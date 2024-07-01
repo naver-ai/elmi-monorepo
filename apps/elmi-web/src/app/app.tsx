@@ -10,7 +10,7 @@ export function App() {
       <Routes>
         <Route path=""/>
         <Route path="works">
-            <Route path="list" element={<WorksPage/>}/>
+            <Route index element={<WorksPage/>}/>
             <Route path=":id" element={<SigningEditorPage/>}/>
         </Route>
       </Routes>
