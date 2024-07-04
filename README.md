@@ -30,7 +30,7 @@
 2. Install python 3.11.8
     ```sh
     > pyenv install 3.11.8
-    > pyenv install 3.11.8
+    > pyenv global 3.11.8
     > python --version
     ```
     The terminal should get 3.11.8.
