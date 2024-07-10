@@ -1,5 +1,5 @@
 import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
-import { WorksPage } from "../features/works/pages/WorksPage";
+import { ProjectsPage } from "../features/projects/pages/ProjectsPage";
 import { SigningEditorPage } from "../features/signing/pages/SigningEditorPage";
 import { Provider } from "react-redux";
 import { persistor, store } from "../redux/store";
@@ -7,6 +7,7 @@ import { PersistGate } from "redux-persist/integration/react";
 import { SignInPage } from "../features/auth/pages/SignInPage";
 import { MainRouter } from "./main-router";
 import { ConfigProvider, ThemeConfig } from "antd";
+import { useEffect } from "react";
 
 const theme: ThemeConfig = {
     token: {
@@ -14,6 +15,7 @@ const theme: ThemeConfig = {
         borderRadius: 100
     }
 }
+
 
 export function App() {
 

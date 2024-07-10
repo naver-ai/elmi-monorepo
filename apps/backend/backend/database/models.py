@@ -27,15 +27,16 @@ class IdTimestampMixin(BaseModel):
     )
 
 
-class SharableUserInfo(BaseModel, IdTimestampMixin):
-   
+class SharableUserInfo(IdTimestampMixin):
+    
     callable_name: Optional[str] = Field(nullable=True)
     sign_language: SignLanguageType = Field(default=SignLanguageType.ASL, nullable=False)
 
 
 class User(SQLModel, SharableUserInfo, table=True):
+    alias: str = Field(nullable=False, min_length=1)
     passcode: str = Field(unique=True, allow_mutation=False, default_factory=lambda: generate('0123456789', size=6))
-    projects: list['Project'] = Relationship(back_populates="user")
+    projects: list['Project'] = Relationship(back_populates="user", sa_relationship_kwargs={'lazy': 'selectin'})
 
 
 class UserIdMixin(BaseModel):

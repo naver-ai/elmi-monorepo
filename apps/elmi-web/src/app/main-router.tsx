@@ -1,10 +1,21 @@
 import { BrowserRouter, Navigate, Outlet, Route, Routes } from "react-router-dom"
 import { SignInPage } from "../features/auth/pages/SignInPage"
-import { WorksPage } from "../features/works/pages/WorksPage"
+import { ProjectsPage } from "../features/projects/pages/ProjectsPage"
 import { SigningEditorPage } from "../features/signing/pages/SigningEditorPage"
+import { useVerifyToken } from "../features/auth/hooks"
+import { useEffect } from "react"
 
 const SignedInRoute = () => {
-    const isSignedIn: boolean = false
+    const {verify, isSignedIn} = useVerifyToken()
+
+    useEffect(()=>{
+        verify().then(isSignedIn => {
+            if(!isSignedIn){
+                console.log("Should redirect to login")
+            }
+        })
+    }, [verify])
+
     if(isSignedIn){
         return <Outlet/>
     }else if(isSignedIn == null){
@@ -21,9 +32,9 @@ export const MainRouter = () => {
         <Route path="app">
             <Route path="login" element={<SignInPage />} />
             <Route element={<SignedInRoute/>}>
-                <Route index element={<Navigate to="works"/>}/>
-                <Route path="works">
-                    <Route index element={<WorksPage />} />
+                <Route index element={<Navigate to="projects"/>}/>
+                <Route path="projects">
+                    <Route index element={<ProjectsPage />} />
                     <Route path=":id" element={<SigningEditorPage />} />
                 </Route>
             </Route>
