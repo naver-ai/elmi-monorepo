@@ -46,6 +46,13 @@
     ```
     This will automatically run poetry install and create a new Python virtual environment at `/.venv`.
 
+### 3. Run setup script
+
+1. Run initial setup script and register `OpenAI API Key` to the local environment.
+    ```sh
+    > nx run setup 
+    ```
+
 ## Nx Commands for Development
 
 ### Python

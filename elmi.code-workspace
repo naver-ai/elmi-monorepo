@@ -4,10 +4,10 @@
 			"path": "."
 		},
 		{
-			"path": "apps/backend"
+			"path": "./apps/backend"
 		},
 		{
-			"path": "apps/elmi-web"
+			"path": "./apps/elmi-web"
 		}
 	],
 	"settings": {
