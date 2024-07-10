@@ -4,6 +4,8 @@ from os import getcwd, getenv, path
 from dotenv import load_dotenv
 
 class EnvironmentVariables(StrEnum):
+    BACKEND_PORT="BACKEND_PORT"
+    BACKEND_HOSTNAME="BACKEND_HOSTNAME"
     APP_AUTH_SECRET="AUTH_SECRET"
     OPENAI_API_KEY="OPENAI_API_KEY"
 
