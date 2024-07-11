@@ -13,6 +13,12 @@ export class Http{
 
     static ENDPOINT_APP_AUTH_VERIFY =`${this.ENDPOINT_APP_AUTH}/verify`
 
+    static ENDPOINT_APP_PROJECTS =`${this.ENDPOINT_APP}/projects`
+
+    static ENDPOINT_APP_PROJECTS_ID = `${this.ENDPOINT_APP_PROJECTS}/{project_id}`
+
+    
+
     static getTemplateEndpoint(template: string, values: {[key:string]: string}): string {
         return pupa(template, values)
       }

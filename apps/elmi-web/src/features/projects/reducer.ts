@@ -1,8 +1,9 @@
 import { PayloadAction, createEntityAdapter, createSlice } from "@reduxjs/toolkit";
-import { Project } from "../../model-types";
-import { AppState } from "../../redux/store";
+import { ProjectInfo } from "../../model-types";
+import { AppState, AppThunk } from "../../redux/store";
+import { Http } from "../../net/http";
 
-const projectEntityAdapter = createEntityAdapter<Project>()
+const projectEntityAdapter = createEntityAdapter<ProjectInfo>()
 
 const initialProjectEntityState = projectEntityAdapter.getInitialState()
 
@@ -24,7 +25,7 @@ const projectsSlice = createSlice({
         setLoadingProjectsFlag: (state, action: PayloadAction<boolean>) => {
             state.loadingProjects = action.payload
         },
-        setProjects: (state, action: PayloadAction<Array<Project>>) => {
+        setProjects: (state, action: PayloadAction<Array<ProjectInfo>>) => {
             projectEntityAdapter.setAll(state.projectEntityState, action)
         },
 
@@ -32,5 +33,24 @@ const projectsSlice = createSlice({
 })
 
 export const projectsEntitySelectors = projectEntityAdapter.getSelectors((state: AppState) => state.projects.projectEntityState)
+
+export function fetchProjectInfos(): AppThunk {
+    return async (dispatch, getState) => {
+        const state = getState()
+        if(state.auth.token){
+            dispatch(projectsSlice.actions.setLoadingProjectsFlag(true))
+            
+
+            try{
+                const resp = await Http.axios.get(Http.ENDPOINT_APP_PROJECTS, {headers: await Http.getSignedInHeaders(state.auth.token)})
+                dispatch(projectsSlice.actions.setProjects(resp.data))
+            }catch(ex){
+            }finally{
+                dispatch(projectsSlice.actions.setLoadingProjectsFlag(false))
+            }
+            
+        }
+    }
+}
 
 export default projectsSlice.reducer

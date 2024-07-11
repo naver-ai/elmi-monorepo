@@ -9,10 +9,11 @@ export interface User {
     sign_language: SignLanguageType
 }
 
-export interface Project {
+export interface ProjectInfo {
     id: string
     user_id: string
     song_title: string
     song_artist: string
     song_description?: string | undefined
+    last_accessed_at?: string | undefined
 }

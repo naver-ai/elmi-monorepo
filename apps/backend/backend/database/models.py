@@ -43,9 +43,15 @@ class UserIdMixin(BaseModel):
     user_id: str = Field(foreign_key=f"{User.__tablename__}.id")
 
 
-class Project(SQLModel, IdTimestampMixin, UserIdMixin, table=True):
+class ProjectInfo(IdTimestampMixin, UserIdMixin):
     song_title: str
     song_artist: str
     song_description: str | None = Field(nullable=True)
-    user: User | None = Relationship(back_populates="projects")
+    last_accessed_at: Optional[datetime] = Field(
+        default=None,
+        nullable=True,
+        sa_type=DateTime(timezone=True)
+    )
 
+class Project(SQLModel, ProjectInfo, table=True):
+    user: User | None = Relationship(back_populates="projects")

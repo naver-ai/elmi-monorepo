@@ -123,4 +123,6 @@ const reducer = persistReducer(
   authSlice.reducer
 );
 
+export const {_initialize: initializeAuth} = authSlice.actions
+
 export default reducer;

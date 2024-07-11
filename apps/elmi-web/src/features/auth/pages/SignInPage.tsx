@@ -24,7 +24,7 @@ export const SignInPage = () => {
 
     const signIn = useCallback((values: {passcode: string}) => {
         dispatch(loginWithPasscode(values.passcode, () => {
-            nav("/app/works", {state: {skipInitialRefresh: true}})
+            nav("/app", {state: {skipInitialRefresh: true}})
         }))
     }, [])
 
