@@ -22,6 +22,7 @@ function makeExistingValidator(message: string): (input: string) => true | strin
 
 const VITE_WHITELISTS: {[key:string]:boolean} = {
     "OPENAI_API_KEY": false,
+    "GENIUS_ACCESS_TOKEN": false,
     "AUTH_SECRET": false
 }
 
@@ -79,6 +80,15 @@ async function setup(){
                 name: 'OPENAI_API_KEY',
                 message: 'Insert OpenAI API Key:',
                 validate: makeExistingValidator("Please enter a valid API key.")
+            })
+    }
+
+    if(env.parsed?.["GENIUS_ACCESS_TOKEN"] == null){
+        questions.push({
+                type: 'input',
+                name: 'GENIUS_ACCESS_TOKEN',
+                message: 'Insert Access token for Genius.com:',
+                validate: makeExistingValidator("Please enter a valid access token.")
             })
     }
 

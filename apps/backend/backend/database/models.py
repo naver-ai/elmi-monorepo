@@ -34,6 +34,7 @@ class SongInfo(IdTimestampMixin):
 class Song(SQLModel, SongInfo, table=True):
     audio_filename: Optional[str] = Field(nullable=True)
     projects: list['Project'] = Relationship(back_populates="song", sa_relationship_kwargs={'lazy': 'selectin'})
+    verses: list['Verse'] = Relationship(back_populates="song", sa_relationship_kwargs={'lazy': 'selectin'})
 
 class SongIdMixin(BaseModel):
     song_id: str = Field(foreign_key=f"{Song.__tablename__}.id")
@@ -49,6 +50,7 @@ class VerseInfo(IdTimestampMixin, SongIdMixin, TimestampRangeMixin):
 
 class Verse(SQLModel, VerseInfo, table=True):
     lines: list['Line'] = Relationship(back_populates='verse', sa_relationship_kwargs={'lazy': 'selectin'})
+    song: Song = Relationship(back_populates='verses', sa_relationship_kwargs={'lazy': 'selectin'})
 
 class VerseIdMixin(BaseModel):
     verse_id: str = Field(foreign_key=f"{Verse.__tablename__}.id")
@@ -87,8 +89,8 @@ class Project(SQLModel, IdTimestampMixin, UserIdMixin, SongIdMixin, table=True):
         sa_type=DateTime(timezone=True)
     )
 
-    user: User | None = Relationship(back_populates="projects")
-    song: Song = Relationship(back_populates='projects') 
+    user: User | None = Relationship(back_populates="projects", sa_relationship_kwargs={'lazy': 'selectin'})
+    song: Song = Relationship(back_populates='projects', sa_relationship_kwargs={'lazy': 'selectin'}) 
 
 class ProjectIdMixin(BaseModel):
     project_id: str = Field(foreign_key=f"{Project.__tablename__}.id")

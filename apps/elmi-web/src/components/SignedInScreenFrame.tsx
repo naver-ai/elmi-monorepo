@@ -36,12 +36,12 @@ export const SignedInScreenFrame = (props: {
     children?: any
 }) => {
 
-    return <div className="h-[100vh]">
-        <header className={`bg-white shadow-sm h-10 p-0 pr-3 flex flex-row justify-between items-center`}>
+    return <div className="h-[100vh] max-h-[100vh] overflow-y-scroll">
+        <header className={`z-[1] bg-white/30 backdrop-blur-md shadow-sm h-10 p-0 pr-3 flex flex-row justify-between items-center fixed left-0 right-0`}>
             {props.headerContent ? props.headerContent : <div className="text-lg pl-3 font-black text-slate-600">ELMI</div>}
             <UserProfile />
         </header>
-        <div className="overflow-scroll">
+        <div className="pt-10">
             {props.children}
         </div>
     </div>

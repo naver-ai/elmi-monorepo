@@ -2,7 +2,7 @@ from contextlib import asynccontextmanager
 from os import getcwd, path
 from time import perf_counter
 
-from backend.database import create_db_and_tables, engine, create_test_user
+from backend.database import create_db_and_tables, engine, create_test_db_entities
 from fastapi import FastAPI, Request, Response, status
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
@@ -15,8 +15,7 @@ from re import compile
 async def server_lifespan(app: FastAPI):
     print("Server launched.")
     await create_db_and_tables(engine)
-    await create_test_user()
-    
+    await create_test_db_entities()
     yield
 
     # Cleanup logic will come below.
@@ -28,6 +27,8 @@ app.include_router(
     app_router,
     prefix="/api/v1/app"
 )
+
+
 
 @app.head("/api/v1/ping")
 def ping():

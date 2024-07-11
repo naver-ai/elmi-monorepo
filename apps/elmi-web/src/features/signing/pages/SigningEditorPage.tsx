@@ -1,32 +1,46 @@
-import { useSelector } from "../../../redux/hooks"
+import { useDispatch, useSelector } from "../../../redux/hooks"
 import { SignedInScreenFrame } from "../../../components/SignedInScreenFrame"
 import { useProjectIdInRoute } from "../hooks"
 import { projectsEntitySelectors } from "../../projects/reducer"
 import {ArrowLeftStartOnRectangleIcon} from '@heroicons/react/20/solid'
 import { Button } from "antd"
 import { useNavigate } from "react-router-dom"
-import { useCallback } from "react"
+import { useCallback, useEffect } from "react"
+import { fetchProjectSong } from "../reducer"
+import { LyricLineView, LyricsView } from "../components/LyricsView"
 
-export const SigningEditorPage = () => {
+const HeaderLeftContent = () => {
+
+    const songInfo = useSelector(state => state.editor.song)
 
     const nav = useNavigate()
-
-    const projectId = useProjectIdInRoute()!
-    const projectInfo = useSelector(state => projectsEntitySelectors.selectById(state, projectId))
-    console.log(projectId, projectInfo)
 
     const onToListClick = useCallback(()=>{
         nav("/app/projects")
     }, [])
 
-    return <SignedInScreenFrame headerContent={<div className="flex flex-row items-center h-full">
-            <Button className="aspect-square h-full block rounded-none p-0 items-center justify-center flex text-slate-500 border-r-[1px] border-r-slate-200" type="text" onClick={onToListClick}><ArrowLeftStartOnRectangleIcon className="w-5 h-5"/></Button>
-            {
-                projectInfo != null ? <div>
-                <span className="ml-3 font-bold text-lg">{projectInfo?.song_title}</span> - {projectInfo?.song_artist}
-            </div> : null
-            }
-        </div>}>
+    return <div className="flex flex-row items-center h-full">
+    <Button className="aspect-square h-full block rounded-none p-0 items-center justify-center flex text-slate-500 border-r-[1px] border-r-slate-200" type="text" onClick={onToListClick}><ArrowLeftStartOnRectangleIcon className="w-5 h-5"/></Button>
+    {
+        songInfo != null ? <div>
+        <span className="ml-3 font-bold text-lg">{songInfo?.title}</span> - {songInfo?.artist}
+    </div> : null
+    }
+</div>
+}
 
+export const SigningEditorPage = () => {
+
+    const dispatch = useDispatch()
+    const nav = useNavigate()
+
+    const projectId = useProjectIdInRoute()!
+
+    useEffect(()=>{
+        dispatch(fetchProjectSong(projectId))
+    }, [projectId])
+
+    return <SignedInScreenFrame headerContent={<HeaderLeftContent/>}>
+        <LyricsView/>
     </SignedInScreenFrame>
 }

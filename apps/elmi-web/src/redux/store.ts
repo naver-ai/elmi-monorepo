@@ -1,11 +1,13 @@
 import {Action, ThunkAction, combineReducers, configureStore} from '@reduxjs/toolkit'
 import authReducer from '../features/auth/reducer'
 import projectsReducer from '../features/projects/reducer'
+import signingReducer from '../features/signing/reducer'
 import {FLUSH, PAUSE, PERSIST, PURGE, Persistor, REGISTER, REHYDRATE, persistReducer, persistStore} from 'redux-persist'
 
 const rootReducer = combineReducers({
     auth: authReducer,
-    projects: projectsReducer
+    projects: projectsReducer,
+    editor: signingReducer
 })
 
 const store = configureStore({

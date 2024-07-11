@@ -1,7 +1,11 @@
 from os import getcwd, path
+import re
 from typing import AsyncGenerator
 
 from sqlmodel import select
+
+from backend.config import ElmiConfig
+from backend.knowledgebase.genius import genius
 from .models import *
 from sqlalchemy.ext.asyncio import AsyncEngine, create_async_engine
 from sqlmodel.ext.asyncio.session import AsyncSession
@@ -27,15 +31,47 @@ async def with_db_session() -> AsyncSession:
     async with db_sessionmaker() as session:
         yield session
 
-async def create_test_user():
+async def create_test_db_entities():
     async with db_sessionmaker() as db:
 
         query = select(User).where(User.alias == 'test')
         test_users = await db.exec(query)
         if test_users.first() is None:
 
-            song = Song(title="Dynamite", artist="BTS", description="""\"Dynamite\" is an upbeat disco-pop song that sings of joy and confidence, bringing a new surge of ‘energy’ to reinvigorate the community during these difficult times. The song finds global superstars searching for happiness by doing again what they are best at—spreading joy to the world through music and performances. It marks BTS‘ first song to be released completely in English as a lead artist. It is featured in the ad for Samsung’s Galaxy S20 FE series.""")
+            title = "Dynamite"
+            artist = "BTS"
+
+            song_info = await genius.retrieve_song_info(title, artist)
+
+            song = Song(title=song_info.title, artist=song_info.artist_names, description=song_info.description)
+
             db.add(song)
+
+
+            if song_info.lyrics is not None:
+                print("Create lyrics orms...")
+                verses: list[Verse] = []
+                line_counter: int = 0
+                for line in song_info.lyrics.split("\n"):
+                    if line.strip() == "":
+                        pass
+                    elif re.match(r'^\[.*\]$', line):
+                        verse_title = line[1:-1]
+                        verse = Verse(title=verse_title, song_id=song.id, verse_ordering=len(verses))
+                        db.add(verse)
+                        verses.append(verse)
+                        line_counter = 0
+                    else:
+                        if len(verses) == 0:
+                            default_verse = Verse(title=None, song_id=song.id, verse_ordering=0)
+                            db.add(default_verse)
+                            verses.append(default_verse)
+                        
+                        line_orm = Line(line_number=line_counter, lyric=line, verse_id=verses[len(verses)-1].id, song_id=song.id)
+                        line_counter += 1
+                        db.add(line_orm)
+
+
 
             print("Create test user...")
             user = User(alias="test", callable_name="Soohyun Yoo", sign_language=SignLanguageType.ASL, passcode="12345")

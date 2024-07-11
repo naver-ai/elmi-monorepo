@@ -18,16 +18,28 @@ export interface ProjectInfo {
     last_accessed_at?: string | undefined
 }
 
+export interface Song {
+    id: string
+    artist: string
+    description?: string
+    title: string
+}
+
 export interface Verse{
     id: string
-    project_id: string
-    name: string
+    song_id: string
+    title?: string
+    verse_ordering: number
+    match_timestamp_start: number
+    match_timestamp_end: number
 }
 
 export interface LyricLine{
     id: string
     verse_id: string
+    song_id: string
     line_number: number
+    lyric: string
     match_timestamp_start: number
     match_timestamp_end: number
 }
