@@ -37,8 +37,8 @@ export const SignedInScreenFrame = (props: {
 }) => {
 
     return <div className="h-[100vh]">
-        <header className={`bg-white shadow-sm h-10 p-0 px-3 flex flex-row justify-between items-center`}>
-            {props.headerContent ? props.headerContent : <div className="text-lg font-black text-slate-600">ELMI</div>}
+        <header className={`bg-white shadow-sm h-10 p-0 pr-3 flex flex-row justify-between items-center`}>
+            {props.headerContent ? props.headerContent : <div className="text-lg pl-3 font-black text-slate-600">ELMI</div>}
             <UserProfile />
         </header>
         <div className="overflow-scroll">

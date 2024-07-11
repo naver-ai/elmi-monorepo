@@ -33,11 +33,13 @@ async def create_test_user():
         query = select(User).where(User.alias == 'test')
         test_users = await db.exec(query)
         if test_users.first() is None:
+
+            song = Song(title="Dynamite", artist="BTS", description="""\"Dynamite\" is an upbeat disco-pop song that sings of joy and confidence, bringing a new surge of ‘energy’ to reinvigorate the community during these difficult times. The song finds global superstars searching for happiness by doing again what they are best at—spreading joy to the world through music and performances. It marks BTS‘ first song to be released completely in English as a lead artist. It is featured in the ad for Samsung’s Galaxy S20 FE series.""")
+            db.add(song)
+
             print("Create test user...")
             user = User(alias="test", callable_name="Soohyun Yoo", sign_language=SignLanguageType.ASL, passcode="12345")
-            project = Project(song_title="Dynamite", song_artist="BTS", song_description="""
-    \"Dynamite\" is an upbeat disco-pop song that sings of joy and confidence, bringing a new surge of ‘energy’ to reinvigorate the community during these difficult times. The song finds global superstars searching for happiness by doing again what they are best at—spreading joy to the world through music and performances. It marks BTS‘ first song to be released completely in English as a lead artist. It is featured in the ad for Samsung’s Galaxy S20 FE series.
-    """, user=user)
+            project = Project(song=song, user=user)
             
             db.add(user)
             db.add(project)

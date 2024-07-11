@@ -4,10 +4,12 @@
   "license": "MIT",
   "nx": {},
   "scripts": {
-    "setup": "ts-node setup.ts"
+    "setup": "ts-node setup.ts",
+    "postinstall": "nx run backend:install"
   },
   "private": true,
   "dependencies": {
+    "@heroicons/react": "^2.1.5",
     "@hookform/resolvers": "^3.9.0",
     "@reduxjs/toolkit": "^2.2.6",
     "antd": "^5.19.1",

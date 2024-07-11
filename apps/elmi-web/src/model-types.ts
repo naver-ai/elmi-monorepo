@@ -17,3 +17,22 @@ export interface ProjectInfo {
     song_description?: string | undefined
     last_accessed_at?: string | undefined
 }
+
+export interface Verse{
+    id: string
+    project_id: string
+    name: string
+}
+
+export interface LyricLine{
+    id: string
+    verse_id: string
+    line_number: number
+    match_timestamp_start: number
+    match_timestamp_end: number
+}
+
+export interface Project extends ProjectInfo {
+
+}
+

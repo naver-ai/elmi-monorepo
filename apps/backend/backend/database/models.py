@@ -3,7 +3,7 @@ from enum import StrEnum
 from typing import Optional
 from pydantic import BaseModel
 from sqlalchemy import DateTime, func
-from sqlmodel import Relationship, SQLModel, Field
+from sqlmodel import Relationship, SQLModel, Field, UniqueConstraint
 from nanoid import generate
 
 def generate_id() -> str:
@@ -26,6 +26,42 @@ class IdTimestampMixin(BaseModel):
         sa_column_kwargs=dict(server_default=func.now(), onupdate=func.now(), nullable=True)
     )
 
+class SongInfo(IdTimestampMixin):
+    title: str
+    artist: str
+    description: str | None = Field(nullable=True)
+
+class Song(SQLModel, SongInfo, table=True):
+    audio_filename: Optional[str] = Field(nullable=True)
+    projects: list['Project'] = Relationship(back_populates="song", sa_relationship_kwargs={'lazy': 'selectin'})
+
+class SongIdMixin(BaseModel):
+    song_id: str = Field(foreign_key=f"{Song.__tablename__}.id")
+
+class TimestampRangeMixin(BaseModel):
+    matched_timestamp_start: Optional[int] = Field(ge=0)
+    matched_timestamp_end: Optional[int] = Field(ge=0)
+
+class VerseInfo(IdTimestampMixin, SongIdMixin, TimestampRangeMixin):
+    title: Optional[str] = Field(nullable=True)
+    verse_ordering: int = Field(nullable=False)
+    included: bool = Field(default=True)
+
+class Verse(SQLModel, VerseInfo, table=True):
+    lines: list['Line'] = Relationship(back_populates='verse', sa_relationship_kwargs={'lazy': 'selectin'})
+
+class VerseIdMixin(BaseModel):
+    verse_id: str = Field(foreign_key=f"{Verse.__tablename__}.id")
+
+class LineInfo(IdTimestampMixin, VerseIdMixin, SongIdMixin, TimestampRangeMixin):
+    line_number: int = Field(nullable=False)
+    lyric: str = Field(nullable=False)
+
+class Line(SQLModel, LineInfo, table=True):
+    __table_args__ = (UniqueConstraint("verse_id", "line_number", name="line_number_uniq_by_verse_idx"), )
+
+    verse: Verse = Relationship(back_populates='lines')
+
 
 class SharableUserInfo(IdTimestampMixin):
     
@@ -43,15 +79,16 @@ class UserIdMixin(BaseModel):
     user_id: str = Field(foreign_key=f"{User.__tablename__}.id")
 
 
-class ProjectInfo(IdTimestampMixin, UserIdMixin):
-    song_title: str
-    song_artist: str
-    song_description: str | None = Field(nullable=True)
+class Project(SQLModel, IdTimestampMixin, UserIdMixin, SongIdMixin, table=True):
+
     last_accessed_at: Optional[datetime] = Field(
         default=None,
         nullable=True,
         sa_type=DateTime(timezone=True)
     )
 
-class Project(SQLModel, ProjectInfo, table=True):
     user: User | None = Relationship(back_populates="projects")
+    song: Song = Relationship(back_populates='projects') 
+
+class ProjectIdMixin(BaseModel):
+    project_id: str = Field(foreign_key=f"{Project.__tablename__}.id")
