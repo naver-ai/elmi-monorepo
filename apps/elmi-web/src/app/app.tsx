@@ -8,6 +8,7 @@ import { SignInPage } from "../features/auth/pages/SignInPage";
 import { MainRouter } from "./main-router";
 import { ConfigProvider, ThemeConfig } from "antd";
 import { useEffect } from "react";
+import './app.css'
 
 const theme: ThemeConfig = {
     token: {

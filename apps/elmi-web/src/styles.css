@@ -1,11 +1,14 @@
+
 @layer tailwind-base, antd;
 @layer tailwind-base {
     @tailwind base;
+    
 }
 @tailwind components;
 @tailwind utilities;
 /* You can add global styles to this file, and also import other style files */
 
 body{
+    font-family: "Lato", sans-serif;
     @apply bg-slate-100 text-gray-700;
 }
