@@ -30,6 +30,7 @@ class SongInfo(IdTimestampMixin):
     title: str
     artist: str
     description: str | None = Field(nullable=True)
+    cover_image_stored: bool = Field(default=False, nullable=False)
 
 class Song(SQLModel, SongInfo, table=True):
     audio_filename: Optional[str] = Field(nullable=True)

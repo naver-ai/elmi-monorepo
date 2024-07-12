@@ -20,7 +20,7 @@ const HeaderLeftContent = () => {
     }, [])
 
     return <div className="flex flex-row items-center h-full">
-    <Button className="aspect-square h-full block rounded-none p-0 items-center justify-center flex text-slate-500 border-r-[1px] border-r-slate-200" type="text" onClick={onToListClick}><ArrowLeftStartOnRectangleIcon className="w-5 h-5"/></Button>
+    <Button className="aspect-square h-full rounded-none p-0 items-center justify-center flex text-slate-500 border-r-[1px] border-r-slate-200" type="text" onClick={onToListClick}><ArrowLeftStartOnRectangleIcon className="w-5 h-5"/></Button>
     {
         songInfo != null ? <div>
         <span className="ml-3 font-bold text-lg">{songInfo?.title}</span> - {songInfo?.artist}

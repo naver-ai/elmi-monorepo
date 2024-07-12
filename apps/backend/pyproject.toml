@@ -36,6 +36,8 @@ readme = 'README.md'
   srt = "^3.5.3"
   httpx = "^0.27.0"
   beautifulsoup4 = "^4.12.3"
+  gdown = "^5.2.0"
+  pillow = "^10.4.0"
 
   [tool.poetry.group.dev.dependencies]
   autopep8 = "2.0.2"

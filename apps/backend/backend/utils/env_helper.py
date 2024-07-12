@@ -9,6 +9,7 @@ class EnvironmentVariables(StrEnum):
     APP_AUTH_SECRET="AUTH_SECRET"
     OPENAI_API_KEY="OPENAI_API_KEY"
     GENIUS_ACCESS_TOKEN="GENIUS_ACCESS_TOKEN"
+    EXAMPLE_SONG_GDRIVE_ID = "EXAMPLE_SONG_GDRIVE_ID"
 
 def get_env_variable(key: str) -> str:
     load_dotenv(path.join(getcwd(), ".env"))
