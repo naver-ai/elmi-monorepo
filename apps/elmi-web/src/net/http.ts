@@ -1,4 +1,4 @@
-import axios, { Axios, CreateAxiosDefaults } from 'axios';
+import axios, { Axios } from 'axios';
 import pupa from 'pupa'
 
 export class Http{
@@ -16,6 +16,11 @@ export class Http{
     static ENDPOINT_APP_PROJECTS =`${this.ENDPOINT_APP}/projects`
 
     static ENDPOINT_APP_PROJECTS_ID = `${this.ENDPOINT_APP_PROJECTS}/{project_id}`
+
+
+    static ENDPOINT_APP_MEDIA = `${this.ENDPOINT_APP}/media`
+    static ENDPOINT_APP_MEDIA_COVER = `${this.ENDPOINT_APP_MEDIA}/cover_image/{song_id}`
+    
 
     
 

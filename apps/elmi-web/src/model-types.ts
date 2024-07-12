@@ -12,6 +12,7 @@ export interface User {
 export interface ProjectInfo {
     id: string
     user_id: string
+    song_id: string
     song_title: string
     song_artist: string
     song_description?: string | undefined
@@ -23,6 +24,7 @@ export interface Song {
     artist: string
     description?: string
     title: string
+    cover_image_stored: boolean
 }
 
 export interface Verse{

@@ -13,6 +13,7 @@ router = APIRouter()
 
 class ProjectInfo(BaseModel):
     id: str
+    user_id: str
     song_id: str
     song_title: str
     song_artist: str
@@ -24,8 +25,9 @@ async def get_projects(user: Annotated[User, Depends(get_signed_in_user)],
                        db: Annotated[AsyncSession, Depends(with_db_session)]):
     query = select(Project, Song).where(Project.user_id == user.id, Project.song_id == Song.id).order_by(desc(Project.last_accessed_at))
     results = (await db.exec(query)).all()
-    print(results)
-    return [ProjectInfo(id=proj.id, song_id=song.id, song_title=song.title, song_artist=song.artist, song_description=song.description, last_accessed_at=proj.last_accessed_at) for proj, song in results]
+    return [ProjectInfo(id=proj.id, user_id=user.id, song_id=song.id, 
+                        song_title=song.title, song_artist=song.artist, song_description=song.description, 
+                        last_accessed_at=proj.last_accessed_at) for proj, song in results]
 
 
 class ProjectDetails(BaseModel):

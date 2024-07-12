@@ -2,11 +2,21 @@ import { useDispatch, useSelector } from "../../../redux/hooks"
 import { useCallback, useEffect, useMemo } from "react"
 import { fetchProjectInfos, projectsEntitySelectors } from "../reducer"
 import { SignedInScreenFrame } from "../../../components/SignedInScreenFrame"
-import { Card, Space, Spin } from "antd"
+import { Card, Image, Space, Spin } from "antd"
 import { useNavigate } from "react-router-dom"
+import { useNetworkImageSource } from "../hooks"
+import { Http } from "../../../net/http"
 
 const ProjectCard = (props: {id: string}) => {
     const project = useSelector(state => projectsEntitySelectors.selectById(state, props.id))
+
+    const coverUrl = useMemo(()=>{
+        if(project?.song_id != null){
+            return Http.getTemplateEndpoint(Http.ENDPOINT_APP_MEDIA_COVER, {song_id: project.song_id})
+        }else return undefined
+    }, [project])
+
+    const coverImageSource = useNetworkImageSource(coverUrl, "cover.jpg")
 
     const accessMessage = useMemo(()=>{
         if(project.last_accessed_at != null){
@@ -22,7 +32,8 @@ const ProjectCard = (props: {id: string}) => {
         nav(`/app/projects/${props.id}`)
     }, [nav, props.id])
 
-    return <Card bordered={false} size="default" className="" loading={project == null} hoverable onClick={onEnter}>
+    return <Card bordered={false} size="default" className="transition hover:shadow-lg hover:scale-105 cursor-pointer" 
+        loading={project == null} onClick={onEnter} cover={<Image src={coverImageSource || undefined} preview={false}/>}>
         <Card.Meta title={project?.song_title} description={<span className="font-bold">{project?.song_artist}</span>}/>
         <Card.Meta className="text-xs pt-2" description={accessMessage}/>
     </Card>
