@@ -24,7 +24,7 @@ const VITE_WHITELISTS: {[key:string]:boolean} = {
     "OPENAI_API_KEY": false,
     "GENIUS_ACCESS_TOKEN": false,
     "AUTH_SECRET": false,
-    "EXAMPLE_SONG_GDRIVE_ID": false
+    //"EXAMPLE_SONG_GDRIVE_ID": false
 }
 
 async function setup(){
@@ -92,7 +92,7 @@ async function setup(){
                 validate: makeExistingValidator("Please enter a valid access token.")
             })
     }
-
+/*
     if(env.parsed?.["EXAMPLE_SONG_GDRIVE_ID"] == null){
         questions.push({
                 type: 'input',
@@ -100,7 +100,7 @@ async function setup(){
                 message: 'Insert a file id of the example song in Google drive:',
                 validate: makeExistingValidator("Please enter a valid file id.")
             })
-    }
+    }*/
 
     const newObj: {[key:string]:string} = env.parsed as any
 

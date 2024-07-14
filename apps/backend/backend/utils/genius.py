@@ -2,10 +2,25 @@ import re
 from fastapi import HTTPException
 from lyricsgenius import Genius
 import httpx
-from pydantic import BaseModel
+from nanoid import generate
+from pydantic import BaseModel, Field
 from bs4 import BeautifulSoup
 
 from backend.utils.env_helper import get_env_variable, EnvironmentVariables
+
+class LyricVerse(BaseModel):
+    id: str = Field(default_factory=lambda: generate(size=5))
+    title: str | None
+
+class LyricLine(BaseModel):
+    id: str = Field(default_factory=lambda: generate(size=5))
+    text: str
+    text_original: str
+    verse_id: str
+
+class LyricsPackage(BaseModel):
+    verses: list[LyricVerse] = []
+    lines: list[LyricLine] = []
 
 class GeniusSongInfo(BaseModel):
     id: int
@@ -13,11 +28,19 @@ class GeniusSongInfo(BaseModel):
     title: str
     song_art_image_thumbnail_url: str | None
     song_art_image_url: str | None
-    lyrics: str
+    lyrics: LyricsPackage
     description: str
 
+@staticmethod
+def clean_lyric_line(line: str) -> str:
+    cleaned_line = line.strip()
+    cleaned_line = re.sub(r'\(.*?\)', "", cleaned_line)
+    cleaned_line = re.sub(r'\s+([,?.!;:])', r'\1', cleaned_line)
+    cleaned_line = re.sub(f'\s+', ' ', cleaned_line).strip()
+    return cleaned_line
+
 # Modified from https://github.com/johnwmillr/LyricsGenius/blob/master/lyricsgenius/genius.py
-async def extract_lyrics_and_description(song_path: str) -> tuple[str|None, str|None]:
+async def extract_lyrics_and_description(song_path: str) -> tuple[LyricsPackage|None, str|None]:
     url = f"https://genius.com{song_path}"
 
     print(url)
@@ -41,6 +64,30 @@ async def extract_lyrics_and_description(song_path: str) -> tuple[str|None, str|
         lyrics = None
     else:
         lyrics = "\n".join([div.get_text() for div in lyrics_divs])
+        lyrics = lyrics.split("\n")
+        print(lyrics)
+        verses: list[LyricVerse] = []
+        lines: list[LyricLine] = []
+        line_counter: int = 0
+        for line in lyrics:
+            if line.strip() == "":
+                pass
+            elif re.match(r'^\[.*\]$', line):
+                verse_title = line[1:-1]
+                verse = LyricVerse(title=verse_title)
+                verses.append(verse)
+                line_counter = 0
+            else:
+                if len(verses) == 0:
+                    default_verse = LyricVerse(title=None)
+                    verses.append(default_verse)
+      
+                line_info = LyricLine(text=clean_lyric_line(line), text_original=line, verse_id=verses[len(verses)-1].id)
+                line_counter += 1
+                lines.append(line_info)
+
+        lyrics = LyricsPackage(lines=lines, verses=verses)
+    
 
     description_div = html.find("div", class_=re.compile("^SongDescription__Content"))
     if description_div is not None:

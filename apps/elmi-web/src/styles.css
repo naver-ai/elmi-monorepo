@@ -10,5 +10,28 @@
 
 body{
     font-family: "Lato", sans-serif;
-    @apply bg-slate-100 text-gray-700;
+    @apply bg-systembg text-gray-700;
+}
+
+.animated-background{
+    background-size: 400%;
+
+    -webkit-animation: bg-anim 3s ease infinite;
+    -moz-animation: bg-anim 3s ease infinite;
+    animation: bg-anim 3s ease infinite;
+}
+
+@keyframes bg-anim {
+    0%,
+    100% {
+        background-position: 0% 50%;
+    }
+    
+    50% {
+        background-position: 100% 50%;
+    }
+}
+
+.lyric-panel-layout{
+    @apply container lg:w-[50vw] lg:max-w-[600px] mx-auto;
 }

@@ -1,10 +1,13 @@
 from datetime import datetime
 from enum import StrEnum
+from os import path
 from typing import Optional
 from pydantic import BaseModel
 from sqlalchemy import DateTime, func
 from sqlmodel import Relationship, SQLModel, Field, UniqueConstraint
 from nanoid import generate
+
+from backend.config import ElmiConfig
 
 def generate_id() -> str:
     return generate()
@@ -37,12 +40,27 @@ class Song(SQLModel, SongInfo, table=True):
     projects: list['Project'] = Relationship(back_populates="song", sa_relationship_kwargs={'lazy': 'selectin'})
     verses: list['Verse'] = Relationship(back_populates="song", sa_relationship_kwargs={'lazy': 'selectin'})
 
+    def get_audio_file_path(self)->str:
+        return path.join(ElmiConfig.get_song_dir(self.id), self.audio_filename)
+    
+    def audio_file_exists(self)->bool:
+        return path.exists(self.get_audio_file_path())
+    
+    def get_lyrics(self,include_verse_title: bool = True, sep="\n")->str:
+        lines = []
+        for verse in self.verses:
+            if include_verse_title and verse.title is not None:
+                lines.append(f"[{verse.title}]")
+            for line in verse.lines:
+                lines.append(line.lyric)
+        return sep.join(lines)
+
 class SongIdMixin(BaseModel):
     song_id: str = Field(foreign_key=f"{Song.__tablename__}.id")
 
 class TimestampRangeMixin(BaseModel):
-    matched_timestamp_start: Optional[int] = Field(ge=0)
-    matched_timestamp_end: Optional[int] = Field(ge=0)
+    matched_timestamp_start: Optional[int] = Field(ge=0, default=None)
+    matched_timestamp_end: Optional[int] = Field(ge=0, default=None)
 
 class VerseInfo(IdTimestampMixin, SongIdMixin, TimestampRangeMixin):
     title: Optional[str] = Field(nullable=True)

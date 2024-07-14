@@ -14,18 +14,20 @@ export const VerseView = (props: {verseId: string}) => {
     const verse = useSelector(state => verseSelectors.selectById(state, props.verseId))
     const lineIds = useSelector(state => selectLineIdsByVerseId(state, props.verseId))
 
-    return <div className="bg-slate-200/50 rounded-lg my-8 first:mt-0 last:mb-0 p-2">
-        {verse.title != null ? <div className="text-gray-400 mb-2">[{verse.title}]</div> : null}
+    return <div className="bg-white/50 shadow-sm backdrop:blur-md rounded-lg my-8 first:mt-0 last:mb-0 p-4">
+        {verse.title != null ? <div className="text-slate-400 mb-2 font-bold">[{verse.title}]</div> : null}
         {
             lineIds.map(lineId => <LyricLineView lineId={lineId} key={lineId}/>)
         }
     </div>
 }
 
-export const LyricsView = () => {
+export const LyricsView = (props: {
+    className?: string
+}) => {
     const verseIds = useSelector(verseSelectors.selectIds)
 
-    return <div className="container lg:w-[50vw] lg:max-w-[600px] mx-auto">
+    return <div className={`lyric-panel-layout ${props.className}`}>
         {
             verseIds.map(verseId => <VerseView verseId={verseId} key={verseId}/>)
         }

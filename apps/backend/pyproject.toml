@@ -38,6 +38,11 @@ readme = 'README.md'
   beautifulsoup4 = "^4.12.3"
   gdown = "^5.2.0"
   pillow = "^10.4.0"
+  openai = "^1.35.13"
+  youtube-transcript-api = "^0.6.2"
+  yt-dlp = "^2024.7.9"
+  pydub = "^0.25.1"
+  rapidfuzz = "^3.9.4"
 
   [tool.poetry.group.dev.dependencies]
   autopep8 = "2.0.2"

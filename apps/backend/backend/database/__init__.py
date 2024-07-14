@@ -5,7 +5,7 @@ from typing import AsyncGenerator
 from sqlmodel import select
 
 from backend.config import ElmiConfig
-from backend.knowledgebase.genius import genius
+from backend.utils.genius import genius
 from backend.utils.env_helper import get_env_variable, EnvironmentVariables
 from backend.utils.media import MediaManager
 from .models import *

@@ -41,6 +41,6 @@ export const SigningEditorPage = () => {
     }, [projectId])
 
     return <SignedInScreenFrame headerContent={<HeaderLeftContent/>}>
-        <LyricsView/>
+        <LyricsView className="mt-10"/>
     </SignedInScreenFrame>
 }

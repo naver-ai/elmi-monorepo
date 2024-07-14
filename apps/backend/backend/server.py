@@ -28,8 +28,6 @@ app.include_router(
     prefix="/api/v1/app"
 )
 
-
-
 @app.head("/api/v1/ping")
 def ping():
     return Response(status_code=status.HTTP_204_NO_CONTENT)

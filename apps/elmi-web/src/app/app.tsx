@@ -13,7 +13,6 @@ import './app.css'
 const theme: ThemeConfig = {
     token: {
         colorPrimary: "#303030",
-        borderRadius: 100
     }
 }
 

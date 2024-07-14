@@ -68,6 +68,14 @@
         "command": "poetry run python backend/run.py",
         "cwd": "apps/backend"
       }
+    },
+
+    "test_lyric_sync": {
+      "executor": "@nxlv/python:run-commands",
+      "options": {
+        "command": "poetry run python backend/test_lyric_sync.py",
+        "cwd": "apps/backend"
+      }
     }
   },
   "tags": []

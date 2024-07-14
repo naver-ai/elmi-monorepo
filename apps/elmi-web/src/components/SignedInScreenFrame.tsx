@@ -27,7 +27,7 @@ const UserProfile = () => {
     }, [])
 
     return <Dropdown menu={menuData}>
-        <Button size="small" type="default">{userName}</Button>
+        <Button size="small" type="default" className="bg-transparent text-gray-600 font-semibold">{userName}</Button>
     </Dropdown>
 }
 
