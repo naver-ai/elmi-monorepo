@@ -32,8 +32,8 @@ export interface Verse{
     song_id: string
     title?: string
     verse_ordering: number
-    match_timestamp_start: number
-    match_timestamp_end: number
+    start: number
+    end: number
 }
 
 export interface LyricLine{
@@ -42,8 +42,11 @@ export interface LyricLine{
     song_id: string
     line_number: number
     lyric: string
-    match_timestamp_start: number
-    match_timestamp_end: number
+    tokens: Array<string>
+    timestamps: Array<{start: number, end: number}>
+
+    start: number
+    end: number
 }
 
 export interface Project extends ProjectInfo {

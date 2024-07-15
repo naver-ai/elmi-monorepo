@@ -2,16 +2,19 @@ from os import getcwd, path
 import re
 from typing import AsyncGenerator
 
+from pydantic import TypeAdapter
 from sqlmodel import select
 
 from backend.config import ElmiConfig
 from backend.utils.genius import genius
 from backend.utils.env_helper import get_env_variable, EnvironmentVariables
+from backend.utils.lyric_data_types import SyncedLyricsSegmentWithWordLevelTimestamp
 from backend.utils.media import MediaManager
 from .models import *
 from sqlalchemy.ext.asyncio import AsyncEngine, create_async_engine
 from sqlmodel.ext.asyncio.session import AsyncSession
 from sqlalchemy.orm import sessionmaker
+from math import floor, ceil
 
 def create_database_engine(db_path: str, verbose: bool = False) -> AsyncEngine:
     return create_async_engine(f"sqlite+aiosqlite:///{db_path}", echo=verbose)
@@ -62,26 +65,37 @@ async def create_test_db_entities():
 
                 if song_info.lyrics is not None:
                     print("Create lyrics orms...")
-                    verses: list[Verse] = []
-                    line_counter: int = 0
-                    for line in song_info.lyrics.split("\n"):
-                        if line.strip() == "":
-                            pass
-                        elif re.match(r'^\[.*\]$', line):
-                            verse_title = line[1:-1]
-                            verse = Verse(title=verse_title, song_id=song.id, verse_ordering=len(verses))
-                            db.add(verse)
-                            verses.append(verse)
-                            line_counter = 0
-                        else:
-                            if len(verses) == 0:
-                                default_verse = Verse(title=None, song_id=song.id, verse_ordering=0)
-                                db.add(default_verse)
-                                verses.append(default_verse)
+                    with open(path.join(ElmiConfig.DIR_DATA, "sample_synced_lyrics_dynamite_bts.json"), 'r') as f:
+                        synced_lyrics: list[SyncedLyricsSegmentWithWordLevelTimestamp] = TypeAdapter(list[SyncedLyricsSegmentWithWordLevelTimestamp]).validate_json(f.read())
+                        
+                        verses_by_lyric_verse_id: dict[str, Verse] = {lyric_verse.id:Verse(title=lyric_verse.title, song_id=song.id, verse_ordering=i) for i, lyric_verse in enumerate(song_info.lyrics.verses)}
+                        line_orms: list[Line] = []
+
+                        line_counter: int = 0
+                        verse_orm: Verse | None = None
+                        for synced_lyric_line in synced_lyrics:
                             
-                            line_orm = Line(line_number=line_counter, lyric=line, verse_id=verses[len(verses)-1].id, song_id=song.id)
+                            this_verse_orm = verses_by_lyric_verse_id[song_info.lyrics.lines[synced_lyric_line.original_lyric_ids[0]].verse_id]
+                            if verse_orm != this_verse_orm:
+                                line_counter = 0
+                                verse_orm = this_verse_orm
+                            line_orm = Line(line_number=line_counter, lyric=synced_lyric_line.text, tokens=synced_lyric_line.tokens, 
+                                            timestamps=[TimestampRangeMixin(start_millis=floor(word.start * 1000), end_millis=ceil(word.end * 1000)).model_dump() for word in synced_lyric_line.words],
+                                            start_millis=floor(synced_lyric_line.start * 1000),
+                                            end_millis=ceil(synced_lyric_line.end * 1000),
+                                            verse_id=this_verse_orm.id, song_id=song.id)
+                            line_orms.append(line_orm)
                             line_counter += 1
-                            db.add(line_orm)
+                        
+                        for _, verse in verses_by_lyric_verse_id.items():
+                            lines = [l for l in line_orms if l.verse_id == verse.id]
+                            verse.start_millis = lines[0].start_millis
+                            verse.end_millis = lines[-1].end_millis
+
+                            db.add(verse)
+                        
+                        for line in line_orms:
+                            db.add(line)
 
 
                 print("Create test user...")

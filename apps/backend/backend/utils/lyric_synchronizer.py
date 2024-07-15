@@ -1,3 +1,4 @@
+from difflib import SequenceMatcher
 from io import BytesIO
 import re
 from pydantic import BaseModel, TypeAdapter, validate_call
@@ -14,23 +15,7 @@ from pydub import AudioSegment
 import json
 
 from backend.utils.genius import LyricsPackage, clean_lyric_line
-
-class SyncedTimestamps(BaseModel):
-    start: float
-    end: float
-
-class SyncedText(SyncedTimestamps):
-    text: str
-
-class SyncedLyricSegment(SyncedText):
-    original_lyric_ids: list[int]
-
-class SyncedLyricsSegmentWithWordLevelTimestampArgs(SyncedLyricSegment):
-    words: list[SyncedText]
-
-class SyncedLyricsSegmentWithWordLevelTimestamp(SyncedLyricSegment):
-    tokens: list[str]
-    words: list[SyncedTimestamps]
+from backend.utils.lyric_data_types import SyncedLyricSegment, SyncedLyricsSegmentWithWordLevelTimestamp, SyncedText, SyncedTimestamps
 
 PROMPT_LINE_MATCH = """
 You are a helpful assistant that helps align lyrics with audio transcripts.
@@ -64,10 +49,53 @@ segment_synced_type_adapter = TypeAdapter(list[SyncedLyricSegment])
 def clean_token_for_comparison(token: str) -> str:
     return re.sub(r'[\'\".,?\-]', "", token).strip().lower()
 
+def join_lyric_tokens(tokens: list[str])->str:
+    text = ""
+    for token in tokens:
+        if text.endswith("-") or text == "":
+            text += token
+        else:
+            text += " " + token
+    return text
+
+def tokenize_lyrics(lyric_line: str) -> list[str]:
+    lyric_tokens = re.split(r'([\s\-])', lyric_line)
+    lyric_tokens = [t for t in lyric_tokens if not t.isspace()]
+    for i, t in enumerate(lyric_tokens):
+        if t == "-" and i > 0:
+            lyric_tokens[i-1] = f"{lyric_tokens[i-1]}-"
+            lyric_tokens[i] = " "
+    lyric_tokens = [t for t in lyric_tokens if not t.isspace()]
+    return lyric_tokens
+
+
+def find_subsequent_indices(lst: list, condition) -> tuple[int, int] | None:
+    subsequence_start = None
+    
+    for i, x in enumerate(lst):
+        if condition(x) == True:
+            if subsequence_start is None:
+                subsequence_start = i
+        else:
+            if subsequence_start is not None:
+                return [subsequence_start, i-1]
+    
+    if subsequence_start is not None:
+        return [subsequence_start, subsequence_start]
+    else:
+        return None
+    
+
 class LyricSynchronizer:
     
     def __init__(self) -> None:
         self.openai_client = openai.AsyncClient(api_key=get_env_variable(EnvironmentVariables.OPENAI_API_KEY))
+
+    async def create_synced_lyrics(self, lyrics: LyricsPackage, youtube_id: str, audio_path: str) -> list[SyncedLyricsSegmentWithWordLevelTimestamp]:
+        line_level_synced_lyrics = await self.apply_line_level_timestamps(lyrics, self.retrieve_segment_timestamped_subtitles_from_youtube(youtube_id))
+        print(line_level_synced_lyrics)
+
+        return await self.apply_word_level_timestamps(line_level_synced_lyrics, audio_path)
 
     def retrieve_segment_timestamped_subtitles_from_youtube(self, youtube_id: str) -> list[SyncedText]:
         return [SyncedText(text=clean_lyric_line(seg["text"]), start=seg["start"], end=seg["start"] + seg["duration"]).model_dump() for seg in YouTubeTranscriptApi.get_transcript(youtube_id)]
@@ -103,7 +131,7 @@ class LyricSynchronizer:
         return merged
     
     @validate_call
-    async def apply_word_level_timestamps(self, synced_lyrics: list[SyncedLyricSegment], audio_path: str):
+    async def apply_word_level_timestamps(self, synced_lyrics: list[SyncedLyricSegment], audio_path: str) -> list[SyncedLyricsSegmentWithWordLevelTimestamp]:
         
         audio: AudioSegment = AudioSegment.from_mp3(audio_path)
 
@@ -143,32 +171,30 @@ class LyricSynchronizer:
                 await self.align_lyric_line_with_word_timestamps(lyric_segment, 
                                                                  [SyncedText(
                                                                      text=word["word"], 
-                                                                     start=word["start"] + lyric_segment.start, 
+                                                                     start=lyric_segment.start + word["start"], 
                                                                      end=lyric_segment.start + word["end"]) 
                                                                      for word in maximum_similarity_transcription.words])
             )
+
+        return segments
 
         #with open(path.join(ElmiConfig.DIR_DATA, "test_lyric_segment_word_timestamps.json"), 'w') as f:
         #    f.write(json.dumps([line.model_dump() for line in segments], indent=2))
 
     @validate_call
     async def align_lyric_line_with_word_timestamps(self, lyric_line: SyncedLyricSegment, word_timestamps: list[SyncedText]) -> SyncedLyricsSegmentWithWordLevelTimestamp:
-        lyric_tokens = re.split(r'([\s\-])', lyric_line.text)
-        lyric_tokens = [t for t in lyric_tokens if not t.isspace()]
-        for i, t in enumerate(lyric_tokens):
-            if t == "-" and i > 0:
-                lyric_tokens[i-1] = f"{lyric_tokens[i-1]}-"
-                lyric_tokens[i] = " "
-        lyric_tokens = [t for t in lyric_tokens if not t.isspace()]
+        lyric_tokens = tokenize_lyrics(lyric_line.text)
 
         lyric_tokens_cleaned = [clean_token_for_comparison(word) for word in lyric_tokens]
         #print(lyric_tokens)
         #print(lyric_tokens_cleaned)
         #print([clean_token_for_comparison(word.text) for word in word_timestamps])
+
+        word_timestamps = [word for word in word_timestamps if not re.match(r'^[^\w\s]+$', word.text)]
+        
         timestamp_tokens_cleaned = [clean_token_for_comparison(word.text) for word in word_timestamps]
         similarity = fuzz.ratio(lyric_tokens_cleaned, timestamp_tokens_cleaned)
         if similarity >= 100:
-            pass
             # Direct matching
             return SyncedLyricsSegmentWithWordLevelTimestamp(
                 **lyric_line.model_dump(),
@@ -177,8 +203,113 @@ class LyricSynchronizer:
             )
 
         else:
-            print(similarity)
-            print(lyric_tokens_cleaned)
-            print(timestamp_tokens_cleaned)
-            print(word_timestamps)
+            s_matcher = SequenceMatcher(None, lyric_tokens_cleaned, timestamp_tokens_cleaned)
+            matches = [match for match in s_matcher.get_matching_blocks()]
+
+            # Segment common matches
             
+            lyric_tokens_segmented: list[str | list[str]] = []
+            timestamp_tokens_segmented: list[SyncedText | list[SyncedText]] = []
+            
+            pointer_a = 0
+            pointer_b = 0
+            for match in matches:
+                lyric_tokens_segmented += lyric_tokens[pointer_a:match.a]
+                timestamp_tokens_segmented += word_timestamps[pointer_b:match.b]
+                if match.size > 0:
+                    lyric_tokens_segmented.append(lyric_tokens[match.a:match.a+match.size])
+                    timestamp_tokens_segmented.append(word_timestamps[match.b:match.b+match.size])
+                pointer_a = match.a + match.size
+                pointer_b = match.b + match.size
+            
+            # Slide the segmented arrays until all elements becomes array.
+
+            new_lyric_tokens: list[str] = []
+            new_words: list[SyncedTimestamps] = []
+
+            while len(lyric_tokens_segmented) > 0 and len(timestamp_tokens_segmented) > 0:
+                # Find orphans
+                first_orphan_lyrics_idx = find_subsequent_indices(lyric_tokens_segmented, lambda seg: isinstance(seg, str)) if isinstance(lyric_tokens_segmented[0], str) else None
+                first_orphan_timstamp_idx = find_subsequent_indices(timestamp_tokens_segmented, lambda seg: isinstance(seg, SyncedText)) if isinstance(timestamp_tokens_segmented[0], SyncedText) else None
+                
+                if first_orphan_lyrics_idx is not None:
+                    first_orphan_lyrics_sequence = lyric_tokens_segmented[first_orphan_lyrics_idx[0]:first_orphan_lyrics_idx[1]+1]
+                else:
+                    first_orphan_lyrics_sequence = None
+
+                
+                if first_orphan_timstamp_idx is not None:
+                    first_orphan_timestamp_sequence = timestamp_tokens_segmented[first_orphan_timstamp_idx[0]:first_orphan_timstamp_idx[1]+1]
+                else:
+                    first_orphan_timestamp_sequence = None
+
+                #Handle orphans
+                if first_orphan_lyrics_sequence is None and first_orphan_timestamp_sequence is None:
+                    # First element is match.
+                    for lyric, ts in zip(lyric_tokens_segmented[0], timestamp_tokens_segmented[0]):
+                        new_lyric_tokens.append(lyric)
+                        new_words.append(SyncedTimestamps(start=ts.start, end=ts.end))
+                    del lyric_tokens_segmented[0]
+                    del timestamp_tokens_segmented[0]
+                elif first_orphan_lyrics_sequence is not None and first_orphan_timestamp_sequence is None:
+                    print("Only lyrics has orphans. Try to merge them with before or next tokens: ", first_orphan_lyrics_sequence)
+                    if len(new_lyric_tokens) > 0:
+                        new_lyric_tokens[-1] = join_lyric_tokens([new_lyric_tokens[-1]] + first_orphan_lyrics_sequence)
+                    else:
+                        lyric_tokens_segmented[first_orphan_lyrics_idx[1]+1][0] = join_lyric_tokens(first_orphan_lyrics_sequence + [lyric_tokens_segmented[first_orphan_lyrics_idx[1]+1][0]])
+
+                    del lyric_tokens_segmented[first_orphan_lyrics_idx[0]:first_orphan_lyrics_idx[1]+1]
+                elif first_orphan_lyrics_sequence is None and first_orphan_timestamp_sequence is not None:
+                    print("Only subtitle has timestamps. Disregard it.")
+                    del timestamp_tokens_segmented[first_orphan_timstamp_idx[0]:first_orphan_timstamp_idx[1]+1]
+                else:
+                    print("Both subtitles and lyrics has orphans. Merge each.")
+                    new_lyric_tokens.append(join_lyric_tokens(first_orphan_lyrics_sequence))
+                    new_words.append(SyncedTimestamps(start=first_orphan_timestamp_sequence[0].start, end=first_orphan_timestamp_sequence[-1].end))
+
+                    del timestamp_tokens_segmented[first_orphan_timstamp_idx[0]:first_orphan_timstamp_idx[1]+1]
+                    del lyric_tokens_segmented[first_orphan_lyrics_idx[0]:first_orphan_lyrics_idx[1]+1]
+            
+            assert len(new_lyric_tokens) == len(new_words)
+
+            print(new_lyric_tokens, new_words)
+
+            #print(words)
+            return SyncedLyricsSegmentWithWordLevelTimestamp(
+                **lyric_line.model_dump(exclude={"text"}),
+                text=join_lyric_tokens(new_lyric_tokens),
+                tokens=new_lyric_tokens,
+                words=new_words
+            )
+        
+    def split_multiline_lyrics(self, original_lyrics: LyricsPackage, synced_lyrics: list[SyncedLyricsSegmentWithWordLevelTimestamp]) -> list[SyncedLyricsSegmentWithWordLevelTimestamp]:
+        new_lyrics: list[SyncedLyricsSegmentWithWordLevelTimestamp] = []
+        for seg in synced_lyrics:
+            if len(seg.original_lyric_ids) > 1:
+                # Split
+                pointer = 0
+                last_end = None
+                for ii, orig_lyric_idx in enumerate(seg.original_lyric_ids):
+                    orig_tokens = [clean_token_for_comparison(tok) for tok in tokenize_lyrics(original_lyrics.lines[orig_lyric_idx].text)]
+                    s_matcher = SequenceMatcher(None, orig_tokens, [clean_token_for_comparison(tok) for tok in seg.tokens[pointer:]])
+                    match = s_matcher.find_longest_match()
+                    print(match, orig_tokens, seg.tokens)
+                    assert match.a == match.b == 0 and match.size == len(orig_tokens)
+
+                    new_seg_end = seg.end if ii >= len(seg.original_lyric_ids)-1 else seg.words[pointer + match.size - 1].end
+
+                    new_lyrics.append(SyncedLyricsSegmentWithWordLevelTimestamp(
+                        start= seg.start if last_end is None else (seg.words[pointer].start + last_end)/2,
+                        end= new_seg_end,
+                        text=join_lyric_tokens(seg.tokens[pointer:pointer+match.size]),
+                        original_lyric_ids=[orig_lyric_idx],
+                        tokens=seg.tokens[pointer:pointer+match.size],
+                        words=seg.words[pointer:pointer+match.size]
+                    ))
+                    last_end = new_seg_end
+
+                    pointer = match.size                
+            else:
+                new_lyrics.append(seg)
+        
+        return new_lyrics
