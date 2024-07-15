@@ -1,6 +1,5 @@
 import re
 from fastapi import HTTPException
-from lyricsgenius import Genius
 import httpx
 from nanoid import generate
 from pydantic import BaseModel, Field
@@ -104,7 +103,6 @@ class GeniusManager:
     
     def __init__(self) -> None:
         self.token = get_env_variable(EnvironmentVariables.GENIUS_ACCESS_TOKEN)
-        self.genius = Genius()
     
 
     async def retrieve_song_info(self, title: str, artist: str) -> GeniusSongInfo | None:

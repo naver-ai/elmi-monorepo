@@ -56,7 +56,7 @@ async def create_test_db_entities():
                         db.add(song)
 
                 audio_filename = f"{title}-{artist}.mp3".lower()
-                MediaManager.retrieve_song_from_gdrive(song.id, audio_filename, get_env_variable(EnvironmentVariables.EXAMPLE_SONG_GDRIVE_ID))
+                MediaManager.retrieve_song_from_youtube(song.id, audio_filename, "gdZLi9oWNZg")
                 song.audio_filename = audio_filename
                 db.add(song)
 

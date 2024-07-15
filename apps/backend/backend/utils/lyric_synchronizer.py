@@ -15,16 +15,22 @@ import json
 
 from backend.utils.genius import LyricsPackage, clean_lyric_line
 
-class SyncedText(BaseModel):
-    text: str
+class SyncedTimestamps(BaseModel):
     start: float
     end: float
+
+class SyncedText(SyncedTimestamps):
+    text: str
 
 class SyncedLyricSegment(SyncedText):
     original_lyric_ids: list[int]
 
-class SyncedLyricsSegmentWithWordLevelTimestamp(SyncedLyricSegment):
+class SyncedLyricsSegmentWithWordLevelTimestampArgs(SyncedLyricSegment):
     words: list[SyncedText]
+
+class SyncedLyricsSegmentWithWordLevelTimestamp(SyncedLyricSegment):
+    tokens: list[str]
+    words: list[SyncedTimestamps]
 
 PROMPT_LINE_MATCH = """
 You are a helpful assistant that helps align lyrics with audio transcripts.
@@ -54,6 +60,9 @@ Do NOT add your informal message but just provide JSON text.
 markdown_json_block_pattern = r'^```(json)?\s*(.*?)\s*```$'
 
 segment_synced_type_adapter = TypeAdapter(list[SyncedLyricSegment])
+
+def clean_token_for_comparison(token: str) -> str:
+    return re.sub(r'[\'\".,?\-]', "", token).strip().lower()
 
 class LyricSynchronizer:
     
@@ -131,15 +140,45 @@ class LyricSynchronizer:
             print(f"Best result ({maximum_similarity}):")
             print(maximum_similarity_transcription)
             segments.append(
-                SyncedLyricsSegmentWithWordLevelTimestamp(
-                    **lyric_segment.model_dump(),
-                    words=[SyncedText(text=word["word"], start=word["start"] + lyric_segment.start, end=lyric_segment.start + word["end"]) for word in maximum_similarity_transcription.words]
-                )
+                await self.align_lyric_line_with_word_timestamps(lyric_segment, 
+                                                                 [SyncedText(
+                                                                     text=word["word"], 
+                                                                     start=word["start"] + lyric_segment.start, 
+                                                                     end=lyric_segment.start + word["end"]) 
+                                                                     for word in maximum_similarity_transcription.words])
             )
 
         #with open(path.join(ElmiConfig.DIR_DATA, "test_lyric_segment_word_timestamps.json"), 'w') as f:
         #    f.write(json.dumps([line.model_dump() for line in segments], indent=2))
 
     @validate_call
-    async def align_lyric_line_with_word_timestamps(lyric_line: SyncedLyricSegment, word_timestamps: list[SyncedText]) -> SyncedLyricsSegmentWithWordLevelTimestamp:
-        pass
+    async def align_lyric_line_with_word_timestamps(self, lyric_line: SyncedLyricSegment, word_timestamps: list[SyncedText]) -> SyncedLyricsSegmentWithWordLevelTimestamp:
+        lyric_tokens = re.split(r'([\s\-])', lyric_line.text)
+        lyric_tokens = [t for t in lyric_tokens if not t.isspace()]
+        for i, t in enumerate(lyric_tokens):
+            if t == "-" and i > 0:
+                lyric_tokens[i-1] = f"{lyric_tokens[i-1]}-"
+                lyric_tokens[i] = " "
+        lyric_tokens = [t for t in lyric_tokens if not t.isspace()]
+
+        lyric_tokens_cleaned = [clean_token_for_comparison(word) for word in lyric_tokens]
+        #print(lyric_tokens)
+        #print(lyric_tokens_cleaned)
+        #print([clean_token_for_comparison(word.text) for word in word_timestamps])
+        timestamp_tokens_cleaned = [clean_token_for_comparison(word.text) for word in word_timestamps]
+        similarity = fuzz.ratio(lyric_tokens_cleaned, timestamp_tokens_cleaned)
+        if similarity >= 100:
+            pass
+            # Direct matching
+            return SyncedLyricsSegmentWithWordLevelTimestamp(
+                **lyric_line.model_dump(),
+                tokens=lyric_tokens,
+                words=[SyncedTimestamps(**word.model_dump()) for word in word_timestamps]
+            )
+
+        else:
+            print(similarity)
+            print(lyric_tokens_cleaned)
+            print(timestamp_tokens_cleaned)
+            print(word_timestamps)
+            

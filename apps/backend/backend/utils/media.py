@@ -16,7 +16,7 @@ class MediaManager:
 
     @staticmethod
     def retrieve_song_from_youtube(song_id: str, filename: str, youtube_id: str):
-        file_path = path.join(ElmiConfig.get_song_dir(song_id), filename)
+        file_path = path.join(ElmiConfig.get_song_dir(song_id), filename.replace('.mp3', ''))
         opts = {
             "outtmpl": file_path,
             "format": "bestaudio/best",
