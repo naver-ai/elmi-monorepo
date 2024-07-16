@@ -99,9 +99,47 @@ async def create_test_db_entities():
 
 
                 print("Create test user...")
-                user = User(alias="test", callable_name="Soohyun Yoo", sign_language=SignLanguageType.ASL, passcode="12345")
-                project = Project(song=song, user=user)
+                user = User(alias="test", callable_name="Sue Yoo", sign_language=SignLanguageType.ASL, passcode="12345")
+                project = Project(song=song, 
+                                  user=user,
+                                  user_settings={
+                                    "MainAudience": "Deaf",
+                                    "AgeGroup": "Adult",
+                                    "MainLanguage": "ASL",
+                                    "LanguageLevel": "Moderate",
+                                    "SpeedOfSigning": "Moderate",
+                                    "EmotionalLevel": "Moderate",
+                                    "UseOfBodyLanguage": "Moderate",
+                                    "UseOfClassifiers": "Moderate"
+                                     }
+                    )
                 
                 db.add(user)
                 db.add(project)
                 await db.commit()
+
+
+
+  # Function to insert the first inference result into the database
+async def insert_inference1_result(session: AsyncSession, line_id: str, challenges: list, description: str):
+      inference_result = Inference1Result(
+          line_id=line_id,
+          challenges=challenges,
+          description=description
+      )
+      session.add(inference_result)
+      await session.commit()
+
+async def insert_combined_result(session: AsyncSession, line_id: str, gloss: str, gloss_description: str, mood: str, facial_expression: str, body_gesture: str, emotion_description: str, gloss_options_with_description: list[GlossDescription]):
+    combined_result = Inference234Result(
+        line_id=line_id,
+        gloss=gloss,
+        gloss_description=gloss_description,
+        mood=mood,
+        facial_expression=facial_expression,
+        body_gesture=body_gesture,
+        emotion_description=emotion_description,
+        gloss_options_with_description=gloss_options_with_description
+    )
+    session.add(combined_result)
+    await session.commit()
