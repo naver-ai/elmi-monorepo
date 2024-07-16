@@ -3,6 +3,7 @@ import { LyricLine, ProjectInfo, Song, Verse } from "../../model-types"
 import { PayloadAction } from '@reduxjs/toolkit'
 import { AppState, AppThunk } from "../../redux/store"
 import { Http } from "../../net/http"
+import { MediaPlayer } from "../media-player/reducer"
 
 
 
@@ -79,12 +80,16 @@ export const selectLineIdsByVerseId = createSelector([lineSelectors.selectAll, (
 
 export function fetchProjectSong(projectId: string): AppThunk {
     return async (dispatch, getState) => {
-        const state = getState()
+        let state = getState()
         if(state.auth.token){
             dispatch(signingEditorSlice.actions.setProjectLoadingFlag(true))
             try{
                 const resp = await Http.axios.get(Http.getTemplateEndpoint(Http.ENDPOINT_APP_PROJECTS_ID, {project_id: projectId}), {headers: await Http.getSignedInHeaders(state.auth.token!)})
                 dispatch(signingEditorSlice.actions.mountProjectInfo(resp.data))
+
+                // Mount song
+                state = getState()
+                await MediaPlayer.mountSong(state.editor.song!.id, lineSelectors.selectAll(state))(dispatch, getState, null)
             }catch(ex){
                 console.log(ex)
             }finally{

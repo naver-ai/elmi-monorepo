@@ -41,5 +41,5 @@ body{
 }
 
 .panel-title{
-    @apply font-semibold text-[1rem];
+    @apply font-light text-gray-500 text-[1rem];
 }

@@ -8,6 +8,7 @@ import { useCallback, useEffect } from "react"
 import { fetchProjectSong } from "../reducer"
 import { LyricsView } from "../components/LyricsView"
 import { LyricDetailPanel } from "../components/LyricDetailPanel"
+import { MediaPlayer } from "../../media-player/reducer"
 
 const HeaderLeftContent = () => {
 
@@ -38,6 +39,10 @@ export const SigningEditorPage = () => {
 
     useEffect(()=>{
         dispatch(fetchProjectSong(projectId))
+
+        return () => {
+            dispatch(MediaPlayer.dispose())
+        }
     }, [projectId])
 
     return <SignedInScreenFrame headerContent={<HeaderLeftContent/>}>

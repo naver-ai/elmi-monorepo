@@ -47,9 +47,6 @@ export interface LyricLine extends TimestampRange{
     lyric: string
     tokens: Array<string>
     timestamps: Array<TimestampRange>
-
-    start: number
-    end: number
 }
 
 export interface Project extends ProjectInfo {

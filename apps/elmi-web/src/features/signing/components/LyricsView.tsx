@@ -1,7 +1,8 @@
 import { Input, Skeleton } from "antd"
 import { useDispatch, useSelector } from "../../../redux/hooks"
 import { lineSelectors, selectLineIdsByVerseId, setDetailLineId, toggleDetailLineId, verseSelectors } from "../reducer"
-import { FocusEventHandler, Fragment, MouseEventHandler, useCallback } from "react"
+import { FocusEventHandler, Fragment, MouseEventHandler, useCallback, useEffect } from "react"
+import { MediaPlayer } from "../../media-player/reducer"
 
 export const LyricLineView = (props: {lineId: string}) => {
     const line = useSelector(state => lineSelectors.selectById(state, props.lineId))
@@ -12,6 +13,12 @@ export const LyricLineView = (props: {lineId: string}) => {
     const isSelected = detailLineId == props.lineId
 
     const dispatch = useDispatch()
+
+    useEffect(()=>{
+        if(isSelected){
+            dispatch(MediaPlayer.playLineLoop(props.lineId))
+        }
+    }, [isSelected, props.lineId])
 
     const onClick = useCallback<MouseEventHandler<HTMLDivElement>>((ev)=>{
         if(line?.id != null){

@@ -64,7 +64,7 @@ async def get_audio(song_id: str,
                 await db.commit()
                 await db.refresh(cache)
                 
-            seg.export(cache.get_trimmed_file_path(), format="mp3")
+            seg.export(cache.get_trimmed_file_path(), format="audio/mp3")
             
             return FileResponse(cache.get_trimmed_file_path(), media_type="audio/mp3")
 
