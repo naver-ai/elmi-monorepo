@@ -76,6 +76,14 @@
         "command": "poetry run python backend/test_lyric_sync.py",
         "cwd": "apps/backend"
       }
+    },
+
+    "test_langchain": {
+      "executor": "@nxlv/python:run-commands",
+      "options": {
+        "command": "poetry run python backend/langchain_inference_features_db.py",
+        "cwd": "apps/backend"
+      }
     }
   },
   "tags": []

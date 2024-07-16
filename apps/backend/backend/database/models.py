@@ -87,6 +87,7 @@ class Line(SQLModel, LineInfo, table=True):
     __table_args__ = (UniqueConstraint("verse_id", "line_number", name="line_number_uniq_by_verse_idx"), )
 
     verse: Verse = Relationship(back_populates='lines')
+    inference1_results: list["Inference1Result"] = Relationship(back_populates="line")
 
 
 class SharableUserInfo(IdTimestampMixin):
@@ -113,6 +114,8 @@ class Project(SQLModel, IdTimestampMixin, UserIdMixin, SongIdMixin, table=True):
         sa_type=DateTime(timezone=True)
     )
 
+    user_settings: Optional[dict] = Field(sa_column=Column(JSON, nullable=True))
+
     user: User | None = Relationship(back_populates="projects", sa_relationship_kwargs={'lazy': 'selectin'})
     song: Song = Relationship(back_populates='projects', sa_relationship_kwargs={'lazy': 'selectin'}) 
 
@@ -136,3 +139,27 @@ class TrimmedMedia(SQLModel, IdTimestampMixin, SongIdMixin, table=True):
     
     def trimmed_file_exists(self)->bool:
         return path.exists(self.get_trimmed_file_path())
+
+
+class Inference1Result(SQLModel, table=True):
+    id: str = Field(default_factory=generate_id, primary_key=True)
+    line_id: str = Field(foreign_key="line.id")
+    challenges: list[str] = Field(sa_column=Column(JSON), default=[])
+    description: Optional[str] = None
+
+    line: Optional["Line"] = Relationship(back_populates="inference1_results")
+
+class GlossDescription(BaseModel):
+    gloss: str
+    description: str
+
+class Inference234Result(SQLModel, table=True):
+    id: str = Field(default_factory=generate, primary_key=True)
+    line_id: str = Field(foreign_key="line.id", nullable=False)
+    gloss:  str = Field(nullable=False)
+    gloss_description: str = Field(nullable=True)
+    mood: str = Field(nullable=True)
+    facial_expression: str = Field(nullable=True)
+    body_gesture: str = Field(nullable=True)
+    emotion_description: str = Field(nullable=True)
+    gloss_options_with_description: list[GlossDescription] = Field(sa_column=Column(JSON, nullable=True))
