@@ -27,7 +27,7 @@ const UserProfile = () => {
     }, [])
 
     return <Dropdown menu={menuData}>
-        <Button size="small" type="default" className="bg-transparent text-gray-600 font-semibold">{userName}</Button>
+        <Button size="small" type="default" className="bg-transparent text-gray-600 ">{userName}</Button>
     </Dropdown>
 }
 
@@ -36,12 +36,13 @@ export const SignedInScreenFrame = (props: {
     children?: any
 }) => {
 
-    return <div className="h-[100vh] max-h-[100vh] overflow-y-scroll">
-        <header className={`z-[1] bg-white/30 backdrop-blur-md shadow-sm h-10 p-0 pr-3 flex flex-row justify-between items-center fixed left-0 right-0`}>
+    return <div className="h-[100vh] max-h-[100vh]">
+        <header className={`z-[1] bg-white shadow-sm h-10 p-0 pr-3 flex flex-row justify-between items-center fixed left-0 right-0`}>
             {props.headerContent ? props.headerContent : <div className="text-lg pl-3 font-black text-slate-600">ELMI</div>}
             <UserProfile />
+            <div className="bg-gradient-to-r from-amber-500 to-pink-500 h-[2px] absolute bottom-0 left-0 right-0 block"/>
         </header>
-        <div className="pt-10">
+        <div className="pt-10 h-[100vh]">
             {props.children}
         </div>
     </div>

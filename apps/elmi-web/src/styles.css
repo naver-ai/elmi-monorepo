@@ -9,8 +9,12 @@
 /* You can add global styles to this file, and also import other style files */
 
 body{
-    font-family: "Lato", sans-serif;
     @apply bg-systembg text-gray-700;
+}
+
+.ant-layout{
+    font-family: "Lato", sans-serif !important;
+    @apply text-[1rem];
 }
 
 .animated-background{
@@ -34,4 +38,8 @@ body{
 
 .lyric-panel-layout{
     @apply container lg:w-[50vw] lg:max-w-[600px] mx-auto;
+}
+
+.panel-title{
+    @apply font-semibold text-[1rem];
 }

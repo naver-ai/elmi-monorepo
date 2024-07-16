@@ -18,7 +18,7 @@ export interface SigningEditorState {
     isProjectLoading: boolean
     verseEntityState: typeof initial_verse_entity_state,
     lineEntityState: typeof initial_line_entity_state,
-    detailVerseId?: string | undefined
+    detailLineId?: string | undefined
 }
 
 const INITIAL_STATE: SigningEditorState = {
@@ -27,7 +27,7 @@ const INITIAL_STATE: SigningEditorState = {
     isProjectLoading: false,
     verseEntityState: initial_verse_entity_state,
     lineEntityState: initial_line_entity_state,
-    detailVerseId: undefined
+    detailLineId: undefined
 }
 
 interface ProjectDetail{
@@ -55,17 +55,17 @@ const signingEditorSlice = createSlice({
             state.isProjectLoading = action.payload
         },
 
-        setDetailVerseId: (state, action: PayloadAction<string | undefined>) => {
-            state.detailVerseId = action.payload
+        setDetailLineId: (state, action: PayloadAction<string | undefined>) => {
+            state.detailLineId = action.payload
         },
 
-        toggleDetailVerseId: (state, action: PayloadAction<string>) => {
-            if(state.detailVerseId == null){
-                state.detailVerseId = action.payload
-            }else if (state.detailVerseId != action.payload){
-                state.detailVerseId = action.payload
+        toggleDetailLineId: (state, action: PayloadAction<string>) => {
+            if(state.detailLineId == null){
+                state.detailLineId = action.payload
+            }else if (state.detailLineId != action.payload){
+                state.detailLineId = action.payload
             }else{
-                state.detailVerseId = undefined
+                state.detailLineId = undefined
             }
         }
     }
@@ -94,6 +94,6 @@ export function fetchProjectSong(projectId: string): AppThunk {
     }
 }
 
-export const { setDetailVerseId, toggleDetailVerseId } = signingEditorSlice.actions
+export const { setDetailLineId, toggleDetailLineId } = signingEditorSlice.actions
 
 export default signingEditorSlice.reducer

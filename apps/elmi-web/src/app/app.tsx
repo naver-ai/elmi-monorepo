@@ -18,7 +18,11 @@ const theme: ThemeConfig = {
         Input: {
             colorPrimary: '#ff583e',
             algorithm: true
-        }
+        },
+        Layout: {
+            colorBgLayout: 'transparent',
+            siderBg: 'white'      
+        },
     }
 }
 
