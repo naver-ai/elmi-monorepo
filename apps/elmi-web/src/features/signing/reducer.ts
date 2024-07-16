@@ -17,7 +17,8 @@ export interface SigningEditorState {
     song?: Song
     isProjectLoading: boolean
     verseEntityState: typeof initial_verse_entity_state,
-    lineEntityState: typeof initial_line_entity_state
+    lineEntityState: typeof initial_line_entity_state,
+    detailVerseId?: string | undefined
 }
 
 const INITIAL_STATE: SigningEditorState = {
@@ -25,7 +26,8 @@ const INITIAL_STATE: SigningEditorState = {
     song: undefined,
     isProjectLoading: false,
     verseEntityState: initial_verse_entity_state,
-    lineEntityState: initial_line_entity_state
+    lineEntityState: initial_line_entity_state,
+    detailVerseId: undefined
 }
 
 interface ProjectDetail{
@@ -51,6 +53,20 @@ const signingEditorSlice = createSlice({
         },
         setProjectLoadingFlag: (state, action: PayloadAction<boolean>) => {
             state.isProjectLoading = action.payload
+        },
+
+        setDetailVerseId: (state, action: PayloadAction<string | undefined>) => {
+            state.detailVerseId = action.payload
+        },
+
+        toggleDetailVerseId: (state, action: PayloadAction<string>) => {
+            if(state.detailVerseId == null){
+                state.detailVerseId = action.payload
+            }else if (state.detailVerseId != action.payload){
+                state.detailVerseId = action.payload
+            }else{
+                state.detailVerseId = undefined
+            }
         }
     }
 })
@@ -77,5 +93,7 @@ export function fetchProjectSong(projectId: string): AppThunk {
         }
     }
 }
+
+export const { setDetailVerseId, toggleDetailVerseId } = signingEditorSlice.actions
 
 export default signingEditorSlice.reducer

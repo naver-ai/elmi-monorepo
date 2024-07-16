@@ -19,7 +19,11 @@ export class Http{
 
 
     static ENDPOINT_APP_MEDIA = `${this.ENDPOINT_APP}/media`
-    static ENDPOINT_APP_MEDIA_COVER = `${this.ENDPOINT_APP_MEDIA}/cover_image/{song_id}`
+    static ENDPOINT_APP_MEDIA_SONGS = `${this.ENDPOINT_APP_MEDIA}/songs`
+
+    static ENDPOINT_APP_MEDIA_SONGS_ID = `${this.ENDPOINT_APP_MEDIA_SONGS}/{song_id}`
+    static ENDPOINT_APP_MEDIA_SONGS_ID_COVER = `${this.ENDPOINT_APP_MEDIA_SONGS_ID}/cover_image`
+    static ENDPOINT_APP_MEDIA_SONGS_ID_AUDIO = `${this.ENDPOINT_APP_MEDIA_SONGS_ID}/audio`
     
 
     
