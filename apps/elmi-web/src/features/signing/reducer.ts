@@ -42,6 +42,7 @@ const signingEditorSlice = createSlice({
     reducers: {
         initialize:()=>INITIAL_STATE,
         mountProjectInfo: (state, action: PayloadAction<ProjectDetail>) => {
+            console.log(action.payload)
             state.isProjectLoading = false
             state.projectId = action.payload.id
             state.song = action.payload.song

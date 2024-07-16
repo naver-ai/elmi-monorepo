@@ -4,10 +4,11 @@ from os import path
 from typing import Optional
 from pydantic import BaseModel
 from sqlalchemy import DateTime, func
-from sqlmodel import Relationship, SQLModel, Field, UniqueConstraint
+from sqlmodel import Relationship, SQLModel, Field, UniqueConstraint, Column, JSON
 from nanoid import generate
 
 from backend.config import ElmiConfig
+from backend.utils.lyric_data_types import SyncedTimestamps
 
 def generate_id() -> str:
     return generate()
@@ -59,8 +60,8 @@ class SongIdMixin(BaseModel):
     song_id: str = Field(foreign_key=f"{Song.__tablename__}.id")
 
 class TimestampRangeMixin(BaseModel):
-    matched_timestamp_start: Optional[int] = Field(ge=0, default=None)
-    matched_timestamp_end: Optional[int] = Field(ge=0, default=None)
+    start_millis: Optional[int] = Field(ge=0, default=None)
+    end_millis: Optional[int] = Field(ge=0, default=None)
 
 class VerseInfo(IdTimestampMixin, SongIdMixin, TimestampRangeMixin):
     title: Optional[str] = Field(nullable=True)
@@ -77,6 +78,8 @@ class VerseIdMixin(BaseModel):
 class LineInfo(IdTimestampMixin, VerseIdMixin, SongIdMixin, TimestampRangeMixin):
     line_number: int = Field(nullable=False)
     lyric: str = Field(nullable=False)
+    tokens: list[str] = Field(sa_column=Column(JSON), default=[])
+    timestamps: list[TimestampRangeMixin] = Field(sa_column=Column(JSON), default=[])
 
 class Line(SQLModel, LineInfo, table=True):
     __table_args__ = (UniqueConstraint("verse_id", "line_number", name="line_number_uniq_by_verse_idx"), )
