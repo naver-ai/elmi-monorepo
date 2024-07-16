@@ -13,6 +13,12 @@ import './app.css'
 const theme: ThemeConfig = {
     token: {
         colorPrimary: "#303030",
+    },
+    components: {
+        Input: {
+            colorPrimary: '#ff583e',
+            algorithm: true
+        }
     }
 }
 

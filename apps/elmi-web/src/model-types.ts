@@ -27,23 +27,26 @@ export interface Song {
     cover_image_stored: boolean
 }
 
-export interface Verse{
+export interface TimestampRange{
+    start_millis: number
+    end_millis: number
+}
+
+export interface Verse extends TimestampRange{
     id: string
     song_id: string
     title?: string
     verse_ordering: number
-    start: number
-    end: number
 }
 
-export interface LyricLine{
+export interface LyricLine extends TimestampRange{
     id: string
     verse_id: string
     song_id: string
     line_number: number
     lyric: string
     tokens: Array<string>
-    timestamps: Array<{start: number, end: number}>
+    timestamps: Array<TimestampRange>
 
     start: number
     end: number

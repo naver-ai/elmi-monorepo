@@ -8,6 +8,7 @@ import { useNavigate } from "react-router-dom"
 import { useCallback, useEffect } from "react"
 import { fetchProjectSong } from "../reducer"
 import { LyricLineView, LyricsView } from "../components/LyricsView"
+import ReactPlayer from 'react-player/youtube'
 
 const HeaderLeftContent = () => {
 
@@ -41,6 +42,11 @@ export const SigningEditorPage = () => {
     }, [projectId])
 
     return <SignedInScreenFrame headerContent={<HeaderLeftContent/>}>
-        <LyricsView className="mt-10"/>
+        <LyricsView className="mt-10 mb-16 pb-10"/>
+        <div className="fixed bottom-0 left-0 right-0 h-16 bg-pink-950/30 backdrop-blur-md">
+            <div className="lyric-panel-layout bg-black block h-full">
+                Footer player content
+            </div>
+        </div>
     </SignedInScreenFrame>
 }
