@@ -40,6 +40,8 @@ class Song(SQLModel, SongInfo, table=True):
     audio_filename: Optional[str] = Field(nullable=True)
     projects: list['Project'] = Relationship(back_populates="song", sa_relationship_kwargs={'lazy': 'selectin'})
     verses: list['Verse'] = Relationship(back_populates="song", sa_relationship_kwargs={'lazy': 'selectin'})
+    trimmed_media: list['TrimmedMedia'] = Relationship(back_populates="song", sa_relationship_kwargs={'lazy': 'selectin'})
+    
 
     def get_audio_file_path(self)->str:
         return path.join(ElmiConfig.get_song_dir(self.id), self.audio_filename)
@@ -116,3 +118,21 @@ class Project(SQLModel, IdTimestampMixin, UserIdMixin, SongIdMixin, table=True):
 
 class ProjectIdMixin(BaseModel):
     project_id: str = Field(foreign_key=f"{Project.__tablename__}.id")
+
+class MediaType(StrEnum):
+    Video="video"
+    Audio="audio"
+
+class TrimmedMedia(SQLModel, IdTimestampMixin, SongIdMixin, table=True):
+    trimmed_filename: str = Field(nullable=False)
+    type: MediaType = Field(nullable=False)
+    start_millis: Optional[int] = Field(nullable=True, default=None)
+    end_millis: Optional[int] = Field(nullable=True, default=None)
+
+    song: Song = Relationship(back_populates='trimmed_media', sa_relationship_kwargs={'lazy': 'selectin'}) 
+
+    def get_trimmed_file_path(self)->str:
+        return path.join(ElmiConfig.get_song_cache_dir(self.id), self.trimmed_filename)
+    
+    def trimmed_file_exists(self)->bool:
+        return path.exists(self.get_trimmed_file_path())

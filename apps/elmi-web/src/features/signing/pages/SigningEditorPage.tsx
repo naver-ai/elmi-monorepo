@@ -8,7 +8,6 @@ import { useNavigate } from "react-router-dom"
 import { useCallback, useEffect } from "react"
 import { fetchProjectSong } from "../reducer"
 import { LyricLineView, LyricsView } from "../components/LyricsView"
-import ReactPlayer from 'react-player/youtube'
 
 const HeaderLeftContent = () => {
 

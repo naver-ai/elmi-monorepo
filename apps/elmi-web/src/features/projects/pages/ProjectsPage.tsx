@@ -12,7 +12,7 @@ const ProjectCard = (props: {id: string}) => {
 
     const coverUrl = useMemo(()=>{
         if(project?.song_id != null){
-            return Http.getTemplateEndpoint(Http.ENDPOINT_APP_MEDIA_COVER, {song_id: project.song_id})
+            return Http.getTemplateEndpoint(Http.ENDPOINT_APP_MEDIA_SONGS_ID_COVER, {song_id: project.song_id})
         }else return undefined
     }, [project])
 
