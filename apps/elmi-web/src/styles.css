@@ -52,3 +52,7 @@ body{
 .point-gradient-bg-light{
     @apply bg-gradient-to-br to-[#ff9f7a] from-[#ec4848]
 }
+
+.global-player-control-wrapper{
+    @apply w-24 bg-white/10 rounded-full;
+}

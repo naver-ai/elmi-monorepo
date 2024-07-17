@@ -19,7 +19,7 @@ export interface SigningEditorState {
     isProjectLoading: boolean
     verseEntityState: typeof initial_verse_entity_state,
     lineEntityState: typeof initial_line_entity_state,
-    detailLineId?: string | undefined
+    detailLineId?: string | undefined,
 }
 
 const INITIAL_STATE: SigningEditorState = {
@@ -28,7 +28,7 @@ const INITIAL_STATE: SigningEditorState = {
     isProjectLoading: false,
     verseEntityState: initial_verse_entity_state,
     lineEntityState: initial_line_entity_state,
-    detailLineId: undefined
+    detailLineId: undefined,
 }
 
 interface ProjectDetail{
@@ -45,7 +45,6 @@ const signingEditorSlice = createSlice({
     reducers: {
         initialize:()=>INITIAL_STATE,
         mountProjectInfo: (state, action: PayloadAction<ProjectDetail>) => {
-            console.log(action.payload)
             state.isProjectLoading = false
             state.projectId = action.payload.id
             state.song = action.payload.song
@@ -74,8 +73,13 @@ const signingEditorSlice = createSlice({
 
 export const verseSelectors = verseEntityAdapter.getSelectors((state: AppState) => state.editor.verseEntityState)
 export const lineSelectors = lineEntityAdapter.getSelectors((state: AppState) => state.editor.lineEntityState)
-export const selectLineIdsByVerseId = createSelector([lineSelectors.selectAll, (state: AppState, verseId: string) => verseId], (lines, verseId) => {
-    return lines.filter(line => line.verse_id == verseId).map(line => line.id)
+
+export const selectLinesByVerseId = createSelector([lineSelectors.selectAll, (state: AppState, verseId: string) => verseId], (lines, verseId) => {
+    return lines.filter(line => line.verse_id == verseId)
+})
+
+export const selectLineIdsByVerseId = createSelector([(state: AppState, verseId: string) => selectLinesByVerseId(state, verseId)], (lines) => {
+    return lines.map(line => line.id)
 })
 
 export function fetchProjectSong(projectId: string): AppThunk {
@@ -89,7 +93,7 @@ export function fetchProjectSong(projectId: string): AppThunk {
 
                 // Mount song
                 state = getState()
-                await MediaPlayer.mountSong(state.editor.song!.id, lineSelectors.selectAll(state))(dispatch, getState, null)
+                await MediaPlayer.mountSong(state.editor.song!.id)(dispatch, getState, null)
             }catch(ex){
                 console.log(ex)
             }finally{

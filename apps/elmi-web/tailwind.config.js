@@ -13,7 +13,8 @@ module.exports = {
   theme: {
     extend: {
       colors: {
-        "systembg": "#e8e9ee"
+        "systembg": "#e8e9ee",
+        "audiopanelbg": "#050505"
       }
     },
   },
