@@ -1,6 +1,6 @@
-import { PayloadAction, createSlice, current } from '@reduxjs/toolkit';
+import { PayloadAction, createSelector, createSlice, current } from '@reduxjs/toolkit';
 import { MediaPlayerStatus } from './types';
-import { AppThunk } from '../../redux/store';
+import { AppState, AppThunk } from '../../redux/store';
 import { Howl, Howler, SoundSpriteDefinitions } from 'howler';
 import { LyricLine, TimestampRange } from '../../model-types';
 import { Http } from '../../net/http';
@@ -9,13 +9,15 @@ import { lineSelectors } from '../signing/reducer';
 export interface MediaPlayerState {
   mountedSongId?: string | undefined;
   status: MediaPlayerStatus;
-  linePlayInfo: TimestampRange & {lineId: string} | undefined
+  linePlayInfo: TimestampRange & {lineId: string} | undefined,
+  audioPositionMillis?: number | undefined
 }
 
 const INITIAL_STATE: MediaPlayerState = {
   mountedSongId: undefined,
   status: MediaPlayerStatus.Initial,
-  linePlayInfo: undefined
+  linePlayInfo: undefined,
+  audioPositionMillis: undefined
 };
 
 const mediaPlayerSlice = createSlice({
@@ -46,17 +48,28 @@ const mediaPlayerSlice = createSlice({
 
     _exitLinePlayMode: (state) => {
         state.linePlayInfo = undefined
+    },
+
+    _setAudioPositionMillis: (state, action: PayloadAction<number>) => {
+      state.audioPositionMillis = action.payload
     }
   },
 });
 
 export default mediaPlayerSlice.reducer;
 
+export const mountedLindIdSelector = createSelector([(state: AppState) => state.mediaPlayer.linePlayInfo], (playInfo) => playInfo?.lineId)
+
 export namespace MediaPlayer {
   let lineHowl: Howl | undefined = undefined;
   let wholeHowl: Howl | undefined = undefined;
 
-  async function createHowl(src:string, sprite?: SoundSpriteDefinitions | undefined): Promise<Howl> {
+  async function createHowl(src:string, 
+      sprite?: SoundSpriteDefinitions | undefined,
+      onStop?: () => void,
+      onPlay?: (howl: Howl) => void,
+      onPause?: (howl: Howl) => void
+    ): Promise<Howl> {
     return new Promise((resolve, reject) => {
         const howl = new Howl({
             src,
@@ -69,6 +82,13 @@ export namespace MediaPlayer {
             onloaderror: (id, error) => {
               reject(error)
             },
+            onstop: onStop,
+            onplay: () => {
+              onPlay?.(howl)
+            },
+            onpause: () => {
+              onPause?.(howl)
+            }
           });
     })
   }
@@ -77,6 +97,9 @@ export namespace MediaPlayer {
     return async (dispatch, getState) => {
       const state = getState();
       lineHowl?.unload();
+      lineHowl = undefined
+      wholeHowl?.unload();
+      wholeHowl = undefined
 
       dispatch(
         mediaPlayerSlice.actions._setStatus(MediaPlayerStatus.LoadingMedia)
@@ -95,14 +118,39 @@ export namespace MediaPlayer {
 
         const currentSongObjectURL = URL.createObjectURL(resp.data);
 
-        [lineHowl, wholeHowl] = await Promise.all([createHowl(currentSongObjectURL, lines.reduce((prev: { [key: string]: any }, line) => {
+        const onStop = () => {
+        }
+
+        const onPlay = (howl: Howl) => {
+          let intervalRef: any | undefined = undefined
+
+          dispatch(mediaPlayerSlice.actions._setStatus(MediaPlayerStatus.Playing))
+
+          intervalRef = setInterval(()=>{
+            if(howl.playing()){
+              dispatch(mediaPlayerSlice.actions._setAudioPositionMillis(Math.round(howl.seek() * 1000)))
+            }else{
+              if(intervalRef != null){
+                clearInterval(intervalRef)
+              }
+            }
+          }, 30)
+        }
+
+        const onPause = (howl: Howl) => {
+          dispatch(mediaPlayerSlice.actions._setStatus(MediaPlayerStatus.Paused))
+        }
+
+        [lineHowl, wholeHowl] = await Promise.all([
+          createHowl(currentSongObjectURL, lines.reduce((prev: { [key: string]: any }, line) => {
             prev[line.id] = [
               line.start_millis,
               line.end_millis - line.start_millis,
               true,
             ];
             return prev;
-          }, {})), createHowl(currentSongObjectURL)])
+          }, {}), onStop, onPlay, onPause),
+          createHowl(currentSongObjectURL, undefined, onStop, onPause)])
           dispatch(mediaPlayerSlice.actions._setStatus(MediaPlayerStatus.Standby))
 
       } catch (ex) {
@@ -127,6 +175,14 @@ export namespace MediaPlayer {
     };
   }
 
+  export function pauseLindLoop(): AppThunk {
+    return async (dispatch, getState) => {
+      if(lineHowl?.playing() == true){
+        lineHowl?.pause()
+      }
+   };
+  }
+
   export function stopAllMedia(): AppThunk {
     return async (dispatch, getState) => {
       Howler.stop();
@@ -140,6 +196,8 @@ export namespace MediaPlayer {
       Howler.stop();
       lineHowl?.unload()
       wholeHowl?.unload()
+      lineHowl = undefined
+      wholeHowl = undefined
       dispatch(mediaPlayerSlice.actions._initialize());
     };
   }

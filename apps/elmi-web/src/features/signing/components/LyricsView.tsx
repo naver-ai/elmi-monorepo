@@ -1,12 +1,28 @@
-import { Input, Skeleton } from "antd"
+import { Button, Input, Skeleton } from "antd"
 import { useDispatch, useSelector } from "../../../redux/hooks"
 import { lineSelectors, selectLineIdsByVerseId, setDetailLineId, toggleDetailLineId, verseSelectors } from "../reducer"
-import { FocusEventHandler, Fragment, MouseEventHandler, useCallback, useEffect } from "react"
-import { MediaPlayer } from "../../media-player/reducer"
+import { FocusEventHandler, Fragment, MouseEventHandler, useCallback, useEffect, useMemo } from "react"
+import { MediaPlayer, mountedLindIdSelector } from "../../media-player/reducer"
+import { MediaPlayerStatus } from "../../media-player/types"
+import { LyricLine, TimestampRange } from "apps/elmi-web/src/model-types"
 
-export const LyricLineView = (props: {lineId: string}) => {
+const LyricToken = (props: {
+    text: string
+    enableHighlighting: boolean,
+    className?: string
+} & TimestampRange) => {
+
+    const audioPosition = useSelector(state => state.mediaPlayer.audioPositionMillis)
+    const isActive = useMemo(()=>{
+        return props.enableHighlighting && audioPosition != null && audioPosition < props.end_millis && audioPosition >= props.start_millis
+    }, [props.enableHighlighting, audioPosition, props.end_millis, props.start_millis])
+    return <><span className={`transition-all rounded-sm ${isActive === true ? "outline-amber-200 outline-[2px] outline outline-offset-[3px] bg-white/20":""} ${props.className}`}>{props.text}</span>
+        {!props.text.endsWith("-") ? " " : ""}
+        </>
+}
+
+const LyricLineView = (props: {lineId: string}) => {
     const line = useSelector(state => lineSelectors.selectById(state, props.lineId))
-
 
     const detailLineId = useSelector(state => state.editor.detailLineId)
 
@@ -41,13 +57,25 @@ export const LyricLineView = (props: {lineId: string}) => {
         }
     }, [line?.id])
 
-    return <div className={`my-1 mb-4 last:mb-0 p-1 rounded-lg hover:bg-orange-400/20 ${isSelected ? 'bg-orange-400/30':''}`}>
+    const mediaPlayerStatus = useSelector(state => state.mediaPlayer.status)
+    const isAudioPlaying = mediaPlayerStatus == MediaPlayerStatus.Playing
+    const mediaPlayerMountedLindId = useSelector(mountedLindIdSelector)
+
+    const onClickPause = useCallback<MouseEventHandler<HTMLDivElement>>((ev)=>{
+        ev.preventDefault()
+    }, [])
+
+
+    return <div className={`mb-3 last:mb-0 p-1.5 rounded-lg hover:bg-orange-400/20 ${isSelected ? 'point-gradient-bg-light':''}`}>
         {
             line == null ? <Skeleton title={false} active/> : <>
-            <div className={`mb-1 pl-1 cursor-pointer transition-colors`} onClick={onClick}>
+            <div className={`mb-1 pl-1 cursor-pointer transition-colors flex items-baseline`} onClick={onClick}>
+                <div className="flex-1">
                 {
-                    line.tokens.map((tok, i) => <Fragment key={i}><span>{tok}</span>{!tok.endsWith("-") ? " " : ""}</Fragment>)
+                    line.tokens.map((tok, i) => <LyricToken key={i} text={tok} enableHighlighting={isSelected && isAudioPlaying === true} {...line.timestamps[i]} className={isSelected ? "text-white" : undefined}/>)
                 }
+                </div>
+                {false && <Button onClick={onClickPause} tabIndex={-1}>Pause</Button>}
             </div>
             <Input className="interactive rounded-md" 
                 onClickCapture={onClickInput}

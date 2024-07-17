@@ -40,7 +40,7 @@ export const SignedInScreenFrame = (props: {
         <header className={`z-[1] bg-white shadow-sm h-10 p-0 pr-3 flex flex-row justify-between items-center fixed left-0 right-0`}>
             {props.headerContent ? props.headerContent : <div className="text-lg pl-3 font-black text-slate-600">ELMI</div>}
             <UserProfile />
-            <div className="bg-gradient-to-r from-amber-500 to-pink-500 h-[2px] absolute bottom-0 left-0 right-0 block"/>
+            <div className="point-gradient-bg h-[2px] absolute bottom-0 left-0 right-0 block"/>
         </header>
         <div className="pt-10 h-[100vh]">
             {props.children}

@@ -43,3 +43,12 @@ body{
 .panel-title{
     @apply font-light text-gray-500 text-[1rem];
 }
+
+.point-gradient-bg{
+    @apply bg-gradient-to-r from-amber-500 to-pink-500
+}
+
+
+.point-gradient-bg-light{
+    @apply bg-gradient-to-br to-[#ff9f7a] from-[#ec4848]
+}
