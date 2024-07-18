@@ -2,7 +2,6 @@ import { MinusIcon, PauseIcon, PlayIcon, PlusIcon } from "@heroicons/react/20/so
 import { Button, Slider, Tooltip } from "antd"
 import { MediaPlayer } from "../../media-player/reducer"
 import { MouseEventHandler, useCallback, useEffect, useMemo, useState } from "react"
-import { useDebouncedCallback } from "use-debounce"
 import { useThrottleCallback } from "@react-hook/throttle"
 import { useDispatch, useSelector } from "../../../redux/hooks"
 import { useResizeDetector } from "react-resize-detector"
@@ -19,6 +18,21 @@ const SVG_HEIGHT = TIMELINE_HEIGHT + 2 * TIMELINE_PADDING
 const TIMELINE_INDICATOR_WIDTH = 1.5
 
 const TIMELINE_GLOBAL_TRANSFORM = `translate(${TIMELINE_PADDING},${TIMELINE_PADDING})`
+
+const Waveform = (props:{width: number}) => {
+
+    const samples = useSelector(state => state.mediaPlayer.songSamples)
+
+    return samples != null ? <g className="pointer-events-none">
+                    {
+                        samples.map((s,i) => {
+                            const normalizedHeight = TIMELINE_HEIGHT * Math.abs(s)
+                            const x = (i/samples.length) * props.width
+                            return <line key={i} strokeWidth={1} strokeLinecap="round" className="stroke-gray-500" x1={x} x2={x} y1={(TIMELINE_HEIGHT - normalizedHeight)/2} y2={TIMELINE_HEIGHT - (TIMELINE_HEIGHT - normalizedHeight)/2}/>
+                        })
+                    }
+                </g> : null
+}
 
 const SongTimelineView = (props:{
     width: number,
@@ -102,11 +116,12 @@ const SongTimelineView = (props:{
                 className={`${highlightedLineInfo != null ? "fill-black" : "fill-slate-700"}`}
                 onClick={onTimelineClick}
                 />
+            <Waveform width={props.width}/>
             {
                 highlightedLineInfo != null ? <rect className="fill-pink-200/40 pointer-events-none" rx={2} x={highlightedLineX} width={highlightedLineWidth} height={TIMELINE_HEIGHT}/> : null
             }
             {
-                progressX != null ? <line x1={progressX} x2={progressX} shapeRendering="geometricPrecision" strokeWidth={TIMELINE_INDICATOR_WIDTH} y1={0} y2={TIMELINE_HEIGHT} stroke={"white"}/> : null
+                progressX != null ? <line className="pointer-events-none" x1={progressX} x2={progressX} shapeRendering="geometricPrecision" strokeWidth={TIMELINE_INDICATOR_WIDTH} y1={0} y2={TIMELINE_HEIGHT} stroke={"white"}/> : null
             }
             
         </g>

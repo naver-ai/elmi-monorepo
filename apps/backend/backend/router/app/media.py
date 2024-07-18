@@ -12,6 +12,7 @@ from backend.database.models import MediaType, Song, TrimmedMedia
 from backend.errors import ErrorType
 from backend.router.app.common import get_signed_in_user
 from os import path
+import numpy as np
 
 router = APIRouter()
 
@@ -70,3 +71,15 @@ async def get_audio(song_id: str,
 
     else:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=ErrorType.ItemNotFound)
+
+@router.get("/songs/{song_id}/audio/samples", dependencies=[Depends(get_signed_in_user)], response_model=list[float])
+async def get_audio(song_id: str, db: Annotated[AsyncSession, Depends(with_db_session)]):
+    song = await db.get(Song, song_id)
+    if song is not None and song.audio_file_exists():
+        seg: AudioSegment = AudioSegment.from_mp3(song.get_audio_file_path())
+        samples = seg.get_array_of_samples()[::int(seg.frame_count()/100)]
+        max_val = np.max(np.abs(samples))
+        normalized_samples = samples/max_val
+
+        print(normalized_samples)
+        return normalized_samples

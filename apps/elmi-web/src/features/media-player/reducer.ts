@@ -24,6 +24,7 @@ export interface MediaPlayerState {
     songDurationMillis?: number;
     linePlayInfo: (TimestampRange & { lineId: string }) | undefined;
     hitLyricTokenInfo: {lineId: string, index: number} | undefined;
+    songSamples?: Array<number>
 }
 
 const INITIAL_STATE: MediaPlayerState = {
@@ -32,6 +33,7 @@ const INITIAL_STATE: MediaPlayerState = {
     linePlayInfo: undefined,
     songDurationMillis: undefined,
     hitLyricTokenInfo: undefined,
+    songSamples: undefined
 };
 
 const mediaPlayerSlice = createSlice({
@@ -73,6 +75,10 @@ const mediaPlayerSlice = createSlice({
 
         _setSongDuration: (state, action: PayloadAction<number>) => {
             state.songDurationMillis = Math.ceil(action.payload * 1000)
+        },
+
+        _setSongSamples: (state, action: PayloadAction<Array<number>>) => {
+            state.songSamples = action.payload
         }
     },
 });
@@ -258,6 +264,16 @@ export namespace MediaPlayer {
                     );
 
                     dispatch(mediaPlayerSlice.actions._setSongDuration(lineHowl.duration()))
+
+                    try{
+                        const resp = await Http.axios.get(Http.getTemplateEndpoint(Http.ENDPOINT_APP_MEDIA_SONGS_ID_AUDIO_SAMPLES, {song_id: songId}), {
+                            headers: await Http.getSignedInHeaders(state.auth.token!)
+                        })
+                        const samples: Array<number> = resp.data
+                        dispatch(mediaPlayerSlice.actions._setSongSamples(samples))
+                    }catch(ex){
+                        console.log(ex)
+                    }
 
                     dispatch(
                         mediaPlayerSlice.actions._setStatus(MediaPlayerStatus.Standby)
