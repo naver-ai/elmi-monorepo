@@ -4,8 +4,9 @@ import { MediaPlayer } from "../../media-player/reducer"
 import { useCallback, useEffect, useMemo, useState } from "react"
 import { useDebouncedCallback } from "use-debounce"
 import { useThrottleCallback } from "@react-hook/throttle"
-import { useSelector } from "../../../redux/hooks"
+import { useDispatch, useSelector } from "../../../redux/hooks"
 import { useResizeDetector } from "react-resize-detector"
+import { LapsIcon } from "../../../components/svg-icons"
 
 const TIMELINE_PADDING = 1
 
@@ -96,9 +97,13 @@ export const GlobalMediaPlayer = (props: {
     className?: string
 }) => {
 
+    const dispatch = useDispatch()
+
     const [volume, setVolume] = useState<number>(1)
 
     const songDuration = useSelector(state => state.mediaPlayer.songDurationMillis)
+
+    const isInLineLoopMode = useSelector(state => state.mediaPlayer.linePlayInfo != null)
 
     const updateSystemVolume = useCallback((value: number)=>{
         MediaPlayer.setMediaVolume(value / 100)
@@ -133,6 +138,12 @@ export const GlobalMediaPlayer = (props: {
         refreshRate: 50
       });
 
+    const onLoopModeButtonClick = useCallback(() => {
+        if(isInLineLoopMode){
+            dispatch(MediaPlayer.exitLineLoop())
+        }
+    }, [isInLineLoopMode])
+
     useEffect(()=>{
         const volumeSubscription = MediaPlayer.getVolumeObservable().subscribe({
             next: (volume) => {
@@ -156,10 +167,11 @@ export const GlobalMediaPlayer = (props: {
     }, [])
 
     return <div ref={ref} className={`${props.className} bg-audiopanelbg/90 backdrop-blur-md bottom-1 rounded-lg overflow-hidden outline outline-1 outline-audiopanelbg shadow-lg flex flex-col select-none`}>
-        <SongTimelineView width={width || 0}/>
+        <SongTimelineView width={width || 100}/>
         <div className="flex justify-between text-white flex-1 items-stretch py-2 px-2 bg-red">
             <div className="global-player-control-wrapper h-8 text-center font-light text-[8pt] flex items-center justify-center pointer-events-none">{progressText}</div>
             <div className="flex items-stretch">
+                <Button type="text" className={`p-0 aspect-square rounded-full ${isInLineLoopMode===true ? 'text-white' : "text-gray-500"}`} onClick={onLoopModeButtonClick}><LapsIcon className="w-5"/></Button>
                 <Button type="text" className="bg-white/20 p-0 aspect-square rounded-full"><PlayIcon className="text-white w-5"/></Button>
             </div>
             <div className="global-player-control-wrapper h-8 relative px-1">

@@ -103,6 +103,6 @@ export function fetchProjectSong(projectId: string): AppThunk {
     }
 }
 
-export const { setDetailLineId, toggleDetailLineId } = signingEditorSlice.actions
+export const { initialize: initializeEditorState, setDetailLineId, toggleDetailLineId } = signingEditorSlice.actions
 
 export default signingEditorSlice.reducer

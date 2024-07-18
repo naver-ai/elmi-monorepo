@@ -10,12 +10,13 @@ import { GlobalMediaPlayer } from "./GlobalMediaPlayer"
 import { useThrottle, useThrottleCallback } from "@react-hook/throttle"
 
 const LyricToken = (props: {
+    lineId: string
     text: string
     index: number
     enableHighlighting: boolean,
     className?: string,
 }) => {
-    const isActive = useSelector(state => state.mediaPlayer.hitLyricTokenIndex == props.index)
+    const isActive = useSelector(state => state.mediaPlayer.hitLyricTokenInfo?.lineId == props.lineId && state.mediaPlayer.hitLyricTokenInfo?.index == props.index)
 
     return <><div className={`transition-all rounded-sm inline-block ${isActive === true && props.enableHighlighting === true ? "outline-amber-200 outline-[2px] outline outline-offset-[0px] bg-white/20 scale-110":""} ${props.className}`}>{props.text}</div>
         {!props.text.endsWith("-") ? " " : ""}
@@ -42,7 +43,7 @@ const LyricLineControlPanel = (props: {lineId: string}) => {
     const onClickPause = useCallback<MouseEventHandler<HTMLDivElement>>((ev)=>{
         ev.stopPropagation()
         if(mediaPlayerStatus == MediaPlayerStatus.Playing){
-            dispatch(MediaPlayer.pauseLineLoop())
+            dispatch(MediaPlayer.pauseMedia())
         }else if(mediaPlayerStatus == MediaPlayerStatus.Paused){
             dispatch(MediaPlayer.playLineLoop(line?.id))
         }
@@ -86,7 +87,6 @@ const LyricLineView = (props: {lineId: string}) => {
     useEffect(()=>{
         if(isSelected){
             inputRef.current?.focus()
-
             dispatch(MediaPlayer.playLineLoop(props.lineId))
         }
     }, [isSelected, props.lineId])
@@ -113,7 +113,6 @@ const LyricLineView = (props: {lineId: string}) => {
 
     const mediaPlayerStatus = useSelector(state => state.mediaPlayer.status)
     const isAudioPlaying = mediaPlayerStatus == MediaPlayerStatus.Playing
-    const mediaPlayerMountedLindId = useSelector(mountedLindIdSelector)
 
     return <div className={`mb-3 last:mb-0 p-1.5 rounded-lg hover:bg-orange-400/20 ${isSelected ? 'point-gradient-bg-light':''}`}>
         {
@@ -122,8 +121,8 @@ const LyricLineView = (props: {lineId: string}) => {
                 <div className="flex-1">
                 {
                     line.tokens.map((tok, i) => {
-                        return <LyricToken key={i} text={tok} index={i}
-                            enableHighlighting={isSelected && isAudioPlaying === true} {...line.timestamps[i]} 
+                        return <LyricToken key={i} text={tok} lineId={line.id} index={i}
+                            enableHighlighting={(isSelected && isAudioPlaying === true)} {...line.timestamps[i]} 
                             className={isSelected ? "text-white" : undefined}/>
                 })
                 }

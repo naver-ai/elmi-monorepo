@@ -22,7 +22,7 @@ export interface MediaPlayerState {
     status: MediaPlayerStatus;
     songDurationMillis?: number;
     linePlayInfo: (TimestampRange & { lineId: string }) | undefined;
-    hitLyricTokenIndex: number;
+    hitLyricTokenInfo: {lineId: string, index: number} | undefined;
 }
 
 const INITIAL_STATE: MediaPlayerState = {
@@ -30,7 +30,7 @@ const INITIAL_STATE: MediaPlayerState = {
     status: MediaPlayerStatus.Initial,
     linePlayInfo: undefined,
     songDurationMillis: undefined,
-    hitLyricTokenIndex: -1,
+    hitLyricTokenInfo: undefined,
 };
 
 const mediaPlayerSlice = createSlice({
@@ -66,8 +66,8 @@ const mediaPlayerSlice = createSlice({
             state.linePlayInfo = undefined;
         },
 
-        _setHitLyricTokenIndex: (state, action: PayloadAction<number>) => {
-            state.hitLyricTokenIndex = action.payload;
+        _setHitLyricTokenInfo: (state, action: PayloadAction<{lineId: string, index: number}|undefined>) => {
+            state.hitLyricTokenInfo = action.payload;
         },
 
         _setSongDuration: (state, action: PayloadAction<number>) => {
@@ -201,17 +201,17 @@ export namespace MediaPlayer {
                                                 timestamp <= ts.end_millis
                                         );
                                         dispatch(
-                                            mediaPlayerSlice.actions._setHitLyricTokenIndex(
-                                                tokenIndex
-                                            )
-                                        );
+                                            mediaPlayerSlice.actions._setHitLyricTokenInfo({
+                                                lineId: line.id,
+                                                index:tokenIndex
+                                            }));
                                     } else {
                                         dispatch(
-                                            mediaPlayerSlice.actions._setHitLyricTokenIndex(-1)
+                                            mediaPlayerSlice.actions._setHitLyricTokenInfo(undefined)
                                         );
                                     }
                                 } else {
-                                    dispatch(mediaPlayerSlice.actions._setHitLyricTokenIndex(-1));
+                                    dispatch(mediaPlayerSlice.actions._setHitLyricTokenInfo(undefined));
                                 }
 
                                 animationFrameRef = requestAnimationFrame(onAnimationFrame);
@@ -242,18 +242,11 @@ export namespace MediaPlayer {
                         return prev;
                     }, {});
 
-                    sprites[songId] = [0, verses[verses.length - 1].end_millis, true];
-
+                    sprites[songId] = [0, verses[verses.length - 1].end_millis, false];
+                    
                     lineHowl = await createHowl(
                         currentSongObjectURL,
-                        lines.reduce((prev: { [key: string]: any }, line) => {
-                            prev[line.id] = [
-                                line.start_millis,
-                                line.end_millis - line.start_millis,
-                                true,
-                            ];
-                            return prev;
-                        }, {}),
+                        sprites,
                         onStop,
                         onPlay,
                         onPause
@@ -279,16 +272,9 @@ export namespace MediaPlayer {
             const state = getState();
             const line = lineSelectors.selectById(state, lineId);
 
-            let resumePosition: number | undefined = undefined;
-            if (state.mediaPlayer.status == MediaPlayerStatus.Paused) {
-                resumePosition = lineHowl?.seek();
-            }
+            const prevLineId = state.mediaPlayer.linePlayInfo?.lineId
 
-            Howler.stop();
-            lineHowl?.play(lineId);
-            if (resumePosition) {
-                lineHowl?.seek(resumePosition);
-            }
+
 
             dispatch(mediaPlayerSlice.actions._setStatus(MediaPlayerStatus.Playing));
             dispatch(
@@ -297,10 +283,46 @@ export namespace MediaPlayer {
                     lineId: line.id,
                 })
             );
+
+            let resumePosition: number | undefined = undefined;
+            if(prevLineId == lineId){
+                if (state.mediaPlayer.status == MediaPlayerStatus.Paused) {
+                    resumePosition = lineHowl?.seek();
+                }
+
+                Howler.stop();
+                lineHowl?.play(lineId);
+                if (resumePosition) {
+                    lineHowl?.seek(resumePosition);
+                }
+            }else{
+                Howler.stop();
+                if(state.mediaPlayer.status == MediaPlayerStatus.Paused){
+                    dispatch(mediaPlayerSlice.actions._setStatus(MediaPlayerStatus.Paused));
+                }else{
+                    lineHowl?.play(lineId);
+                }
+            }
         };
     }
 
-    export function pauseLineLoop(): AppThunk {
+    export function exitLineLoop(): AppThunk {
+        return async (dispatch, getState) => {
+            const state = getState()
+            if(state.mediaPlayer.linePlayInfo != null){
+                dispatch(mediaPlayerSlice.actions._exitLinePlayMode())
+                const position = lineHowl?.seek()
+                if(lineHowl?.playing()){
+                    Howler.stop()
+                    console.log(state.editor.song?.id, position)
+                    lineHowl?.play(state.editor.song?.id!)
+                    lineHowl?.seek(position||0)
+                }
+            }
+        }
+    }
+
+    export function pauseMedia(): AppThunk {
         return async (dispatch, getState) => {
             if (lineHowl?.playing() == true) {
                 lineHowl?.pause();
