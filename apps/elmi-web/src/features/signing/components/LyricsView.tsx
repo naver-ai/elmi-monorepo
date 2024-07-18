@@ -9,6 +9,10 @@ import { PauseIcon, PlayIcon } from "@heroicons/react/20/solid"
 import { GlobalMediaPlayer } from "./GlobalMediaPlayer"
 import { useThrottle, useThrottleCallback } from "@react-hook/throttle"
 
+const LYRIC_TOKEN_ACTIVE_CLASSNAME_SELECTED = "outline-[2px] outline outline-offset-[0px] bg-white/20 scale-110"
+const LYRIC_TOKEN_ACTIVE_CLASSNAME_UNSELECTED = "outline-[2px] outline outline-offset-[0px] outline-pink-400 scale-110"
+
+
 const LyricToken = (props: {
     lineId: string
     text: string
@@ -16,9 +20,15 @@ const LyricToken = (props: {
     enableHighlighting: boolean,
     className?: string,
 }) => {
+
+
+    const detailLineId = useSelector(state => state.editor.detailLineId)
+
+    const isSelected = detailLineId == props.lineId
+
     const isActive = useSelector(state => state.mediaPlayer.hitLyricTokenInfo?.lineId == props.lineId && state.mediaPlayer.hitLyricTokenInfo?.index == props.index)
 
-    return <><div className={`transition-all rounded-sm inline-block ${isActive === true && props.enableHighlighting === true ? "outline-amber-200 outline-[2px] outline outline-offset-[0px] bg-white/20 scale-110":""} ${props.className}`}>{props.text}</div>
+    return <><div className={`transition-all rounded-sm inline-block outline-amber-200 ${isActive === true && props.enableHighlighting === true ? (isSelected === true ? LYRIC_TOKEN_ACTIVE_CLASSNAME_SELECTED : LYRIC_TOKEN_ACTIVE_CLASSNAME_UNSELECTED):""} ${props.className}`}>{props.text}</div>
         {!props.text.endsWith("-") ? " " : ""}
         </>
 }
@@ -34,7 +44,11 @@ const LyricLineControlPanel = (props: {lineId: string}) => {
     const [audioPercentage, setAudioPercentage] = useState<number>(0)
     const throttledSetAudioPercentage = useThrottleCallback(useCallback((sec: number|null) => {
         if(line != null && sec != null){
-            setAudioPercentage(Math.round((sec - line.start_millis) / (line.end_millis - line.start_millis) * 100))
+            if(sec < line.start_millis || sec > line.end_millis){
+                setAudioPercentage(0)
+            }else{
+                setAudioPercentage(Math.round((sec - line.start_millis) / (line.end_millis - line.start_millis) * 100))
+            }
         }else{
             setAudioPercentage(0)
         }
@@ -44,8 +58,8 @@ const LyricLineControlPanel = (props: {lineId: string}) => {
         ev.stopPropagation()
         if(mediaPlayerStatus == MediaPlayerStatus.Playing){
             dispatch(MediaPlayer.pauseMedia())
-        }else if(mediaPlayerStatus == MediaPlayerStatus.Paused){
-            dispatch(MediaPlayer.playLineLoop(line?.id))
+        }else if(mediaPlayerStatus == MediaPlayerStatus.Standby || mediaPlayerStatus == MediaPlayerStatus.Paused){
+            dispatch(MediaPlayer.playLineLoop(line?.id, true))
         }
     }, [mediaPlayerStatus, line?.id])
 
@@ -64,7 +78,6 @@ const LyricLineControlPanel = (props: {lineId: string}) => {
     }, [throttledSetAudioPercentage])
 
     return <div className="flex items-center gap-x-1">
-    
     <Button onClick={onClickPause} type="text" className="m-0 p-0 rounded-full aspect-square relative items-center justify-center" tabIndex={-1}>
         <Progress size={24} type="circle" percent={audioPercentage} 
         showInfo={false} strokeWidth={12} strokeColor={"white"} trailColor="rgba(255,255,255,0.3)"/>
@@ -87,9 +100,9 @@ const LyricLineView = (props: {lineId: string}) => {
     useEffect(()=>{
         if(isSelected){
             inputRef.current?.focus()
-            dispatch(MediaPlayer.playLineLoop(props.lineId))
+            dispatch(MediaPlayer.playLineLoop(props.lineId, false))
         }
-    }, [isSelected, props.lineId])
+    }, [isSelected])
 
     const onClick = useCallback<MouseEventHandler<HTMLDivElement>>((ev)=>{
         if(line?.id != null){
@@ -113,8 +126,10 @@ const LyricLineView = (props: {lineId: string}) => {
 
     const mediaPlayerStatus = useSelector(state => state.mediaPlayer.status)
     const isAudioPlaying = mediaPlayerStatus == MediaPlayerStatus.Playing
+    const isInLineLoopMode = useSelector(state => state.mediaPlayer.linePlayInfo != null)
+    const isPositionHitting = useSelector(state => state.mediaPlayer.hitLyricTokenInfo?.lineId == props.lineId)
 
-    return <div className={`mb-3 last:mb-0 p-1.5 rounded-lg hover:bg-orange-400/20 ${isSelected ? 'point-gradient-bg-light':''}`}>
+    return <div className={`transition-all mb-3 last:mb-0 p-1.5 rounded-lg hover:bg-orange-400/20 ${isSelected ? 'point-gradient-bg-light':''} ${isInLineLoopMode == false && isAudioPlaying && isPositionHitting ? 'bg-orange-400/20':''}`}>
         {
             line == null ? <Skeleton title={false} active/> : <>
             <div className={`mb-1 pl-1 cursor-pointer transition-colors flex items-baseline`} onClick={onClick}>
@@ -122,7 +137,7 @@ const LyricLineView = (props: {lineId: string}) => {
                 {
                     line.tokens.map((tok, i) => {
                         return <LyricToken key={i} text={tok} lineId={line.id} index={i}
-                            enableHighlighting={(isSelected && isAudioPlaying === true)} {...line.timestamps[i]} 
+                            enableHighlighting={(isSelected && isAudioPlaying === true) || isInLineLoopMode === false} {...line.timestamps[i]} 
                             className={isSelected ? "text-white" : undefined}/>
                 })
                 }

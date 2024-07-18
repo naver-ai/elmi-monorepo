@@ -122,7 +122,7 @@ export namespace MediaPlayer {
                     reject(error);
                 },
                 onstop: onStop,
-                onplay: () => {
+                onplay: (id) => {
                     onPlay?.(howl);
                 },
                 onpause: () => {
@@ -163,7 +163,7 @@ export namespace MediaPlayer {
                     const currentSongObjectURL = URL.createObjectURL(resp.data);
 
                     const onStop = () => {
-                        timestampBehaviorSubject.next(null);
+                        //timestampBehaviorSubject.next(null);
                     };
 
                     const onPlay = (howl: Howl) => {
@@ -177,7 +177,11 @@ export namespace MediaPlayer {
                             const timestamp = Math.round(howl.seek() * 1000);
 
                             if (howl.playing()) {
+                                howl.seek()
+                                const timestamp = Math.round(howl.seek() * 1000);
                                 timestampBehaviorSubject.next(timestamp);
+
+                                console.log("update timestamp - ", timestamp)
 
                                 const verse = verseSelectors
                                     .selectAll(state)
@@ -242,7 +246,7 @@ export namespace MediaPlayer {
                         return prev;
                     }, {});
 
-                    sprites[songId] = [0, verses[verses.length - 1].end_millis, false];
+                    sprites[songId] = [verses[0].start_millis, verses[verses.length - 1].end_millis, false];
                     
                     lineHowl = await createHowl(
                         currentSongObjectURL,
@@ -267,14 +271,14 @@ export namespace MediaPlayer {
         };
     }
 
-    export function playLineLoop(lineId: string): AppThunk {
+    export function playLineLoop(lineId: string, forcePlay: boolean = false): AppThunk {
         return async (dispatch, getState) => {
             const state = getState();
             const line = lineSelectors.selectById(state, lineId);
 
             const prevLineId = state.mediaPlayer.linePlayInfo?.lineId
 
-
+            const prevStatus = state.mediaPlayer.status
 
             dispatch(mediaPlayerSlice.actions._setStatus(MediaPlayerStatus.Playing));
             dispatch(
@@ -297,8 +301,12 @@ export namespace MediaPlayer {
                 }
             }else{
                 Howler.stop();
-                if(state.mediaPlayer.status == MediaPlayerStatus.Paused){
-                    dispatch(mediaPlayerSlice.actions._setStatus(MediaPlayerStatus.Paused));
+                if(state.mediaPlayer.status == MediaPlayerStatus.Paused && forcePlay == false){
+                    dispatch(mediaPlayerSlice.actions._setStatus(MediaPlayerStatus.Standby));
+                    lineHowl?.seek(line.start_millis)
+                }else if(prevStatus == MediaPlayerStatus.Standby){
+                    dispatch(mediaPlayerSlice.actions._setStatus(MediaPlayerStatus.Standby))
+                    lineHowl?.seek(line.start_millis)
                 }else{
                     lineHowl?.play(lineId);
                 }
@@ -326,6 +334,33 @@ export namespace MediaPlayer {
         return async (dispatch, getState) => {
             if (lineHowl?.playing() == true) {
                 lineHowl?.pause();
+            }
+        };
+    }
+
+    export function performGlobalPlay(): AppThunk {
+        return async (dispatch, getState) => {
+            if (lineHowl?.playing() == false) {
+                
+                const state = getState()
+                const isInLineLoopMode = state.mediaPlayer.linePlayInfo
+                if(isInLineLoopMode){
+                    await playLineLoop(state.mediaPlayer.linePlayInfo!.lineId, true)(dispatch, getState, null)
+                }else{
+                    const resumePosition = timestampBehaviorSubject.getValue()
+
+                    Howler.stop()
+                    lineHowl?.play(state.editor.song?.id)
+
+                    console.log(resumePosition)
+                    if(resumePosition){
+                        lineHowl?.seek(resumePosition/1000)
+                    }else{
+                        lineHowl?.seek(verseSelectors.selectAll(state)[0].start_millis/1000)
+                    }
+
+                    dispatch(mediaPlayerSlice.actions._setStatus(MediaPlayerStatus.Playing));
+                }
             }
         };
     }

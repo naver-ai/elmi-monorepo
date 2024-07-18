@@ -1,5 +1,5 @@
-import { MinusIcon, PlayIcon, PlusIcon } from "@heroicons/react/20/solid"
-import { Button, Slider } from "antd"
+import { MinusIcon, PauseIcon, PlayIcon, PlusIcon } from "@heroicons/react/20/solid"
+import { Button, Slider, Tooltip } from "antd"
 import { MediaPlayer } from "../../media-player/reducer"
 import { useCallback, useEffect, useMemo, useState } from "react"
 import { useDebouncedCallback } from "use-debounce"
@@ -7,6 +7,8 @@ import { useThrottleCallback } from "@react-hook/throttle"
 import { useDispatch, useSelector } from "../../../redux/hooks"
 import { useResizeDetector } from "react-resize-detector"
 import { LapsIcon } from "../../../components/svg-icons"
+import { setDetailLineId } from "../reducer"
+import { MediaPlayerStatus } from "../../media-player/types"
 
 const TIMELINE_PADDING = 1
 
@@ -103,8 +105,10 @@ export const GlobalMediaPlayer = (props: {
 
     const songDuration = useSelector(state => state.mediaPlayer.songDurationMillis)
 
-    const isInLineLoopMode = useSelector(state => state.mediaPlayer.linePlayInfo != null)
+    const mediaPlayerStatus = useSelector(state => state.mediaPlayer.status)
 
+    const isInLineLoopMode = useSelector(state => state.mediaPlayer.linePlayInfo != null)
+    
     const updateSystemVolume = useCallback((value: number)=>{
         MediaPlayer.setMediaVolume(value / 100)
     },[])
@@ -124,13 +128,15 @@ export const GlobalMediaPlayer = (props: {
 
     const [progressText, setProgressText] = useState<string|undefined>(undefined)
 
-    const onProgressUpdate = useThrottleCallback(useCallback((progress: number|null) => {
-        if(progress != null && songDuration != null){
-            setProgressText(`${formatDuration(progress)} / ${formatDuration(songDuration)}`)
+    const updateProgressText = useCallback((progress: number|null) => {
+        if(songDuration != null){
+            setProgressText(`${progress != null ? formatDuration(progress) : "--:--"} / ${formatDuration(songDuration)}`)
         }else{
             setProgressText(undefined)
         }
-    }, [songDuration]))
+    }, [songDuration])
+
+    const onProgressUpdate = useThrottleCallback(updateProgressText)
 
       const { width, height, ref } = useResizeDetector({
         handleHeight: false,
@@ -140,9 +146,22 @@ export const GlobalMediaPlayer = (props: {
 
     const onLoopModeButtonClick = useCallback(() => {
         if(isInLineLoopMode){
+            dispatch(setDetailLineId(undefined))
             dispatch(MediaPlayer.exitLineLoop())
         }
     }, [isInLineLoopMode])
+
+    const onPlayButtonClick = useCallback(()=>{
+        if(mediaPlayerStatus == MediaPlayerStatus.Playing){
+            dispatch(MediaPlayer.pauseMedia())
+        }else{
+            dispatch(MediaPlayer.performGlobalPlay())
+        }
+    }, [mediaPlayerStatus])
+
+    useEffect(()=>{
+        updateProgressText(null)
+    }, [songDuration])
 
     useEffect(()=>{
         const volumeSubscription = MediaPlayer.getVolumeObservable().subscribe({
@@ -159,20 +178,23 @@ export const GlobalMediaPlayer = (props: {
             }
         })
 
-
         return () => {
             volumeSubscription.unsubscribe()
             positionSubscription.unsubscribe()
         }
     }, [])
 
+    const PlayButtonIconClass = mediaPlayerStatus == MediaPlayerStatus.Playing ? PauseIcon : PlayIcon
+
     return <div ref={ref} className={`${props.className} bg-audiopanelbg/90 backdrop-blur-md bottom-1 rounded-lg overflow-hidden outline outline-1 outline-audiopanelbg shadow-lg flex flex-col select-none`}>
         <SongTimelineView width={width || 100}/>
         <div className="flex justify-between text-white flex-1 items-stretch py-2 px-2 bg-red">
             <div className="global-player-control-wrapper h-8 text-center font-light text-[8pt] flex items-center justify-center pointer-events-none">{progressText}</div>
-            <div className="flex items-stretch">
-                <Button type="text" className={`p-0 aspect-square rounded-full ${isInLineLoopMode===true ? 'text-white' : "text-gray-500"}`} onClick={onLoopModeButtonClick}><LapsIcon className="w-5"/></Button>
-                <Button type="text" className="bg-white/20 p-0 aspect-square rounded-full"><PlayIcon className="text-white w-5"/></Button>
+            <div className="flex items-center transition-transform gap-x-2">
+                {
+                    isInLineLoopMode === true ? <Tooltip title="Exit line loop mode"><Button type="text" size="small" className={`bg-white/10 rounded-full text-white text-xs`} onClick={onLoopModeButtonClick} icon={<LapsIcon className={`w-4 ${isInLineLoopMode===true ? 'fill-white' : "fill-gray-500"}`}/>}>Exit Line Loop</Button></Tooltip> : null
+                }
+                <Button type="text" className="bg-white/20 p-0 aspect-square rounded-full" onClick={onPlayButtonClick}><PlayButtonIconClass className="text-white w-5"/></Button>             
             </div>
             <div className="global-player-control-wrapper h-8 relative px-1">
                 <MinusIcon className="w-3 h-full absolute left-2 top-0" onClick={onMuteClick}/>
