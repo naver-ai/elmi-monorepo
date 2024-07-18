@@ -13,6 +13,7 @@ import {
     lineSelectors,
     selectLineIdsByVerseId,
     selectLinesByVerseId,
+    setDetailLineId,
     verseSelectors,
 } from '../signing/reducer';
 import { BehaviorSubject, Observable, Subject, SubjectLike } from 'rxjs';
@@ -177,11 +178,11 @@ export namespace MediaPlayer {
                             const timestamp = Math.round(howl.seek() * 1000);
 
                             if (howl.playing()) {
-                                howl.seek()
                                 const timestamp = Math.round(howl.seek() * 1000);
+                                if(timestamp > howl.duration() * 1000){
+                                    howl.seek(verses[0].start_millis/1000)
+                                }
                                 timestampBehaviorSubject.next(timestamp);
-
-                                console.log("update timestamp - ", timestamp)
 
                                 const verse = verseSelectors
                                     .selectAll(state)
@@ -246,7 +247,7 @@ export namespace MediaPlayer {
                         return prev;
                     }, {});
 
-                    sprites[songId] = [verses[0].start_millis, verses[verses.length - 1].end_millis, false];
+                    sprites[songId] = [verses[0].start_millis, verses[verses.length - 1].end_millis, true];
                     
                     lineHowl = await createHowl(
                         currentSongObjectURL,
@@ -314,6 +315,20 @@ export namespace MediaPlayer {
         };
     }
 
+    export function directAccessLineLoop(positionMillis: number, select: boolean): AppThunk {
+        return async (dispatch, getState) => {
+            const state = getState()
+            const lines = lineSelectors.selectAll(state)
+            const line = lines.find(line => line.start_millis <= positionMillis && positionMillis <= line.end_millis)
+            if(line != null){
+                await playLineLoop(line.id, false)(dispatch, getState, null)
+                if(select === true){
+                    dispatch(setDetailLineId(line.id))
+                }
+            }
+        }
+    }
+
     export function exitLineLoop(): AppThunk {
         return async (dispatch, getState) => {
             const state = getState()
@@ -322,7 +337,6 @@ export namespace MediaPlayer {
                 const position = lineHowl?.seek()
                 if(lineHowl?.playing()){
                     Howler.stop()
-                    console.log(state.editor.song?.id, position)
                     lineHowl?.play(state.editor.song?.id!)
                     lineHowl?.seek(position||0)
                 }
@@ -352,7 +366,6 @@ export namespace MediaPlayer {
                     Howler.stop()
                     lineHowl?.play(state.editor.song?.id)
 
-                    console.log(resumePosition)
                     if(resumePosition){
                         lineHowl?.seek(resumePosition/1000)
                     }else{
@@ -363,6 +376,17 @@ export namespace MediaPlayer {
                 }
             }
         };
+    }
+
+    export function seekGlobalMediaPosition(positionMillis: number): AppThunk {
+        return async (dispatch, getState) => {
+            const state = getState()
+            const isInLineLoopMode = state.mediaPlayer.linePlayInfo
+            if(!isInLineLoopMode){
+                lineHowl?.seek(positionMillis/1000)
+            }
+
+        }
     }
 
     export function stopAllMedia(): AppThunk {

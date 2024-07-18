@@ -1,7 +1,7 @@
 import { MinusIcon, PauseIcon, PlayIcon, PlusIcon } from "@heroicons/react/20/solid"
 import { Button, Slider, Tooltip } from "antd"
 import { MediaPlayer } from "../../media-player/reducer"
-import { useCallback, useEffect, useMemo, useState } from "react"
+import { MouseEventHandler, useCallback, useEffect, useMemo, useState } from "react"
 import { useDebouncedCallback } from "use-debounce"
 import { useThrottleCallback } from "@react-hook/throttle"
 import { useDispatch, useSelector } from "../../../redux/hooks"
@@ -28,7 +28,7 @@ const SongTimelineView = (props:{
 
     const highlightedLineInfo = useSelector(state => state.mediaPlayer.linePlayInfo)
 
-
+    const dispatch = useDispatch()
 
     const [progress, setProgress] = useState<number|undefined>(undefined)
 
@@ -42,6 +42,14 @@ const SongTimelineView = (props:{
         if(millis != null && songDuration != null){
                 return millis/songDuration * timelineWidth
         }else return undefined
+    }, [songDuration])
+
+    const xToPositionMillis = useCallback((position: number) => {
+        if(songDuration != null){
+            return position / props.width * songDuration
+        }else{
+            return undefined
+        }
     }, [songDuration])
     
     const progressX = useMemo(()=>{
@@ -60,6 +68,21 @@ const SongTimelineView = (props:{
         }else return undefined
     }, [x, highlightedLineInfo, highlightedLineX])
 
+    const onTimelineClick = useCallback<MouseEventHandler<any>>((ev)=>{
+        ev.stopPropagation()
+        const position = xToPositionMillis(ev.nativeEvent.offsetX)
+        if(position){
+            if(highlightedLineInfo){
+                //Jump to another line
+                dispatch(MediaPlayer.directAccessLineLoop(position, true))
+            }else{
+                //Global navigation
+                dispatch(MediaPlayer.performGlobalPlay())
+                dispatch(MediaPlayer.seekGlobalMediaPosition(position))
+            }
+        }
+    },[highlightedLineInfo])
+
     useEffect(()=>{
 
         const positionSubscription = MediaPlayer.getTimestampObservable().subscribe({
@@ -75,9 +98,12 @@ const SongTimelineView = (props:{
     }, [])
     return <svg width={props.width} height={SVG_HEIGHT}>
         <g transform={TIMELINE_GLOBAL_TRANSFORM}>
-            <rect x={0} y={0} width={timelineWidth} height={TIMELINE_HEIGHT} rx={8}/>
+            <rect x={0} y={0} width={timelineWidth} height={TIMELINE_HEIGHT} rx={8} 
+                className={`${highlightedLineInfo != null ? "fill-black" : "fill-slate-700"}`}
+                onClick={onTimelineClick}
+                />
             {
-                highlightedLineInfo != null ? <rect className="fill-pink-200/40" rx={2} x={highlightedLineX} width={highlightedLineWidth} height={TIMELINE_HEIGHT}/> : null
+                highlightedLineInfo != null ? <rect className="fill-pink-200/40 pointer-events-none" rx={2} x={highlightedLineX} width={highlightedLineWidth} height={TIMELINE_HEIGHT}/> : null
             }
             {
                 progressX != null ? <line x1={progressX} x2={progressX} shapeRendering="geometricPrecision" strokeWidth={TIMELINE_INDICATOR_WIDTH} y1={0} y2={TIMELINE_HEIGHT} stroke={"white"}/> : null
