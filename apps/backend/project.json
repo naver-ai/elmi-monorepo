@@ -84,6 +84,14 @@
         "command": "poetry run python backend/langchain_inference_features_db.py",
         "cwd": "apps/backend"
       }
+    },
+
+    "test_chains": {
+      "executor": "@nxlv/python:run-commands",
+      "options": {
+        "command": "poetry run python backend/test_analysis_chains.py",
+        "cwd": "apps/backend"
+      }
     }
   },
   "tags": []
