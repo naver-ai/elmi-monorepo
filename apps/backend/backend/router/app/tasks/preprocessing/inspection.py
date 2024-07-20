@@ -2,18 +2,16 @@ from time import perf_counter
 from langchain_core.prompts.chat import ChatPromptTemplate
 from langchain_openai import ChatOpenAI
 from langchain.output_parsers import PydanticOutputParser
+from langchain_core.runnables import RunnableConfig
 from pydantic import validate_call
 
 from backend.database.models import LineInfo, ProjectConfiguration, SongInfo
-from backend.router.app.tasks.preprocessing.common import BasePipelineInput, InputLyricLine, InspectionResult, ProjectConfigurationV1
+from backend.router.app.tasks.preprocessing.common import BasePipelineInput, InspectionPipelineInputArgs, InputLyricLine, InspectionResult
 from backend.utils.env_helper import EnvironmentVariables, get_env_variable
 
 
-class InspectionInputArgs(BasePipelineInput):
-    song_title: str
-    song_description: str
+class InspectionPromptInputArgs(BasePipelineInput):
     lyrics:list[InputLyricLine]
-    user_settings: ProjectConfigurationV1
 
 
 class InspectionPipeline():
@@ -76,27 +74,37 @@ class InspectionPipeline():
                             )
         )
 
+
         # Initialize the chain
-        self.chain = chat_prompt | client | PydanticOutputParser(pydantic_object=InspectionResult)
+        self.chain = self.__input_parser | chat_prompt | client | PydanticOutputParser(pydantic_object=InspectionResult) | self.__output_processor
+
+    @staticmethod
+    def __input_parser(input: InspectionPipelineInputArgs, config: RunnableConfig) -> dict:
+        config["metadata"].update(input.__dict__)
+        return {"input": InspectionPromptInputArgs(
+                song_title=input.song_info.title,
+                song_description=input.song_info.description,
+                lyrics=[InputLyricLine(lyric=line.lyric, id=str(line_index)) for line_index, line in enumerate(input.lyric_lines[:12])],
+                user_settings=input.configuration
+            ).model_dump_json(indent=2)}
+
+    @staticmethod
+    def __output_processor(result: InspectionResult, config: RunnableConfig) -> InspectionResult:
+        original_lyrics = config["metadata"]["lyric_lines"]
+        for inspection in result.inspections:
+            inspection.line_id = original_lyrics[int(inspection.line_id)].id # Replace number index into unique id.
+        
+        return result
 
     @validate_call
     async def inspect(self, lyric_lines: list[LineInfo], song_info: SongInfo, configuration: ProjectConfiguration) -> InspectionResult:
 
         ts = perf_counter()
 
-        input = InspectionInputArgs(
-                song_title=song_info.title,
-                song_description=song_info.description,
-                lyrics=[InputLyricLine(lyric=line.lyric, id=line_index) for line_index, line in enumerate(lyric_lines[:12])],
-                user_settings=ProjectConfigurationV1(**configuration.model_dump())
-            )
-         
-        result: InspectionResult = await self.chain.ainvoke({
-            "input": input.json()
-        })
-
-        for inspection in result.inspections:
-            inspection.line_id = lyric_lines[int(inspection.line_id)].id # Replace number index into unique id.
+        result = await self.chain.ainvoke(InspectionPipelineInputArgs(
+            lyric_lines=lyric_lines,
+            song_info=song_info,
+            configuration=configuration))
 
         te = perf_counter()
 

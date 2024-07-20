@@ -1,27 +1,18 @@
 
-from langchain.pydantic_v1 import BaseModel, Field
+from pydantic import BaseModel, Field
+from langchain_core.runnables import RunnableConfig
 
-from backend.database.models import AgeGroup, BodyLanguage, ClassifierLevel, EmotionalLevel, LanguageProficiency, MainAudience, SignLanguageType, SigningSpeed
+from backend.database.models import LineInfo, ProjectConfiguration, SongInfo
 
 
 class InputLyricLine(BaseModel):
     id: str
     lyric: str
 
-class ProjectConfigurationV1(BaseModel):
-      main_audience: MainAudience = Field(default=MainAudience.Deaf)
-      age_group: AgeGroup = Field(default=AgeGroup.Adult)
-      main_language: SignLanguageType = SignLanguageType.ASL
-      language_proficiency: LanguageProficiency = LanguageProficiency.Moderate
-      signing_speed: SigningSpeed = SigningSpeed.Moderate
-      emotional_level: EmotionalLevel = EmotionalLevel.Moderate
-      body_language: BodyLanguage = BodyLanguage.Moderate
-      classifier_level: ClassifierLevel = ClassifierLevel.Moderate
-
 class BasePipelineInput(BaseModel):
     song_title: str
     song_description: str
-    user_settings: ProjectConfigurationV1
+    user_settings: ProjectConfiguration
 
 class BaseInspectionElement(BaseModel):
     challenges: list[str] = Field(description="Challenge labels for the line of lyrics. Refer to 'List of Challenge Labels' above.")
@@ -41,3 +32,16 @@ class GlossLine(BaseModel):
 
 class GlossGenerationResult(BaseModel):
     translations: list[GlossLine]
+
+
+class InspectionPipelineInputArgs(BaseModel):
+    lyric_lines: list[LineInfo]
+    song_info: SongInfo
+    configuration: ProjectConfiguration
+
+class BaseGlossGenerationPipelineInputArgs(InspectionPipelineInputArgs):
+    inspection_result: InspectionResult
+
+class InputLyricLineWithGloss(InputLyricLine):
+    gloss: str
+    gloss_description: str

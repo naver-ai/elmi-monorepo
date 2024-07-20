@@ -4,8 +4,8 @@ import asyncio
 from sqlmodel import select
 from backend.database.models import Line, Project, ProjectConfiguration, User, Verse
 from backend.router.app.tasks.preprocessing.base_gloss_generation import BaseGlossGenerationPipeline
+from backend.router.app.tasks.preprocessing.common import InspectionPipelineInputArgs
 from backend.router.app.tasks.preprocessing.inspection import InspectionPipeline
-from backend.utils.genius import genius
 from backend.database import db_sessionmaker
 
 
