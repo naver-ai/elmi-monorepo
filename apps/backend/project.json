@@ -78,18 +78,25 @@
       }
     },
 
-    "test_langchain": {
+    "test_features": {
       "executor": "@nxlv/python:run-commands",
       "options": {
         "command": "poetry run python backend/langchain_inference_features_db.py",
         "cwd": "apps/backend"
       }
     },
-
     "test_chains": {
       "executor": "@nxlv/python:run-commands",
       "options": {
         "command": "poetry run python backend/test_analysis_chains.py",
+        "cwd": "apps/backend"
+      }
+    },
+    
+    "test_chat": {
+      "executor": "@nxlv/python:run-commands",
+      "options": {
+        "command": "poetry run python /Users/user/Documents/GitHub/elmi-monorepo/apps/backend/proactive_chatbot.py",
         "cwd": "apps/backend"
       }
     }
