@@ -1,8 +1,8 @@
 from datetime import datetime
-from enum import StrEnum
+from enum import StrEnum, auto
 from os import path
-from typing import Optional
-from pydantic import BaseModel
+from typing import Literal, Optional, Union
+from pydantic import BaseModel, ConfigDict
 from sqlalchemy import DateTime, func
 from sqlmodel import Relationship, SQLModel, Field, UniqueConstraint, Column, JSON
 from nanoid import generate
@@ -105,6 +105,51 @@ class User(SQLModel, SharableUserInfo, table=True):
 class UserIdMixin(BaseModel):
     user_id: str = Field(foreign_key=f"{User.__tablename__}.id")
 
+class MainAudience(StrEnum):
+    Deaf=auto()
+    Hearing=auto()
+
+class AgeGroup(StrEnum):
+    Children=auto()
+    Adult=auto()
+
+class LanguageProficiency(StrEnum):
+    Novice=auto()
+    Moderate=auto()
+    Expert=auto()
+
+class SigningSpeed(StrEnum):
+    Slow=auto()
+    Moderate=auto()
+    Fast=auto()
+
+class EmotionalLevel(StrEnum):
+    Calm=auto()
+    Moderate=auto()
+    Excited=auto()
+
+class BodyLanguage(StrEnum):
+    NotUsed=auto()
+    Moderate=auto()
+    Rich=auto()
+
+class ClassifierLevel(StrEnum):
+    NotUsed=auto()
+    Moderate=auto()
+    Rich=auto()
+
+
+class ProjectConfiguration(BaseModel):
+      model_config = ConfigDict(use_enum_values=True)
+
+      main_audience: MainAudience = Field(default=MainAudience.Deaf)
+      age_group: AgeGroup = Field(default=AgeGroup.Adult)
+      main_language: SignLanguageType = SignLanguageType.ASL
+      language_proficiency: LanguageProficiency = LanguageProficiency.Moderate
+      signing_speed: SigningSpeed = SigningSpeed.Moderate
+      emotional_level: EmotionalLevel = EmotionalLevel.Moderate
+      body_language: BodyLanguage = BodyLanguage.Moderate
+      classifier_level: ClassifierLevel = ClassifierLevel.Moderate
 
 class Project(SQLModel, IdTimestampMixin, UserIdMixin, SongIdMixin, table=True):
 
@@ -114,7 +159,7 @@ class Project(SQLModel, IdTimestampMixin, UserIdMixin, SongIdMixin, table=True):
         sa_type=DateTime(timezone=True)
     )
 
-    user_settings: Optional[dict] = Field(sa_column=Column(JSON, nullable=True))
+    user_settings: ProjectConfiguration = Field(sa_column=Column(JSON), default_factory=lambda: ProjectConfiguration().model_dump())
 
     user: User | None = Relationship(back_populates="projects", sa_relationship_kwargs={'lazy': 'selectin'})
     song: Song = Relationship(back_populates='projects', sa_relationship_kwargs={'lazy': 'selectin'}) 

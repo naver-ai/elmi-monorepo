@@ -85,6 +85,13 @@
         "cwd": "apps/backend"
       }
     },
+    "test_chains": {
+      "executor": "@nxlv/python:run-commands",
+      "options": {
+        "command": "poetry run python backend/test_analysis_chains.py",
+        "cwd": "apps/backend"
+      }
+    },
     
     "test_chat": {
       "executor": "@nxlv/python:run-commands",
@@ -93,7 +100,6 @@
         "cwd": "apps/backend"
       }
     }
-
   },
   "tags": []
 }

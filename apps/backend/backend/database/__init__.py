@@ -101,17 +101,7 @@ async def create_test_db_entities():
                 print("Create test user...")
                 user = User(alias="test", callable_name="Sue Yoo", sign_language=SignLanguageType.ASL, passcode="12345")
                 project = Project(song=song, 
-                                  user=user,
-                                  user_settings={
-                                    "MainAudience": "Deaf",
-                                    "AgeGroup": "Adult",
-                                    "MainLanguage": "ASL",
-                                    "LanguageLevel": "Moderate",
-                                    "SpeedOfSigning": "Moderate",
-                                    "EmotionalLevel": "Moderate",
-                                    "UseOfBodyLanguage": "Moderate",
-                                    "UseOfClassifiers": "Moderate"
-                                     }
+                                  user=user
                     )
                 
                 db.add(user)
