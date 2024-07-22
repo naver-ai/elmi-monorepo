@@ -7,6 +7,7 @@ from backend.router.app.tasks.preprocessing.base_gloss_generation import BaseGlo
 from backend.router.app.tasks.preprocessing.common import InspectionPipelineInputArgs
 from backend.router.app.tasks.preprocessing.inspection import InspectionPipeline
 from backend.database import db_sessionmaker
+from backend.router.app.tasks.preprocessing.performance_guide_generation import PerformanceGuideGenerationPipeline
 
 
 async def run():
@@ -21,6 +22,7 @@ async def run():
             
             inspector = InspectionPipeline()
             gloss_generator = BaseGlossGenerationPipeline()
+            performance_guide_generator = PerformanceGuideGenerationPipeline()
 
 
             inspection_result = await inspector.inspect(lines, project.song, user_settings)
@@ -30,6 +32,10 @@ async def run():
             base_gloss_generation_result = await gloss_generator.generate_gloss(lines, project.song, user_settings, inspection_result)
 
             print(base_gloss_generation_result)
+
+            performance_guide_result = await performance_guide_generator.generate_performance_guides(lines, project.song, user_settings, base_gloss_generation_result)
+
+            print(performance_guide_result)
 
 
         else:

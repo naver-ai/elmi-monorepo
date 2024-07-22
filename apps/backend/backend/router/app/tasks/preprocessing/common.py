@@ -1,5 +1,6 @@
 
-from pydantic import BaseModel, Field
+from typing_extensions import Self
+from pydantic import BaseModel, Field, model_validator, validator
 from langchain_core.runnables import RunnableConfig
 
 from backend.database.models import LineInfo, ProjectConfiguration, SongInfo
@@ -45,3 +46,24 @@ class BaseGlossGenerationPipelineInputArgs(InspectionPipelineInputArgs):
 class InputLyricLineWithGloss(InputLyricLine):
     gloss: str
     gloss_description: str
+
+class PerformanceGuideElement(BaseModel):
+    line_id: str
+    mood: str
+    facial_expression: str
+    body_gesture: str
+    emotion_description: str
+
+class PerformanceGuideGenerationResult(BaseModel):
+    guides: list[PerformanceGuideElement]
+
+class PerformanceGuideGenerationPipelineInputArgs(BaseModel):
+    song_info: SongInfo
+    configuration: ProjectConfiguration
+    lyric_lines: list[LineInfo]
+    gloss_generations: GlossGenerationResult
+
+    @model_validator(mode='after')
+    def check_lyric_gloss_match(self) -> Self:
+        assert len(self.lyric_lines) == len(self.gloss_generations.translations)
+        assert all(l.id == g.line_id for l, g in zip(self.lyric_lines, self.gloss_generations.translations))

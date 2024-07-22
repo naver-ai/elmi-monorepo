@@ -84,7 +84,7 @@ class InspectionPipeline():
         return {"input": InspectionPromptInputArgs(
                 song_title=input.song_info.title,
                 song_description=input.song_info.description,
-                lyrics=[InputLyricLine(lyric=line.lyric, id=str(line_index)) for line_index, line in enumerate(input.lyric_lines[:12])],
+                lyrics=[InputLyricLine(lyric=line.lyric, id=str(line_index)) for line_index, line in enumerate(input.lyric_lines)],
                 user_settings=input.configuration
             ).model_dump_json(indent=2)}
 

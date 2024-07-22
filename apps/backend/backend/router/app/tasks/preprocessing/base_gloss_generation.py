@@ -3,7 +3,8 @@ from langchain_core.prompts.chat import ChatPromptTemplate
 from langchain_openai import ChatOpenAI
 from langchain.output_parsers import PydanticOutputParser
 from langchain_core.runnables import RunnableConfig
-from pydantic import BaseModel
+from langchain_core.runnables.retry import RunnableRetry
+from pydantic import BaseModel, ValidationError
 
 from backend.database.models import LineInfo, ProjectConfiguration, SongInfo
 from backend.router.app.tasks.preprocessing.common import BaseGlossGenerationPipelineInputArgs, BaseInspectionElement, BasePipelineInput, GlossGenerationResult, InputLyricLine, InspectionResult
@@ -82,7 +83,7 @@ class BaseGlossGenerationPipeline:
   {{
     "translations": Array<{{
         "line_id": string // id of the line,
-        "gloss": string // gloss labels for the line of lyrics. Refer to preference above.
+        "gloss": string // gloss labels for the line of lyrics. Refer to user preference above.
         "description": string // description on you rationale of why you created this line of gloss. Show that you considered the user settings.
     }}> // The translations must be provided for all lyric lines.
   }}'''
@@ -109,13 +110,17 @@ class BaseGlossGenerationPipeline:
         )
 
         # Initialize the chain
-        self.chain = self.__input_parser | chat_prompt | client | PydanticOutputParser(pydantic_object=GlossGenerationResult) | self.__output_parser
+        self.chain = self.__input_parser | RunnableRetry(
+            bound=chat_prompt | client | PydanticOutputParser(pydantic_object=GlossGenerationResult) | self.__output_parser,
+            retry_exception_types=(ValidationError, AssertionError),
+            max_attempt_number=5
+        ) 
 
     @staticmethod
     def __input_parser(input: BaseGlossGenerationPipelineInputArgs, config: RunnableConfig)->dict:
 
         config["metadata"].update(input.__dict__)
-        lyrics = [InputLyricLineWithInspection(lyric=line.lyric, id=str(line_index)) for line_index, line in enumerate(input.lyric_lines[:12])]
+        lyrics = [InputLyricLineWithInspection(lyric=line.lyric, id=str(line_index)) for line_index, line in enumerate(input.lyric_lines)]
         for inspection in input.inspection_result.inspections:
             ls = [l for l in lyrics if l.id == inspection.line_id]
             if len(ls) > 0:
@@ -133,8 +138,13 @@ class BaseGlossGenerationPipeline:
     @staticmethod
     def __output_parser(result : GlossGenerationResult, config: RunnableConfig)->GlossGenerationResult:
 
+        lyric_lines : list[LineInfo] = config["metadata"]["lyric_lines"]
+
         for translation in result.translations:
-            translation.line_id = config["metadata"]["lyric_lines"][int(translation.line_id)].id # Replace number index into unique id.
+            translation.line_id = lyric_lines[int(translation.line_id)].id # Replace number index into unique id.
+
+        assert len(lyric_lines) == len(result.translations)
+        assert all(l.id == g.line_id for l, g in zip(lyric_lines, result.translations))
 
         return result
  
