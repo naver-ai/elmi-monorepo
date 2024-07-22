@@ -1,24 +1,18 @@
-from time import perf_counter
-from langchain_core.prompts.chat import ChatPromptTemplate
-from langchain_openai import ChatOpenAI
-from langchain.output_parsers import PydanticOutputParser
 from langchain_core.runnables import RunnableConfig
-from pydantic import validate_call
 
-from backend.database.models import LineInfo, ProjectConfiguration, SongInfo
+from backend.router.app.tasks.chain_mapper import ChainMapper
 from backend.router.app.tasks.preprocessing.common import BasePipelineInput, InspectionPipelineInputArgs, InputLyricLine, InspectionResult
-from backend.utils.env_helper import EnvironmentVariables, get_env_variable
 
 
 class InspectionPromptInputArgs(BasePipelineInput):
     lyrics:list[InputLyricLine]
 
 
-class InspectionPipeline():
+class InspectionPipeline(ChainMapper[InspectionPipelineInputArgs, InspectionResult]):
 
     def __init__(self) -> None:
 
-        system_template = '''You are a helpful assistant that helps user to translate ENG lyrics into sign language.
+        super().__init__("Inspection", InspectionResult, '''You are a helpful assistant that helps user to translate ENG lyrics into sign language.
   Your goal is to figure out noteworthy part where the user might need to think how to interpret the lines.
   Given the lyrics, mark lines that seems to be challenging to translate.
   
@@ -52,63 +46,23 @@ class InspectionPipeline():
     }}>
   }}  
 
-  '''
-        # Define the prompt template
-        chat_prompt = ChatPromptTemplate.from_messages([
-            ("system", system_template),
-            ("human", "{input}")
-        ])
+  ''')
 
-        # Retrieve API key from environment variable
-        api_key = get_env_variable(EnvironmentVariables.OPENAI_API_KEY)
-
-
-        # Initialize the OpenAI client
-        client = ChatOpenAI(api_key=api_key, 
-                            model_name="gpt-4o", 
-                            temperature=1, 
-                            max_tokens=2048,
-                            model_kwargs=dict(
-                                frequency_penalty=0, 
-                                presence_penalty=0
-                            )
-        )
-
-
-        # Initialize the chain
-        self.chain = self.__input_parser | chat_prompt | client | PydanticOutputParser(pydantic_object=InspectionResult) | self.__output_processor
-
-    @staticmethod
-    def __input_parser(input: InspectionPipelineInputArgs, config: RunnableConfig) -> dict:
-        config["metadata"].update(input.__dict__)
-        return {"input": InspectionPromptInputArgs(
+    @classmethod
+    def _input_to_str(cls, input: InspectionPipelineInputArgs, config: RunnableConfig) -> str:
+        return InspectionPromptInputArgs(
                 song_title=input.song_info.title,
                 song_description=input.song_info.description,
                 lyrics=[InputLyricLine(lyric=line.lyric, id=str(line_index)) for line_index, line in enumerate(input.lyric_lines)],
                 user_settings=input.configuration
-            ).model_dump_json(indent=2)}
+            ).model_dump_json(indent=2)
 
-    @staticmethod
-    def __output_processor(result: InspectionResult, config: RunnableConfig) -> InspectionResult:
+    @classmethod
+    def _postprocess_output(cls, output: InspectionResult, config: RunnableConfig) -> InspectionResult:
         original_lyrics = config["metadata"]["lyric_lines"]
-        for inspection in result.inspections:
+        for inspection in output.inspections:
             inspection.line_id = original_lyrics[int(inspection.line_id)].id # Replace number index into unique id.
         
-        return result
+        return output
 
-    @validate_call
-    async def inspect(self, lyric_lines: list[LineInfo], song_info: SongInfo, configuration: ProjectConfiguration) -> InspectionResult:
-
-        ts = perf_counter()
-
-        result = await self.chain.ainvoke(InspectionPipelineInputArgs(
-            lyric_lines=lyric_lines,
-            song_info=song_info,
-            configuration=configuration))
-
-        te = perf_counter()
-
-        print(f"Inspection took {te-ts} sec.")
-
-        return result
        

@@ -2,9 +2,10 @@
 import asyncio
 
 from sqlmodel import select
-from backend.database.models import Line, Project, ProjectConfiguration, User, Verse
+from backend.database.models import Project, ProjectConfiguration, User
 from backend.router.app.tasks.preprocessing.base_gloss_generation import BaseGlossGenerationPipeline
-from backend.router.app.tasks.preprocessing.common import InspectionPipelineInputArgs
+from backend.router.app.tasks.preprocessing.common import BaseGlossGenerationPipelineInputArgs, InspectionPipelineInputArgs, TranslatedLyricsPipelineInputArgs
+from backend.router.app.tasks.preprocessing.gloss_option_generation import GlossOptionGenerationPipeline
 from backend.router.app.tasks.preprocessing.inspection import InspectionPipeline
 from backend.database import db_sessionmaker
 from backend.router.app.tasks.preprocessing.performance_guide_generation import PerformanceGuideGenerationPipeline
@@ -23,19 +24,33 @@ async def run():
             inspector = InspectionPipeline()
             gloss_generator = BaseGlossGenerationPipeline()
             performance_guide_generator = PerformanceGuideGenerationPipeline()
+            gloss_options_generator = GlossOptionGenerationPipeline()
 
-
-            inspection_result = await inspector.inspect(lines, project.song, user_settings)
+            inspection_input = InspectionPipelineInputArgs(lyric_lines=lines, song_info=project.song, configuration=user_settings)
+            inspection_result = await inspector.run(InspectionPipelineInputArgs(lyric_lines=lines, song_info=project.song, configuration=user_settings))
 
             print(inspection_result)
 
-            base_gloss_generation_result = await gloss_generator.generate_gloss(lines, project.song, user_settings, inspection_result)
+            base_gloss_generation_result = await gloss_generator.run(BaseGlossGenerationPipelineInputArgs(**inspection_input.__dict__, inspection_result=inspection_result))
 
             print(base_gloss_generation_result)
 
-            performance_guide_result = await performance_guide_generator.generate_performance_guides(lines, project.song, user_settings, base_gloss_generation_result)
+
+            traslated_lyrics_input = TranslatedLyricsPipelineInputArgs(
+                song_info=project.song,
+                configuration=user_settings,
+                lyric_lines=lines,
+                gloss_generations=base_gloss_generation_result
+            )
+
+            performance_guide_result = await performance_guide_generator.run(traslated_lyrics_input)
 
             print(performance_guide_result)
+
+            gloss_option_generation_result = await gloss_options_generator.run(traslated_lyrics_input)
+
+            print(gloss_option_generation_result)
+
 
 
         else:

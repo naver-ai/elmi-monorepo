@@ -1,14 +1,8 @@
-from time import perf_counter
-from langchain_core.prompts.chat import ChatPromptTemplate
-from langchain_openai import ChatOpenAI
-from langchain.output_parsers import PydanticOutputParser
 from langchain_core.runnables import RunnableConfig
-from langchain_core.runnables.retry import RunnableRetry
-from pydantic import BaseModel, ValidationError
 
-from backend.database.models import LineInfo, ProjectConfiguration, SongInfo
-from backend.router.app.tasks.preprocessing.common import BaseGlossGenerationPipelineInputArgs, BaseInspectionElement, BasePipelineInput, GlossGenerationResult, InputLyricLine, InspectionResult
-from backend.utils.env_helper import EnvironmentVariables, get_env_variable
+from backend.database.models import LineInfo
+from backend.router.app.tasks.chain_mapper import ChainMapper
+from backend.router.app.tasks.preprocessing.common import BaseGlossGenerationPipelineInputArgs, BaseInspectionElement, BasePipelineInput, GlossGenerationResult, InputLyricLine
 
 class InputLyricLineWithInspection(InputLyricLine):
     note: BaseInspectionElement | None = None
@@ -16,10 +10,11 @@ class InputLyricLineWithInspection(InputLyricLine):
 class GlossGenerationPromptInputArgs(BasePipelineInput):
     lyrics: list[InputLyricLineWithInspection]
 
-class BaseGlossGenerationPipeline:
+class BaseGlossGenerationPipeline(ChainMapper[BaseGlossGenerationPipelineInputArgs, GlossGenerationResult]):
 
     def __init__(self) -> None:
-        system_instruction = '''
+        super().__init__(
+            "BaseGlossGeneration", GlossGenerationResult, '''
   You are a helpful assistant that helps user to translate ENG lyrics into sign language.
   Given the lyrics, provide the gloss of each lines.
 
@@ -86,41 +81,24 @@ class BaseGlossGenerationPipeline:
         "gloss": string // gloss labels for the line of lyrics. Refer to user preference above.
         "description": string // description on you rationale of why you created this line of gloss. Show that you considered the user settings.
     }}> // The translations must be provided for all lyric lines.
-  }}'''
-        
-        # Define the prompt template
-        chat_prompt = ChatPromptTemplate.from_messages([
-            ("system", system_instruction),
-            ("human", "{input}")
-        ])
+  }}''')
 
-        # Retrieve API key from environment variable
-        api_key = get_env_variable(EnvironmentVariables.OPENAI_API_KEY)
+    @classmethod
+    def _postprocess_output(cls, output: GlossGenerationResult, config: RunnableConfig) -> GlossGenerationResult:
+        lyric_lines : list[LineInfo] = config["metadata"]["lyric_lines"]
 
+        for translation in output.translations:
+            translation.line_id = lyric_lines[int(translation.line_id)].id # Replace number index into unique id.
 
-        # Initialize the OpenAI client
-        client = ChatOpenAI(api_key=api_key, 
-                            model_name="gpt-4o", 
-                            temperature=1, 
-                            max_tokens=2048,
-                            model_kwargs=dict(
-                                frequency_penalty=0, 
-                                presence_penalty=0
-                            )
-        )
+        assert len(lyric_lines) == len(output.translations)
+        assert all(l.id == g.line_id for l, g in zip(lyric_lines, output.translations))
 
-        # Initialize the chain
-        self.chain = self.__input_parser | RunnableRetry(
-            bound=chat_prompt | client | PydanticOutputParser(pydantic_object=GlossGenerationResult) | self.__output_parser,
-            retry_exception_types=(ValidationError, AssertionError),
-            max_attempt_number=5
-        ) 
+        return output
 
-    @staticmethod
-    def __input_parser(input: BaseGlossGenerationPipelineInputArgs, config: RunnableConfig)->dict:
-
-        config["metadata"].update(input.__dict__)
-        lyrics = [InputLyricLineWithInspection(lyric=line.lyric, id=str(line_index)) for line_index, line in enumerate(input.lyric_lines)]
+    @classmethod
+    def _input_to_str(cls, input: BaseGlossGenerationPipelineInputArgs, config: RunnableConfig) -> str:
+        lyrics = [InputLyricLineWithInspection(lyric=line.lyric, id=str(line_index)) 
+                  for line_index, line in enumerate(input.lyric_lines)]
         for inspection in input.inspection_result.inspections:
             ls = [l for l in lyrics if l.id == inspection.line_id]
             if len(ls) > 0:
@@ -133,30 +111,5 @@ class BaseGlossGenerationPipeline:
                 user_settings=input.configuration
             )
         
-        return {"input": prompt_input.model_dump_json(exclude_none=True, indent=2)}
-    
-    @staticmethod
-    def __output_parser(result : GlossGenerationResult, config: RunnableConfig)->GlossGenerationResult:
+        return prompt_input.model_dump_json(exclude_none=True, indent=2)
 
-        lyric_lines : list[LineInfo] = config["metadata"]["lyric_lines"]
-
-        for translation in result.translations:
-            translation.line_id = lyric_lines[int(translation.line_id)].id # Replace number index into unique id.
-
-        assert len(lyric_lines) == len(result.translations)
-        assert all(l.id == g.line_id for l, g in zip(lyric_lines, result.translations))
-
-        return result
- 
-
-    async def generate_gloss(self, lyric_lines: list[LineInfo], song_info: SongInfo, configuration: ProjectConfiguration, inspection_result: InspectionResult) -> InspectionResult:
-
-        ts = perf_counter()
-        
-        result : GlossGenerationResult = await self.chain.ainvoke(BaseGlossGenerationPipelineInputArgs(lyric_lines=lyric_lines, song_info=song_info, configuration=configuration, inspection_result=inspection_result))
-
-        te = perf_counter()
-
-        print(f"Base gloss generation took {te-ts} sec.")
-
-        return result
