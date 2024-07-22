@@ -5,7 +5,7 @@ from pydantic import BaseModel
 from sqlmodel import select, desc
 from sqlmodel.ext.asyncio.session import AsyncSession
 
-from backend.database import with_db_session
+from backend.database.engine import with_db_session
 from backend.database.models import Line, LineInfo, Project, Song, SongInfo, User, Verse, VerseInfo
 from backend.router.app.common import get_signed_in_user
 

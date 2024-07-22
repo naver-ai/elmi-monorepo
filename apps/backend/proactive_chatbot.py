@@ -9,7 +9,7 @@ from os import path
 import json
 
 import asyncio
-from backend.database import db_sessionmaker, insert_inference1_result, insert_combined_result
+from backend.database.engine import db_sessionmaker, insert_inference1_result, insert_combined_result
 from backend.database.models import Line, Verse, Project, Song, Inference1Result, GlossDescription, Inference234Result
 from sqlalchemy.future import select
 from sqlalchemy.ext.asyncio import AsyncSession

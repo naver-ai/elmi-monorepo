@@ -3,7 +3,7 @@ from fastapi import Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
 from sqlmodel.ext.asyncio.session import AsyncSession
 
-from backend.database import with_db_session
+from backend.database.engine import with_db_session
 from backend.database.models import User
 from backend.errors import ErrorType
 import jwt

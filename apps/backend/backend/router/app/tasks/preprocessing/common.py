@@ -2,10 +2,10 @@
 from abc import ABC
 from typing import Generic
 from typing_extensions import Self
-from pydantic import BaseModel, Field, model_validator
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 from langchain_core.runnables import RunnableConfig
 
-from backend.database.models import LineInfo, ProjectConfiguration, SongInfo
+from backend.database.models import LineInfo, ProjectConfiguration, SongInfo, TranslationChallengeType
 from backend.router.app.tasks.chain_mapper import ChainMapper, OutputType
 
 
@@ -19,7 +19,9 @@ class BasePipelineInput(BaseModel):
     user_settings: ProjectConfiguration
 
 class BaseInspectionElement(BaseModel):
-    challenges: list[str] = Field(description="Challenge labels for the line of lyrics. Refer to 'List of Challenge Labels' above.")
+    model_config=ConfigDict(use_enum_values=True)
+    
+    challenges: list[TranslationChallengeType] = Field(description="Challenge labels for the line of lyrics. Refer to 'List of Challenge Labels' above.")
     description: str = Field(description="Description on you rationale of why you chose this line of lyrics and put that challenge labels.")    
 
 

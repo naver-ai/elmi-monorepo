@@ -4,7 +4,7 @@ from pydantic import BaseModel
 from sqlmodel import select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
-from backend.database import with_db_session
+from backend.database.engine import with_db_session
 from backend.database.models import Project, SignLanguageType, User
 from backend.errors import ErrorType
 from backend.router.app.common import get_signed_in_user

@@ -33,9 +33,9 @@ Given the lyrics and translation, provide 2 more options how to sign it differen
     options: Array<{{
         "line_id": string // ID of the lyric line,
         "gloss_short_ver": string // An alternative of the gloss translation for the line of lyrics, shorter than the reference glosses.
-        "gloss_description_short_ver": string // The description on the short version of gloss. Do NOT mention it is just shorter or longer version. Explain the gloss as if it is stand-alone.
+        "gloss_description_short_ver": string // The description on the short version of gloss. Do NOT mention it is shorter or longer version. Explain the gloss as if it is stand-alone.
         "gloss_long_ver": string // An alternative of the gloss translation for the line of lyrics, longer than the reference glosses.
-        "gloss_description_long_ver": string // The description on the long version of gloss. Do NOT mention it is just shorter or longer version. Explain the gloss as if it is stand-alone.
+        "gloss_description_long_ver": string // The description on the long version of gloss. Do NOT mention it is shorter or longer version. Explain the gloss as if it is stand-alone.
     }}>''')
 
 

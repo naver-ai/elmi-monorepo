@@ -4,6 +4,7 @@ from typing import Generic, TypeVar
 
 from langchain_core.prompts.chat import ChatPromptTemplate
 from langchain_openai import ChatOpenAI
+from langchain_core.exceptions import OutputParserException
 from langchain_core.runnables.retry import RunnableRetry
 from langchain.output_parsers import PydanticOutputParser
 from langchain_core.runnables import RunnableConfig, Runnable
@@ -42,7 +43,7 @@ class ChainMapper(ABC, Generic[InputType, OutputType]):
 
         # Initialize the chain
         self._chain = self.__input_parser | RunnableRetry(name="LLM-routin", bound = chat_prompt | chat_model | PydanticOutputParser(pydantic_object=outputModel) | self._postprocess_output,
-                                                         retry_exception_types=(ValidationError, AssertionError), 
+                                                         retry_exception_types=(ValidationError, AssertionError, OutputParserException), 
                                                          max_attempt_number=5)
 
     @classmethod

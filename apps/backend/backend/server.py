@@ -2,12 +2,13 @@ from contextlib import asynccontextmanager
 from os import getcwd, path
 from time import perf_counter
 
-from backend.database import create_db_and_tables, engine, create_test_db_entities
+from backend.database.test import create_test_db_entities
 from fastapi import FastAPI, Request, Response, status
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, HTMLResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
+from backend.database.engine import create_db_and_tables, engine
 from backend.router.app import router as app_router
 from re import compile
 

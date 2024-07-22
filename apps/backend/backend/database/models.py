@@ -87,8 +87,12 @@ class Line(SQLModel, LineInfo, table=True):
     __table_args__ = (UniqueConstraint("verse_id", "line_number", name="line_number_uniq_by_verse_idx"), )
 
     verse: Verse = Relationship(back_populates='lines')
-    inference1_results: list["Inference1Result"] = Relationship(back_populates="line")
+    inspection: Optional["LineInspection"] = Relationship(back_populates="line", sa_relationship_kwargs={'lazy': 'selectin'})
+    annotation: Optional["LineAnnotation"] = Relationship(back_populates="line", sa_relationship_kwargs={'lazy': 'selectin'})
 
+
+class LineIdMixin(BaseModel):
+    line_id: str = Field(foreign_key=f"{Line.__tablename__}.id")
 
 class SharableUserInfo(IdTimestampMixin):
     
@@ -164,6 +168,11 @@ class Project(SQLModel, IdTimestampMixin, UserIdMixin, SongIdMixin, table=True):
     user: User | None = Relationship(back_populates="projects", sa_relationship_kwargs={'lazy': 'selectin'})
     song: Song = Relationship(back_populates='projects', sa_relationship_kwargs={'lazy': 'selectin'}) 
 
+
+    inspections: list["LineInspection"] = Relationship(back_populates="project", sa_relationship_kwargs={'lazy': 'selectin'})
+    annotations: list["LineAnnotation"] = Relationship(back_populates="project", sa_relationship_kwargs={'lazy': 'selectin'})
+
+
 class ProjectIdMixin(BaseModel):
     project_id: str = Field(foreign_key=f"{Project.__tablename__}.id")
 
@@ -186,25 +195,34 @@ class TrimmedMedia(SQLModel, IdTimestampMixin, SongIdMixin, table=True):
         return path.exists(self.get_trimmed_file_path())
 
 
-class Inference1Result(SQLModel, table=True):
-    id: str = Field(default_factory=generate_id, primary_key=True)
-    line_id: str = Field(foreign_key="line.id")
-    challenges: list[str] = Field(sa_column=Column(JSON), default=[])
-    description: Optional[str] = None
+class TranslationChallengeType(StrEnum):
+    Poetic='poetic'
+    Cultural='cultural'
+    Broken='broken'
+    Mismatch='mismatch'
 
-    line: Optional["Line"] = Relationship(back_populates="inference1_results")
+class LineInspection(SQLModel,IdTimestampMixin, LineIdMixin, ProjectIdMixin, table=True):
+    challenges: list[TranslationChallengeType] = Field(sa_column=Column(JSON), default=[])
+    description: str
+
+    line: Optional["Line"] = Relationship(back_populates="inspection", sa_relationship_kwargs={'lazy': 'selectin'})
+    project: Optional["Project"] = Relationship(back_populates="inspections", sa_relationship_kwargs={'lazy': 'selectin'})
 
 class GlossDescription(BaseModel):
+    model_config = ConfigDict(frozen=True)
     gloss: str
     description: str
 
-class Inference234Result(SQLModel, table=True):
-    id: str = Field(default_factory=generate, primary_key=True)
-    line_id: str = Field(foreign_key="line.id", nullable=False)
-    gloss:  str = Field(nullable=False)
-    gloss_description: str = Field(nullable=True)
-    mood: str = Field(nullable=True)
-    facial_expression: str = Field(nullable=True)
-    body_gesture: str = Field(nullable=True)
-    emotion_description: str = Field(nullable=True)
-    gloss_options_with_description: list[GlossDescription] = Field(sa_column=Column(JSON, nullable=True))
+class LineAnnotation(SQLModel, IdTimestampMixin, LineIdMixin, ProjectIdMixin, table=True):
+    gloss:  str
+    gloss_description: str
+    
+    mood: str
+    facial_expression: str
+    body_gesture: str
+    emotion_description: str
+
+    gloss_alts: list[GlossDescription] = Field(sa_column=Column(JSON), default=[])
+
+    line: Optional["Line"] = Relationship(back_populates="annotation", sa_relationship_kwargs={'lazy': 'selectin'})
+    project: Optional["Project"] = Relationship(back_populates="annotations", sa_relationship_kwargs={'lazy': 'selectin'})
