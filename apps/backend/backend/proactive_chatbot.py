@@ -4,10 +4,13 @@ import json
 import asyncio
 from os import path
 
+from pydantic import BaseModel
 from sqlalchemy.future import select
 
-from backend.database import db_sessionmaker, save_thread_message, create_thread
-from backend.database.models import Inference1Result, Inference2Result
+from backend.database import db_sessionmaker
+from backend.database.crud.chat import create_thread, save_thread_message
+from backend.database.crud.project import fetch_line_annotation_by_line, fetch_line_inspection_by_line
+from backend.database.models import LineAnnotation, LineInspection
 from backend.utils.env_helper import get_env_variable, EnvironmentVariables
 from langchain_core.output_parsers import StrOutputParser
 from langchain_openai import ChatOpenAI
@@ -29,27 +32,7 @@ client = ChatOpenAI(
     top_p=1,
     frequency_penalty=0,
     presence_penalty=0
-)
-
-# Fetch inference results for a specific line ID from the database.
-async def fetch_inference1_results(line_id: str):
-
-    async with db_sessionmaker() as session:
-        stmt = select(Inference1Result).where(Inference1Result.line_id == line_id)
-        result = await session.exec(stmt)
-        results = result.scalars().all()
-        return [{"Challenges": result.challenges, "Description": result.description} for result in results]
-    
-
-# Fetch inference results for a specific line ID from the database (glossing)
-async def fetch_inference2_results(line_id: str):
-
-    async with db_sessionmaker() as session:
-        stmt = select(Inference2Result).where(Inference2Result.line_id == line_id)
-        result = await session.exec(stmt)
-        results = result.scalars().all()
-        return [{"Gloss": result.gloss, "Gloss_Description": result.gloss_description} for result in results]
-    
+)    
 
 # Store for session histories
 store = {}
@@ -101,7 +84,7 @@ def classify_user_intent(user_input: str):
     
 
 # Create a formatted system template string with inference results.
-def create_system_template(intent: str, results: list) -> str:
+def create_system_template(intent: str, result: BaseModel) -> str:
     if intent == "Meaning":
         system_template = '''
         Your name is ELMI, a helpful chatbot that helps users translate ENG lyrics to ASL.
@@ -112,7 +95,7 @@ def create_system_template(intent: str, results: list) -> str:
 
         You start by prompting questions to users of the input line.
 
-        You are using the outputs from the feature #1:
+        You are using the outputs from the previous note on the line:
         {line_inspection_results}
 
         Key characteristics of ELMI:
@@ -131,7 +114,7 @@ def create_system_template(intent: str, results: list) -> str:
         Given the tags above, you will create some thought-provoking questions for users and start a discussion with the user. Your role is to help users to come up with their idea.
         When you suggest something, make sure to ask if the user wants other things.
         '''
-        return system_template.format(line_inspection_results=json.dumps(results, indent=2))
+        return system_template.format(line_inspection_results=result.model_dump_json(include={"challenges", "description"}))
 
     elif intent == "Glossing":
         system_template = '''
@@ -143,7 +126,7 @@ def create_system_template(intent: str, results: list) -> str:
 
         You start by prompting questions to users of the input line.
 
-        You are using the outputs from the feature #2:
+        You are using the outputs from the glosses of the line:
         {line_glossing_results}
 
         The first answer should be string plain text formated {line_glossing_results} (remove JSON format) with added explannation. Do not introduce yourself.
@@ -164,74 +147,72 @@ def create_system_template(intent: str, results: list) -> str:
         Given the tags above, you will create some thought-provoking questions for users and start a discussion with the user. Your role is to help users to come up with their idea.
         When you suggest something, make sure to ask if the user wants other things.
         '''
-        return system_template.format(line_glossing_results=json.dumps(results, indent=2))
+        return system_template.format(line_glossing_results=result.model_dump_json(include={"gloss", "gloss_description"}))
 
 
 # Initiate a proactive chat session with a user based on a specific line ID.
-def proactive_chat(line_id: str):
-    inference1_results = asyncio.run(fetch_inference1_results(line_id))
-    inference2_results = asyncio.run(fetch_inference2_results(line_id))
+async def proactive_chat(line_id: str):
+    async with db_sessionmaker() as session:
+        line_inspection: LineInspection = await fetch_line_inspection_by_line(session, line_id)
+        line_annotation: LineAnnotation = await fetch_line_annotation_by_line(session, line_id)
 
-    # Use the classified user intent to decide which inference results to use
-    user_input = input("You: ")
-    classification_result = classify_user_intent(user_input)
-    intent = classification_result
+        # Use the classified user intent to decide which inference results to use
+        user_input = input("You: ")
+        classification_result = classify_user_intent(user_input)
+        intent = classification_result
 
-    if intent == "Meaning":
-        system_template = create_system_template(intent, inference1_results)
-        input_variables = ["line_inspection_results", "history", "input"]
-    elif intent == "Glossing":
-        system_template = create_system_template(intent, inference2_results)
-        input_variables = ["line_glossing_results", "history", "input"]
-    else:
-        print(f"Feature {intent} is not yet implemented.")
-        return
-    
-    custom_prompt_template = PromptTemplate(
-        input_variables=input_variables,
-        template=system_template + "\n\n{history}\nUser: {input}\nELMI:"
-    )
+        if intent == "Meaning":
+            system_template = create_system_template(intent, line_inspection)
+            input_variables = ["line_inspection_results", "history", "input"]
+        elif intent == "Glossing":
+            system_template = create_system_template(intent, line_annotation)
+            input_variables = ["line_glossing_results", "history", "input"]
+        else:
+            print(f"Feature {intent} is not yet implemented.")
+            return
+        
+        custom_prompt_template = PromptTemplate(
+            input_variables=input_variables,
+            template=system_template + "\n\n{history}\nUser: {input}\nELMI:"
+        )
 
-    conversation_chain = RunnableWithMessageHistory(
-        runnable=client,
-        get_session_history=get_session_history,
-        prompt=custom_prompt_template
-    )
+        conversation_chain = RunnableWithMessageHistory(
+            runnable=client,
+            get_session_history=get_session_history,
+            prompt=custom_prompt_template
+        )
 
-    config = {"configurable": {"session_id": "unique_session_id"}}  # Change session_id as needed
+        config = {"configurable": {"session_id": "unique_session_id"}}  # Change session_id as needed
 
-    initial_messages = [
-        SystemMessage(content=system_template)
-    ]
+        initial_messages = [
+            SystemMessage(content=system_template)
+        ]
 
-    async def main():
-        async with db_sessionmaker() as session:
-            thread_id = await create_thread(session, line_id)
+        
+        thread_id = await create_thread(session, line_id)
 
-            initial_response = conversation_chain.invoke(
+        initial_response = await conversation_chain.ainvoke(
                 initial_messages,
                 config=config
-            )
-            print(f"Initial Questions: {initial_response.content}")
-            await save_thread_message(session, thread_id, 'assistant', initial_response.content, 'initial')
+        )
+        print(f"Initial Questions: {initial_response.content}")
+        await save_thread_message(session, thread_id, 'assistant', initial_response.content, 'initial')
 
-            while True:
+        while True:
                 user_input = input("You: ")
                 if user_input.lower() in ["exit", "quit"]:
                     break
 
                 await save_thread_message(session, thread_id, 'user', user_input, 'ongoing')
 
-                assistant_response = conversation_chain.invoke(
+                assistant_response = await conversation_chain.ainvoke(
                     [HumanMessage(content=user_input)],
                     config=config
                 )
                 print(f"ELMI: {assistant_response.content}")
                 await save_thread_message(session, thread_id, 'assistant', assistant_response.content, 'ongoing')
 
-    asyncio.run(main())
-
 # Example usage
 if __name__ == "__main__":
     line_id = "hNI4Ydr2haGdtNrssrId_"  # Replace with actual line ID
-    proactive_chat(line_id)
+    asyncio.run(proactive_chat(line_id))
