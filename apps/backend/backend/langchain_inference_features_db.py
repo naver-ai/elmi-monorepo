@@ -10,7 +10,7 @@ from os import path
 import json
 
 import asyncio
-from backend.database import db_sessionmaker, insert_inference1_result, insert_combined_result
+from backend.database import db_sessionmaker, insert_inference1_result, insert_inference2_result, insert_combined_result
 from backend.database.models import Line, Verse, Project, Song, Inference1Result, GlossDescription, Inference234Result
 from sqlalchemy.future import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -216,23 +216,16 @@ def run_second_inference():
   with open(path.join(ElmiConfig.DIR_DATA, "output_feature2.json"), 'w') as f:
       json.dump(json.loads(response_feature2.strip('```json\n').strip('\n```')), f, indent=2)
 
-  async def store_combined_results():
-        async with db_sessionmaker() as session:
-            results = json.loads(response_feature2.strip('```json\n').strip('\n```'))
-            for result in results:
-                line_id = next(item['line_id'] for item in lyrics_input)
-                await insert_combined_result(
-                    session,
-                    line_id,
-                    result["gloss"],
-                    result["description"],
-                    "",
-                    "",
-                    "",
-                    "",
-                    []
-                )
-  asyncio.run(store_combined_results())
+  # Process the response and store in the database
+  async def store_inference2_results():
+      async with db_sessionmaker() as session:
+          results = json.loads(response_feature2.strip('```json\n').strip('\n```'))
+
+          for result in results:
+              line_id = result["line_id"]
+              await insert_inference2_result(session, line_id, result["gloss"], result["description"])
+
+  asyncio.run(store_inference2_results())
 
 
 

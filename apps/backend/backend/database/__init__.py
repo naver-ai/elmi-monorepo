@@ -130,6 +130,17 @@ async def insert_inference1_result(session: AsyncSession, line_id: str, challeng
       session.add(inference_result)
       await session.commit()
 
+
+  # Function to insert the first inference result into the database
+async def insert_inference2_result(session: AsyncSession, line_id: str, gloss: list, gloss_description: str):
+      inference_result = Inference2Result(
+          line_id=line_id,
+          gloss=gloss,
+          gloss_description=gloss_description
+      )
+      session.add(inference_result)
+      await session.commit()
+
 async def insert_combined_result(session: AsyncSession, line_id: str, gloss: str, gloss_description: str, mood: str, facial_expression: str, body_gesture: str, emotion_description: str, gloss_options_with_description: list[GlossDescription]):
     combined_result = Inference234Result(
         line_id=line_id,
@@ -143,3 +154,22 @@ async def insert_combined_result(session: AsyncSession, line_id: str, gloss: str
     )
     session.add(combined_result)
     await session.commit()
+
+
+# Save a message to the ThreadMessage table.
+async def save_thread_message(session, thread_id, role, message, mode):
+    new_message = ThreadMessage(
+        thread_id=thread_id,
+        role=role,
+        message=message,
+        mode=mode
+    )
+    session.add(new_message)
+    await session.commit()
+
+# Create a new thread and return its ID."""
+async def create_thread(session, start_line_id):
+    new_thread = Thread(start_line_id=start_line_id, end_line_id=None)
+    session.add(new_thread)
+    await session.commit()
+    return new_thread.id

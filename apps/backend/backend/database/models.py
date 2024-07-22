@@ -153,6 +153,13 @@ class GlossDescription(BaseModel):
     gloss: str
     description: str
 
+class Inference2Result(SQLModel, table=True):
+    id: str = Field(default_factory=generate, primary_key=True)
+    line_id: str = Field(foreign_key="line.id", nullable=False)
+    gloss:  str = Field(nullable=False)
+    gloss_description: str = Field(nullable=True)
+
+
 class Inference234Result(SQLModel, table=True):
     id: str = Field(default_factory=generate, primary_key=True)
     line_id: str = Field(foreign_key="line.id", nullable=False)
@@ -163,3 +170,18 @@ class Inference234Result(SQLModel, table=True):
     body_gesture: str = Field(nullable=True)
     emotion_description: str = Field(nullable=True)
     gloss_options_with_description: list[GlossDescription] = Field(sa_column=Column(JSON, nullable=True))
+
+
+
+# New models for Chat :)
+class Thread(SQLModel, IdTimestampMixin, table=True):
+    start_line_id: str = Field(nullable=False)
+    end_line_id: Optional[str] = Field(nullable=True)
+    messages: list["ThreadMessage"] = Relationship(back_populates="thread", sa_relationship_kwargs={'lazy': 'selectin'})
+
+class ThreadMessage(SQLModel, IdTimestampMixin, table=True):
+    thread_id: str = Field(foreign_key="thread.id")
+    role: str = Field(nullable=False)  # user or assistant
+    message: str = Field(nullable=False)
+    mode: str = Field(nullable=False)
+    thread: Thread = Relationship(back_populates="messages")
