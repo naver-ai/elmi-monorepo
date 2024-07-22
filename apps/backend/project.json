@@ -96,7 +96,7 @@
     "test_chat": {
       "executor": "@nxlv/python:run-commands",
       "options": {
-        "command": "poetry run python /Users/user/Documents/GitHub/elmi-monorepo/apps/backend/proactive_chatbot.py",
+        "command": "poetry run python backend/proactive_chatbot.py",
         "cwd": "apps/backend"
       }
     }

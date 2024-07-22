@@ -226,3 +226,17 @@ class LineAnnotation(SQLModel, IdTimestampMixin, LineIdMixin, ProjectIdMixin, ta
 
     line: Optional["Line"] = Relationship(back_populates="annotation", sa_relationship_kwargs={'lazy': 'selectin'})
     project: Optional["Project"] = Relationship(back_populates="annotations", sa_relationship_kwargs={'lazy': 'selectin'})
+
+
+# New models for Chat :)
+class Thread(SQLModel, IdTimestampMixin, table=True):
+    start_line_id: str = Field(nullable=False)
+    end_line_id: Optional[str] = Field(nullable=True)
+    messages: list["ThreadMessage"] = Relationship(back_populates="thread", sa_relationship_kwargs={'lazy': 'selectin'})
+
+class ThreadMessage(SQLModel, IdTimestampMixin, table=True):
+    thread_id: str = Field(foreign_key="thread.id")
+    role: str = Field(nullable=False)  # user or assistant
+    message: str = Field(nullable=False)
+    mode: str = Field(nullable=False)
+    thread: Thread = Relationship(back_populates="messages")
