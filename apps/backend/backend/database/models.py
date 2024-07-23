@@ -168,6 +168,7 @@ class Project(SQLModel, IdTimestampMixin, UserIdMixin, SongIdMixin, table=True):
     user: User | None = Relationship(back_populates="projects", sa_relationship_kwargs={'lazy': 'selectin'})
     song: Song = Relationship(back_populates='projects', sa_relationship_kwargs={'lazy': 'selectin'}) 
 
+    last_processing_id: str | None = Field(nullable=True, default=None)
 
     inspections: list["LineInspection"] = Relationship(back_populates="project", sa_relationship_kwargs={'lazy': 'selectin'})
     annotations: list["LineAnnotation"] = Relationship(back_populates="project", sa_relationship_kwargs={'lazy': 'selectin'})
@@ -202,6 +203,7 @@ class TranslationChallengeType(StrEnum):
     Mismatch='mismatch'
 
 class LineInspection(SQLModel,IdTimestampMixin, LineIdMixin, ProjectIdMixin, table=True):
+    processing_id: str
     challenges: list[TranslationChallengeType] = Field(sa_column=Column(JSON), default=[])
     description: str
 
@@ -214,6 +216,7 @@ class GlossDescription(BaseModel):
     description: str
 
 class LineAnnotation(SQLModel, IdTimestampMixin, LineIdMixin, ProjectIdMixin, table=True):
+    processing_id: str
     gloss:  str
     gloss_description: str
     

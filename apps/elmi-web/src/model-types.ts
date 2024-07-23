@@ -49,7 +49,36 @@ export interface LyricLine extends TimestampRange{
     timestamps: Array<TimestampRange>
 }
 
-export interface Project extends ProjectInfo {
+export enum TranslationChallengeType{
+    Poetic='poetic',
+    Cultural='cultural',
+    Broken='broken',
+    Mismatch='mismatch'
+}
 
+export interface LineInspection{
+    id: string
+    line_id: string
+    challenges: Array<TranslationChallengeType>
+    description: string
+}
+
+export interface GlossDescription {
+    gloss: string
+    description: string
+}
+
+export interface LineAnnotation{
+    id: string
+    line_id: string
+    project_id: string
+    gloss: string
+    gloss_description: string
+    mood: string
+    facial_expression: string
+    body_gesture: string
+    emotion_description: string
+
+    gloss_alts: Array<GlossDescription>
 }
 

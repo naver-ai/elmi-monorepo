@@ -1,13 +1,18 @@
 import { Button, Layout, Typography } from "antd"
 import { useDispatch, useSelector } from "../../../redux/hooks"
 import { useCallback } from "react";
-import { setDetailLineId } from "../reducer";
+import { selectLineAnnotationByLineId, setDetailLineId } from "../reducer";
 import { LeftDoubleArrowIcon } from "../../../components/svg-icons";
+import { LineAnnotation } from "apps/elmi-web/src/model-types";
 const { Title } = Typography;
 
 export const LyricDetailPanel = () => {
 
     const lineId = useSelector(state => state.editor.detailLineId)
+
+    const annotation: LineAnnotation | undefined = useSelector(state => selectLineAnnotationByLineId(state, lineId || ""))
+
+
     const dispatch = useDispatch()
 
     const onClickClose = useCallback(()=>{
@@ -23,8 +28,10 @@ export const LyricDetailPanel = () => {
                 </div>
                 <div className="p-3 overflow-y-scroll">
                     <Title level={5}>Music Video</Title>
-                    <Title level={5}>Emotions</Title>
-                    <Title level={5}>Emotion</Title>
+                    <Title level={5}>Mood</Title>
+                    {
+                        annotation != null ? annotation.mood : null
+                    }
                 </div>
             </div>
         </div>
