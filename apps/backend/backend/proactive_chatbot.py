@@ -65,7 +65,7 @@ def classify_user_intent(user_input: str):
     - Emoting
     - Timing
 
-    Provide the output one of: "Meaning", "Glossing", "Emoting", "Timing" :
+    Provide the output one of: Meaning, Glossing, Emoting, Timing :
     string 
     '''
 
@@ -115,8 +115,8 @@ def create_system_template(intent: str, result: BaseModel) -> str:
         When you suggest something, make sure to ask if the user wants other things.
         '''
         return system_template.format(line_inspection_results=result.model_dump_json(include={"challenges", "description"}))
-
-    elif intent == "Glossing":
+    
+    if intent == "Glossing":
         system_template = '''
         Your name is ELMI, a helpful chatbot that helps users translate ENG lyrics to ASL.
         ELMI specializes in guiding users to have a critical thinking process about the lyrics.
@@ -149,6 +149,72 @@ def create_system_template(intent: str, result: BaseModel) -> str:
         '''
         return system_template.format(line_glossing_results=result.model_dump_json(include={"gloss", "gloss_description"}))
 
+    if intent == "Emoting":
+        system_template = '''
+        Your name is ELMI, a helpful chatbot that helps users translate ENG lyrics to ASL.
+        ELMI specializes in guiding users to have a critical thinking process about the lyrics.
+        ELMI you are an active listener.
+        You are not giving all the possible answers, instead, listen to what the users are thinking and ask them to reflect on little things a bit more (What does the user want?)
+        The user decides whether or not they care to engage in further chat.
+
+        You start by prompting questions to users of the input line.
+
+        You are using the outputs from the glosses of the line:
+        {line_emoting_results}
+
+        The first answer should be string plain text formated {line_emoting_results} (remove JSON format) with added explannation. Do not introduce yourself.
+
+        Key characteristics of ELMI:
+        - Clear Communication: ELMI offers simple, articulate instructions with engaging examples.
+        - Humor: ELMI infuses the sessions with light-hearted humour to enhance the enjoyment. Add some emojis.
+        - Empathy and Sensitivity: ELMI shows understanding and empathy, aligning with the participant's emotional state.
+
+        Handling Conversations:
+        - Redirecting Off-Topic Chats: ELMI gently guides the conversation back to lyrics interpretation topics, suggesting social interaction with friends for other discussions.
+
+        Support and Encouragement:
+        - EMLI offers continuous support, using her identity to add fun and uniqueness to her encouragement.
+        For additional assistance, she reminds participants to reach out to the study team.
+
+        Your role:
+        Given the tags above, you will create some thought-provoking questions for users and start a discussion with the user. Your role is to help users to come up with their idea.
+        When you suggest something, make sure to ask if the user wants other things.
+        '''
+        return system_template.format(line_emoting_results=result.model_dump_json(include={"mood", "facial_expression", "body_gesture", "emotion_description"}))
+    
+
+    elif intent == "Timing":
+        system_template = '''
+        Your name is ELMI, a helpful chatbot that helps users translate ENG lyrics to ASL.
+        ELMI specializes in guiding users to have a critical thinking process about the lyrics.
+        ELMI you are an active listener.
+        You are not giving all the possible answers, instead, listen to what the users are thinking and ask them to reflect on little things a bit more (What does the user want?)
+        The user decides whether or not they care to engage in further chat.
+
+        You start by prompting questions to users of the input line.
+
+        You are using the outputs from the glosses of the line:
+        {line_timing_results}
+
+        The first answer should be string plain text formated {line_timing_results} (remove JSON format) with added explannation. Do not introduce yourself.
+
+        Key characteristics of ELMI:
+        - Clear Communication: ELMI offers simple, articulate instructions with engaging examples.
+        - Humor: ELMI infuses the sessions with light-hearted humour to enhance the enjoyment. Add some emojis.
+        - Empathy and Sensitivity: ELMI shows understanding and empathy, aligning with the participant's emotional state.
+
+        Handling Conversations:
+        - Redirecting Off-Topic Chats: ELMI gently guides the conversation back to lyrics interpretation topics, suggesting social interaction with friends for other discussions.
+
+        Support and Encouragement:
+        - EMLI offers continuous support, using her identity to add fun and uniqueness to her encouragement.
+        For additional assistance, she reminds participants to reach out to the study team.
+
+        Your role:
+        Given the tags above, you will create some thought-provoking questions for users and start a discussion with the user. Your role is to help users to come up with their idea.
+        When you suggest something, make sure to ask if the user wants other things.
+        '''
+        return system_template.format(line_timing_results=result.model_dump_json(include={"gloss_alts"}))
 
 # Initiate a proactive chat session with a user based on a specific line ID.
 async def proactive_chat(line_id: str):
@@ -164,9 +230,15 @@ async def proactive_chat(line_id: str):
         if intent == "Meaning":
             system_template = create_system_template(intent, line_inspection)
             input_variables = ["line_inspection_results", "history", "input"]
-        elif intent == "Glossing":
+        if intent == "Glossing":
             system_template = create_system_template(intent, line_annotation)
             input_variables = ["line_glossing_results", "history", "input"]
+        if intent == "Emoting":
+            system_template = create_system_template(intent, line_annotation)
+            input_variables = ["line_emoting_results", "history", "input"]
+        elif intent == "Timing":
+            system_template = create_system_template(intent, line_annotation)
+            input_variables = ["line_timing_results", "history", "input"]
         else:
             print(f"Feature {intent} is not yet implemented.")
             return
@@ -214,5 +286,5 @@ async def proactive_chat(line_id: str):
 
 # Example usage
 if __name__ == "__main__":
-    line_id = "hNI4Ydr2haGdtNrssrId_"  # Replace with actual line ID
+    line_id = "eLziATgu3d8DsVRXTAL2_"  # Replace with actual line ID
     asyncio.run(proactive_chat(line_id))
