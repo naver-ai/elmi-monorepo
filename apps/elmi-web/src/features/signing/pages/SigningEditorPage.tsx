@@ -5,7 +5,7 @@ import {ArrowLeftStartOnRectangleIcon} from '@heroicons/react/20/solid'
 import { Button, Layout } from "antd"
 import { useNavigate } from "react-router-dom"
 import { useCallback, useEffect } from "react"
-import { fetchProjectSong, initializeEditorState } from "../reducer"
+import { fetchProjectDetail, initializeEditorState } from "../reducer"
 import { LyricsView } from "../components/LyricsView"
 import { LyricDetailPanel } from "../components/LyricDetailPanel"
 import { MediaPlayer } from "../../media-player/reducer"
@@ -38,7 +38,7 @@ export const SigningEditorPage = () => {
     const projectId = useProjectIdInRoute()!
 
     useEffect(()=>{
-        dispatch(fetchProjectSong(projectId))
+        dispatch(fetchProjectDetail(projectId))
 
         return () => {
             dispatch(initializeEditorState())

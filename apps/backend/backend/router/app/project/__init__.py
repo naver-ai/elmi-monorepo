@@ -6,8 +6,9 @@ from sqlmodel import select, desc
 from sqlmodel.ext.asyncio.session import AsyncSession
 
 from backend.database.engine import with_db_session
-from backend.database.models import Line, LineInfo, Project, Song, SongInfo, User, Verse, VerseInfo
+from backend.database.models import Line, LineAnnotation, LineInfo, LineInspection, Project, Song, SongInfo, User, Verse, VerseInfo
 from backend.router.app.common import get_signed_in_user
+from backend.database.crud.project import fetch_line_annotations_by_project, fetch_line_inspections_by_project
 
 router = APIRouter()
 
@@ -36,6 +37,8 @@ class ProjectDetails(BaseModel):
     song: SongInfo
     verses: list[VerseInfo]
     lines: list[LineInfo]
+    annotations: list[LineAnnotation]
+    inspections: list[LineInspection]
 
 
 @router.get("/{project_id}", response_model=ProjectDetails)
@@ -49,9 +52,23 @@ async def get_project_detail(project_id: str, user: Annotated[User, Depends(get_
                 last_accessed_at=project.last_accessed_at,
                 song=project.song,
                 verses=project.song.verses,
-                lines=[line for verse in project.song.verses for line in verse.lines]
+                lines=[line for verse in project.song.verses for line in verse.lines],
+                annotations=project.annotations,
+                inspections=project.inspections
             )
         else:
             return status.HTTP_403_FORBIDDEN
     else:
         return status.HTTP_404_NOT_FOUND
+
+
+@router.get("/{project_id}/inspections/all", response_model=list[LineInspection])
+async def get_line_inspections(project_id: str, user: Annotated[User, Depends(get_signed_in_user)],
+                       db: Annotated[AsyncSession, Depends(with_db_session)]):
+    return await fetch_line_inspections_by_project(db, project_id, user.id)
+
+@router.get("/{project_id}/annotations/all", response_model=list[LineAnnotation])
+async def get_line_annotations(project_id: str, user: Annotated[User, Depends(get_signed_in_user)],
+                       db: Annotated[AsyncSession, Depends(with_db_session)]):
+    return await fetch_line_annotations_by_project(db, project_id, user.id)
+

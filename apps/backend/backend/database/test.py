@@ -95,4 +95,5 @@ async def create_test_db_entities():
             test_users = await db.exec(query)
             test_user = test_users.first()
             if test_user is not None:
-                await preprocess_song(test_user.projects[0].id, db)
+                await preprocess_song(test_user.projects[0].id, db, force=False)
+                pass
