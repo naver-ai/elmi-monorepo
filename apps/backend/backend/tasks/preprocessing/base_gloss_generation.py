@@ -1,8 +1,8 @@
 from langchain_core.runnables import RunnableConfig
 
 from backend.database.models import LineInfo
-from backend.router.app.tasks.chain_mapper import ChainMapper
-from backend.router.app.tasks.preprocessing.common import BaseGlossGenerationPipelineInputArgs, BaseInspectionElement, BasePipelineInput, GlossGenerationResult, InputLyricLine
+from backend.tasks.chain_mapper import ChainMapper
+from backend.tasks.preprocessing.common import BaseGlossGenerationPipelineInputArgs, BaseInspectionElement, BasePipelineInput, GlossGenerationResult, InputLyricLine
 
 class InputLyricLineWithInspection(InputLyricLine):
     note: BaseInspectionElement | None = None

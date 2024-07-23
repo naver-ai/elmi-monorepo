@@ -2,7 +2,7 @@ from sqlmodel import select
 
 from backend.database.models import Song, User
 from backend.database.engine import db_sessionmaker
-from backend.router.app.tasks.preprocessing import preprocess_song
+from backend.tasks.preprocessing import preprocess_song
 from backend.utils import genius
 from backend.utils.media import MediaManager
 
@@ -88,4 +88,11 @@ async def create_test_db_entities():
                 db.add(user)
                 db.add(project)
                 await db.commit()
+
+    async with db_sessionmaker() as db:
+        async with db.begin():
+            query = select(User).where(User.alias == 'test')
+            test_users = await db.exec(query)
+            test_user = test_users.first()
+            if test_user is not None:
                 await preprocess_song(test_user.projects[0].id, db)

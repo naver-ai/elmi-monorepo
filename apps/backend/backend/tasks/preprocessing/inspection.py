@@ -1,7 +1,7 @@
 from langchain_core.runnables import RunnableConfig
 
-from backend.router.app.tasks.chain_mapper import ChainMapper
-from backend.router.app.tasks.preprocessing.common import BasePipelineInput, InspectionPipelineInputArgs, InputLyricLine, InspectionResult
+from backend.tasks.chain_mapper import ChainMapper
+from backend.tasks.preprocessing.common import BasePipelineInput, InspectionPipelineInputArgs, InputLyricLine, InspectionResult
 
 
 class InspectionPromptInputArgs(BasePipelineInput):

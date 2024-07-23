@@ -3,7 +3,7 @@ from langchain_openai import ChatOpenAI
 from langchain.output_parsers import PydanticOutputParser
 from langchain_core.runnables import RunnableConfig
 
-from backend.router.app.tasks.preprocessing.common import GlossOptionGenerationResult, TranslatedLyricsPipelineBase
+from backend.tasks.preprocessing.common import GlossOptionGenerationResult, TranslatedLyricsPipelineBase
 
 
 class GlossOptionGenerationPipeline(TranslatedLyricsPipelineBase[GlossOptionGenerationResult]):

@@ -1,6 +1,6 @@
 from langchain_core.runnables import RunnableConfig
 
-from backend.router.app.tasks.preprocessing.common import PerformanceGuideGenerationResult, TranslatedLyricsPipelineBase, TranslatedLyricsPipelineInputArgs
+from backend.tasks.preprocessing.common import PerformanceGuideGenerationResult, TranslatedLyricsPipelineBase, TranslatedLyricsPipelineInputArgs
 
 
 class PerformanceGuideGenerationPipeline(TranslatedLyricsPipelineBase[PerformanceGuideGenerationResult]):

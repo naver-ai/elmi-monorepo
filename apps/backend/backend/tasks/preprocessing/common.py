@@ -6,7 +6,7 @@ from pydantic import BaseModel, ConfigDict, Field, model_validator
 from langchain_core.runnables import RunnableConfig
 
 from backend.database.models import LineInfo, ProjectConfiguration, SongInfo, TranslationChallengeType
-from backend.router.app.tasks.chain_mapper import ChainMapper, OutputType
+from backend.tasks.chain_mapper import ChainMapper, OutputType
 
 
 class InputLyricLine(BaseModel):

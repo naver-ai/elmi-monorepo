@@ -4,12 +4,12 @@ from langchain_core.runnables import RunnableParallel
 
 from sqlmodel import select
 from backend.database.models import Line, Project, ProjectConfiguration, User
-from backend.router.app.tasks.preprocessing.base_gloss_generation import BaseGlossGenerationPipeline
-from backend.router.app.tasks.preprocessing.common import BaseGlossGenerationPipelineInputArgs, InspectionPipelineInputArgs, TranslatedLyricsPipelineInputArgs
-from backend.router.app.tasks.preprocessing.gloss_option_generation import GlossOptionGenerationPipeline
-from backend.router.app.tasks.preprocessing.inspection import InspectionPipeline
+from backend.tasks.preprocessing.base_gloss_generation import BaseGlossGenerationPipeline
+from backend.tasks.preprocessing.common import BaseGlossGenerationPipelineInputArgs, InspectionPipelineInputArgs, TranslatedLyricsPipelineInputArgs
+from backend.tasks.preprocessing.gloss_option_generation import GlossOptionGenerationPipeline
+from backend.tasks.preprocessing.inspection import InspectionPipeline
 from backend.database.engine import db_sessionmaker
-from backend.router.app.tasks.preprocessing.performance_guide_generation import PerformanceGuideGenerationPipeline
+from backend.tasks.preprocessing.performance_guide_generation import PerformanceGuideGenerationPipeline
 
 
 async def run():

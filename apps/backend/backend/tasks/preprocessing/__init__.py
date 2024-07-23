@@ -4,11 +4,11 @@ from langchain_core.runnables import RunnableParallel
 import asyncio
 
 from backend.database.models import GlossDescription, Line, LineAnnotation, LineInspection, Project, ProjectConfiguration
-from backend.router.app.tasks.preprocessing.base_gloss_generation import BaseGlossGenerationPipeline
-from backend.router.app.tasks.preprocessing.common import BaseGlossGenerationPipelineInputArgs, GlossOptionGenerationResult, InspectionPipelineInputArgs, PerformanceGuideGenerationResult, TranslatedLyricsPipelineInputArgs
-from backend.router.app.tasks.preprocessing.gloss_option_generation import GlossOptionGenerationPipeline
-from backend.router.app.tasks.preprocessing.inspection import InspectionPipeline
-from backend.router.app.tasks.preprocessing.performance_guide_generation import PerformanceGuideGenerationPipeline
+from .base_gloss_generation import BaseGlossGenerationPipeline
+from .common import BaseGlossGenerationPipelineInputArgs, GlossOptionGenerationResult, InspectionPipelineInputArgs, PerformanceGuideGenerationResult, TranslatedLyricsPipelineInputArgs
+from .gloss_option_generation import GlossOptionGenerationPipeline
+from .inspection import InspectionPipeline
+from .performance_guide_generation import PerformanceGuideGenerationPipeline
 
 inspector = InspectionPipeline()
 gloss_generator = BaseGlossGenerationPipeline()
