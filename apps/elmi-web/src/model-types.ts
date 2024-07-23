@@ -74,7 +74,7 @@ export interface LineAnnotation{
     project_id: string
     gloss: string
     gloss_description: string
-    mood: string
+    mood: Array<string>
     facial_expression: string
     body_gesture: string
     emotion_description: string

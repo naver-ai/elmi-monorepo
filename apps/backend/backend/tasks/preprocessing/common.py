@@ -54,7 +54,7 @@ class InputLyricLineWithGloss(InputLyricLine):
 
 class PerformanceGuideElement(BaseModel):
     line_id: str
-    mood: str
+    mood: list[str]
     facial_expression: str
     body_gesture: str
     emotion_description: str

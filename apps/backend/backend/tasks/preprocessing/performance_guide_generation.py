@@ -29,7 +29,7 @@ Given the lyrics, mark lines with emotion and how to interpret with facial expre
     {{
         "guides": Array<{{
             "line_id": string // id of the line,
-            "mood": string // main mood or emotion of the line
+            "mood": Array<string> // List of keywords for main mood or emotion of the line. Try to use adjectives: e.g., Energetic, Calm, Confident
             "facial_expression": string // how to express the mood of the lines using facial expressions 
             "body_gesture": string // how to express the mood of the lines using bodily gestures
             "emotion_description": string // description on you rationale of why you chose these expressions. This will be given to the users to support the results. 

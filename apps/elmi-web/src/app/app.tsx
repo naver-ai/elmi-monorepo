@@ -7,12 +7,11 @@ import { PersistGate } from "redux-persist/integration/react";
 import { SignInPage } from "../features/auth/pages/SignInPage";
 import { MainRouter } from "./main-router";
 import { ConfigProvider, ThemeConfig } from "antd";
-import { useEffect } from "react";
-import './app.css'
 
 const theme: ThemeConfig = {
     token: {
         colorPrimary: "#303030",
+        fontFamily: "'Lato', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, 'Noto Sans', sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol','Noto Color Emoji'"
     },
     components: {
         Input: {
@@ -23,6 +22,10 @@ const theme: ThemeConfig = {
             colorBgLayout: 'transparent',
             siderBg: 'white'      
         },
+        Divider: {
+            orientationMargin: 0,
+            textPaddingInline: 0
+        }
     }
 }
 

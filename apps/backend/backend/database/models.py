@@ -220,7 +220,7 @@ class LineAnnotation(SQLModel, IdTimestampMixin, LineIdMixin, ProjectIdMixin, ta
     gloss:  str
     gloss_description: str
     
-    mood: str
+    mood: list[str] = Field(sa_column=Column(JSON), default_factory=lambda: [])
     facial_expression: str
     body_gesture: str
     emotion_description: str
