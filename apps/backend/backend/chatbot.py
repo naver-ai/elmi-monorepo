@@ -300,11 +300,17 @@ async def proactive_chat(project_id: str, line_id: str, user_input: str, intent:
         
         thread_id = await create_thread(session, line_id)
 
+        # Save the initial user message or hidden user message
+        initial_user_message = user_input
+
+        await save_thread_message(session, thread_id, 'user', initial_user_message, 'initial')
+
         initial_response = await conversation_chain.ainvoke(
                 initial_messages,
                 config=config
         )
 
+        # Save the initial assistant message
         await save_thread_message(session, thread_id, 'assistant', initial_response.content, 'initial')
 
         if is_button_click:
