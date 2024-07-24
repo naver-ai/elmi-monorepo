@@ -1,4 +1,4 @@
-from difflib import SequenceMatcher
+from difflib import Match, SequenceMatcher
 from io import BytesIO
 import re
 from pydantic import BaseModel, TypeAdapter, validate_call
@@ -60,12 +60,12 @@ def join_lyric_tokens(tokens: list[str])->str:
 
 def tokenize_lyrics(lyric_line: str) -> list[str]:
     lyric_tokens = re.split(r'([\s\-])', lyric_line)
-    lyric_tokens = [t for t in lyric_tokens if not t.isspace()]
+    lyric_tokens = [t for t in lyric_tokens if not t.isspace() and t != ""]
     for i, t in enumerate(lyric_tokens):
         if t == "-" and i > 0:
             lyric_tokens[i-1] = f"{lyric_tokens[i-1]}-"
             lyric_tokens[i] = " "
-    lyric_tokens = [t for t in lyric_tokens if not t.isspace()]
+    lyric_tokens = [t for t in lyric_tokens if not t.isspace() and t != ""]
     return lyric_tokens
 
 
@@ -291,25 +291,43 @@ class LyricSynchronizer:
                 last_end = None
                 for ii, orig_lyric_idx in enumerate(seg.original_lyric_ids):
                     orig_tokens = [clean_token_for_comparison(tok) for tok in tokenize_lyrics(original_lyrics.lines[orig_lyric_idx].text)]
-                    s_matcher = SequenceMatcher(None, orig_tokens, [clean_token_for_comparison(tok) for tok in seg.tokens[pointer:]])
-                    match = s_matcher.find_longest_match()
-                    print(match, orig_tokens, seg.tokens)
-                    assert match.a == match.b == 0 and match.size == len(orig_tokens)
+                    
+                    match, adjusted_match_size = self._find_first_match_including_merged(orig_tokens, seg.tokens[pointer:])
 
-                    new_seg_end = seg.end if ii >= len(seg.original_lyric_ids)-1 else seg.words[pointer + match.size - 1].end
+                    new_seg_end = seg.end if ii >= len(seg.original_lyric_ids)-1 else seg.words[pointer + adjusted_match_size - 1].end
 
                     new_lyrics.append(SyncedLyricsSegmentWithWordLevelTimestamp(
                         start= seg.start if last_end is None else (seg.words[pointer].start + last_end)/2,
                         end= new_seg_end,
-                        text=join_lyric_tokens(seg.tokens[pointer:pointer+match.size]),
+                        text=join_lyric_tokens(seg.tokens[pointer:pointer+adjusted_match_size]),
                         original_lyric_ids=[orig_lyric_idx],
-                        tokens=seg.tokens[pointer:pointer+match.size],
-                        words=seg.words[pointer:pointer+match.size]
+                        tokens=seg.tokens[pointer:pointer+adjusted_match_size],
+                        words=seg.words[pointer:pointer+adjusted_match_size]
                     ))
                     last_end = new_seg_end
 
-                    pointer = match.size                
+                    pointer = adjusted_match_size               
             else:
                 new_lyrics.append(seg)
         
         return new_lyrics
+    
+    @staticmethod
+    def _find_first_match_including_merged(a_tokens_perfect: list[str], b_tokens: list[str])->tuple[Match, int]:
+        b_flatten = []
+        b_token_indices = []
+
+        for i, b_token in enumerate(b_tokens):
+            b_split = tokenize_lyrics(b_token)
+            for b_split_token in b_split:
+                b_flatten.append(clean_token_for_comparison(b_split_token))
+                b_token_indices.append(i)
+
+        
+        s_matcher = SequenceMatcher(None, a_tokens_perfect, b_flatten)
+        match = s_matcher.find_longest_match()
+
+        print(a_tokens_perfect, b_flatten, b_token_indices, match)
+
+        assert match.a == match.b == 0 and match.size == len(a_tokens_perfect)
+        return match, b_token_indices[match.size-1]+1

@@ -46,6 +46,7 @@ readme = 'README.md'
   langchain = "^0.2.7"
   langchain-openai = "^0.1.16"
   numpy = "1.26.4"
+  stringcase = "^1.2.0"
 
   [tool.poetry.group.dev.dependencies]
   autopep8 = "2.0.2"

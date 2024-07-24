@@ -114,7 +114,7 @@ class GeniusManager:
             }
 
         async with httpx.AsyncClient() as client:
-            response = await client.get(url=self.ENDPOINT_SEARCH, params=params, headers=headers)
+            response = await client.get(url=self.ENDPOINT_SEARCH, params=params, headers=headers, timeout=20000)
             songs = [hit["result"] for hit in response.json()["response"]["hits"] if hit["type"] == "song"]
             if len(songs) > 0:
                 print(f"{len(songs)} songs")
