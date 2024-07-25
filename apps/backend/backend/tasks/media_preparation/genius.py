@@ -4,6 +4,7 @@ import httpx
 from nanoid import generate
 from pydantic import BaseModel, Field
 from bs4 import BeautifulSoup
+from retry import retry
 
 from backend.utils.env_helper import get_env_variable, EnvironmentVariables
 
@@ -39,6 +40,7 @@ def clean_lyric_line(line: str) -> str:
     return cleaned_line
 
 # Modified from https://github.com/johnwmillr/LyricsGenius/blob/master/lyricsgenius/genius.py
+@retry()
 async def extract_lyrics_and_description(song_path: str) -> tuple[LyricsPackage|None, str|None]:
     url = f"https://genius.com{song_path}"
 
@@ -104,7 +106,7 @@ class GeniusManager:
     def __init__(self) -> None:
         self.token = get_env_variable(EnvironmentVariables.GENIUS_ACCESS_TOKEN)
     
-
+    retry()
     async def retrieve_song_info(self, title: str, artist: str) -> GeniusSongInfo | None:
 
         params = {"q": f"{title}"}

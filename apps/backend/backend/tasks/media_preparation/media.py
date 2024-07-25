@@ -2,7 +2,7 @@ from io import BytesIO
 import gdown
 from os import path
 from PIL import Image
-from youtube_transcript_api import YouTubeTranscriptApi
+from retry import retry
 
 from backend.config import ElmiConfig
 import httpx
@@ -15,6 +15,7 @@ class MediaManager:
         gdown.download(id=gdrive_file_id, output=file_path)
 
     @staticmethod
+    @retry()
     def retrieve_song_from_youtube(song_id: str, filename: str, youtube_id: str):
         file_path = path.join(ElmiConfig.get_song_dir(song_id), filename.replace('.mp3', ''))
         opts = {
@@ -29,6 +30,7 @@ class MediaManager:
         YoutubeDL(opts).download(f"https://www.youtube.com/watch?v={youtube_id}")
 
     @staticmethod
+    @retry()
     async def retrieve_song_image_file(song_id: str, image_url: str) -> bool:
         try:
             async with httpx.AsyncClient() as client:

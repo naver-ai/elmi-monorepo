@@ -1,25 +1,22 @@
 from difflib import Match, SequenceMatcher
 from io import BytesIO
 import re
-from pydantic import BaseModel, TypeAdapter, validate_call
-from backend.config import ElmiConfig
-from backend.database.models import Song
+from pydantic import TypeAdapter, validate_call
 from backend.utils.env_helper import get_env_variable, EnvironmentVariables
 import openai
 from openai.types.audio import Transcription
-from sqlmodel.ext.asyncio.session import AsyncSession
 from youtube_transcript_api import YouTubeTranscriptApi
-from os import path
 from rapidfuzz import fuzz
 from pydub import AudioSegment
 import json
 
-from backend.utils.genius import LyricsPackage, clean_lyric_line
+from .genius import LyricsPackage, clean_lyric_line
 from backend.utils.lyric_data_types import SyncedLyricSegment, SyncedLyricsSegmentWithWordLevelTimestamp, SyncedText, SyncedTimestamps
 
 PROMPT_LINE_MATCH = """
 You are a helpful assistant that helps align lyrics with audio transcripts.
 
+[Input]
 The user will give you a subtitle and lyrics.
 The subtitle will contain text segments with start and end timestamps, the text of which may not be accurate.
 The subtitle will be formatted as JSON array: Array<{"text": string, "start": number, "end": number}>
@@ -27,9 +24,8 @@ The subtitle will be formatted as JSON array: Array<{"text": string, "start": nu
 The lyrics are accurate ground truth, with line IDs.
 The lyrics will be formatted as a JSON array: Array<{"id": number, "text": string}>
 
-Match the lyrics text with subtitle, and map the lyrics with the subtitle segment.
-
-The subtitle segmentation and timestamp should be maintained and text to be replaced.
+[Output]
+Match the lyrics text with subtitle, and map the lyrics with the subtitle segment. 
 
 The output must be a JSON array with:
 Array<{
@@ -39,7 +35,11 @@ Array<{
     "original_lyric_ids": Array<number> // list of lyric line IDs contributed to this segment. 
 }>
 
-Do NOT add your informal message but just provide JSON text.
+- A subtitle line may contain multiple lyric lines, and multiple recurring lyric lines may be represented as one subtitle line.
+In that case, put all related lyric line ids into "original_lyric_ids". Note that you must INCLUDE ALL lyric lines in the original_lyric_ids.
+- The subtitle segmentation and timestamp should be consistent with the input and text to be replaced using lyrics.
+
+Do NOT add your informal message but just provide JSON string.
 """
 
 markdown_json_block_pattern = r'^```(json)?\s*(.*?)\s*```$'
@@ -67,6 +67,9 @@ def tokenize_lyrics(lyric_line: str) -> list[str]:
             lyric_tokens[i] = " "
     lyric_tokens = [t for t in lyric_tokens if not t.isspace() and t != ""]
     return lyric_tokens
+
+def tokenize_lyrics_cleaned(lyric_line: str) -> list[str]:
+    return [clean_token_for_comparison(t) for t in tokenize_lyrics(lyric_line)]
 
 
 def find_subsequent_indices(lst: list, condition) -> tuple[int, int] | None:
@@ -99,9 +102,10 @@ class LyricSynchronizer:
 
     def retrieve_segment_timestamped_subtitles_from_youtube(self, youtube_id: str) -> list[SyncedText]:
         return [SyncedText(text=clean_lyric_line(seg["text"]), start=seg["start"], end=seg["start"] + seg["duration"]).model_dump() for seg in YouTubeTranscriptApi.get_transcript(youtube_id)]
+    
 
     @validate_call
-    async def apply_line_level_timestamps(self, lyrics: LyricsPackage, subtitles: list[SyncedText])->list[SyncedLyricSegment]:
+    async def apply_line_level_timestamps_llm(self, lyrics: LyricsPackage, subtitles: list[SyncedText])->list[SyncedLyricSegment]:
         
         message = await self.openai_client.chat.completions.create(
                 model="gpt-4o",
@@ -128,6 +132,62 @@ class LyricSynchronizer:
         #with open(path.join(ElmiConfig.DIR_DATA, "test_lyric_segment_timestamp.json"), 'w') as f:
         #    f.write(json.dumps([line.model_dump() for line in merged], indent=2))
 
+        for seg in merged:
+            if len(seg.original_lyric_ids)>0:
+                seg.text = " ".join([lyrics.lines[lyric_line_id].text for lyric_line_id in seg.original_lyric_ids]) 
+
+        return merged
+
+    @validate_call
+    async def apply_line_level_timestamps(self, lyrics: LyricsPackage, subtitles: list[SyncedText])->list[SyncedLyricSegment]:
+        merged = [SyncedLyricSegment(**subt.model_dump(), original_lyric_ids=[]) for subt in subtitles]
+        last_subtitle_idx_paired = -1
+        for line_i, lyric_line in enumerate(lyrics.lines):
+            candidates: list[SyncedLyricSegment] = []
+            if last_subtitle_idx_paired >=0:
+                candidates.append(merged[last_subtitle_idx_paired])
+            if last_subtitle_idx_paired < len(merged) - 1:
+                candidates.append(merged[last_subtitle_idx_paired + 1])
+            
+            if last_subtitle_idx_paired + 1 < len(merged) - 1:
+                candidates.append(merged[last_subtitle_idx_paired + 2])
+            
+            similarities = [fuzz.ratio(tokenize_lyrics_cleaned(cand.text), tokenize_lyrics_cleaned(lyric_line.text)) for cand in candidates]
+
+            # similarities_with_next_line = [fuzz.ratio(tokenize_lyrics_cleaned(cand.text), tokenize_lyrics_cleaned(lyric_line.text + " " + lyrics.lines[line_i+1].text)) for cand in candidates]
+            
+            stitched_candidates = [[candidate, candidates[i+1]] if i < len(candidates) - 1 else None for i, candidate in enumerate(candidates)]
+            stitched_candidates = [cc for cc in stitched_candidates if cc is not None]
+            similarities_stitched_subtitles = [fuzz.ratio(tokenize_lyrics_cleaned(cc[0].text + " " + cc[1].text), tokenize_lyrics_cleaned(lyric_line.text)) for cc in stitched_candidates]
+
+            highest_similarity = max(similarities)
+            # highest_similarity_with_next_line = max(similarities_with_next_line)
+            highest_similarity_with_switched_subtitles = max(similarities_stitched_subtitles)
+
+            if highest_similarity >= highest_similarity_with_switched_subtitles:
+                cand_highest_similarity = candidates[similarities.index(highest_similarity)]
+                subt_idx = merged.index(cand_highest_similarity)
+                merged[subt_idx].original_lyric_ids.append(line_i)
+                last_subtitle_idx_paired = subt_idx if highest_similarity < 100 else subt_idx + 1
+            elif highest_similarity_with_switched_subtitles > highest_similarity:
+                # merge the two subtitles
+                cand1, cand2 = stitched_candidates[similarities_stitched_subtitles.index(highest_similarity_with_switched_subtitles)]
+                print(f"Merge subtitles: {cand1.text} + {cand2.text}")
+                
+                cand1.end = cand2.end
+                cand1.text += " " + cand2.text
+                cand1_index = merged.index(cand1)
+                del merged[cand1_index+1]
+                cand1.original_lyric_ids.append(line_i)
+                last_subtitle_idx_paired = cand1_index if highest_similarity < 100 else cand1_index
+            
+            print("original: ", lyric_line.text, ", candidates: ", candidates, stitched_candidates, similarities, similarities_stitched_subtitles, last_subtitle_idx_paired)
+            print("-------------")
+
+
+
+        print(json.dumps([l.model_dump() for l in merged], indent=4))
+
         return merged
     
     @validate_call
@@ -150,9 +210,7 @@ class LyricSynchronizer:
                 transcription = await self.openai_client.audio.transcriptions.create(
                     model="whisper-1", file=buffer, response_format="verbose_json", timestamp_granularities=["word"],
                     language="en",
-                    prompt=f"""
-    The actual lyric is "{lyric_segment.text}." Use this text AS-IS.
-    """)
+                    prompt=f"Use this actual lyric AS-IS: \"{lyric_segment.text}\"")
                 
                 similarity = fuzz.ratio(re.sub(r"[.,!]$", "", lyric_segment.text.lower()), re.sub(r"[.,!]$", "", transcription.text.lower()))
                 print(f"Similarity: {similarity}, Original: {lyric_segment.text} // Transcription: {transcription.text}")
@@ -227,10 +285,10 @@ class LyricSynchronizer:
             new_lyric_tokens: list[str] = []
             new_words: list[SyncedTimestamps] = []
 
-            while len(lyric_tokens_segmented) > 0 and len(timestamp_tokens_segmented) > 0:
+            while len(lyric_tokens_segmented) > 0 or len(timestamp_tokens_segmented) > 0:
                 # Find orphans
-                first_orphan_lyrics_idx = find_subsequent_indices(lyric_tokens_segmented, lambda seg: isinstance(seg, str)) if isinstance(lyric_tokens_segmented[0], str) else None
-                first_orphan_timstamp_idx = find_subsequent_indices(timestamp_tokens_segmented, lambda seg: isinstance(seg, SyncedText)) if isinstance(timestamp_tokens_segmented[0], SyncedText) else None
+                first_orphan_lyrics_idx = find_subsequent_indices(lyric_tokens_segmented, lambda seg: isinstance(seg, str)) if  len(lyric_tokens_segmented) > 0 and isinstance(lyric_tokens_segmented[0], str) else None
+                first_orphan_timstamp_idx = find_subsequent_indices(timestamp_tokens_segmented, lambda seg: isinstance(seg, SyncedText)) if len(timestamp_tokens_segmented) > 0 and isinstance(timestamp_tokens_segmented[0], SyncedText) else None
                 
                 if first_orphan_lyrics_idx is not None:
                     first_orphan_lyrics_sequence = lyric_tokens_segmented[first_orphan_lyrics_idx[0]:first_orphan_lyrics_idx[1]+1]
@@ -243,6 +301,8 @@ class LyricSynchronizer:
                 else:
                     first_orphan_timestamp_sequence = None
 
+                print(first_orphan_lyrics_sequence, first_orphan_timestamp_sequence)
+
                 #Handle orphans
                 if first_orphan_lyrics_sequence is None and first_orphan_timestamp_sequence is None:
                     # First element is match.
@@ -251,12 +311,24 @@ class LyricSynchronizer:
                         new_words.append(SyncedTimestamps(start=ts.start, end=ts.end))
                     del lyric_tokens_segmented[0]
                     del timestamp_tokens_segmented[0]
+
+                    #Handle orphans behind.
+                    print(lyric_tokens_segmented)
+                    print(timestamp_tokens_segmented)
+
                 elif first_orphan_lyrics_sequence is not None and first_orphan_timestamp_sequence is None:
-                    print("Only lyrics has orphans. Try to merge them with before or next tokens: ", first_orphan_lyrics_sequence)
-                    if len(new_lyric_tokens) > 0:
-                        new_lyric_tokens[-1] = join_lyric_tokens([new_lyric_tokens[-1]] + first_orphan_lyrics_sequence)
-                    else:
-                        lyric_tokens_segmented[first_orphan_lyrics_idx[1]+1][0] = join_lyric_tokens(first_orphan_lyrics_sequence + [lyric_tokens_segmented[first_orphan_lyrics_idx[1]+1][0]])
+                    print("Only lyrics has orphans. Try to assign them timestamps.", first_orphan_lyrics_sequence)
+                    new_lyric_tokens.append(join_lyric_tokens(first_orphan_lyrics_sequence))
+                    new_words.append(SyncedTimestamps(
+                        start=new_words[len(new_words)-1].end if len(new_words) > 0 else lyric_line.start,
+                        end=timestamp_tokens_segmented[0][0].start if len(timestamp_tokens_segmented) > 0 else lyric_line.end
+                    ))
+                    
+                    #if len(new_lyric_tokens) > 0:
+                    #    new_lyric_tokens[-1] = join_lyric_tokens([new_lyric_tokens[-1]] + first_orphan_lyrics_sequence)
+                    #else:
+                    #    lyric_tokens_segmented[first_orphan_lyrics_idx[1]+1][0] = join_lyric_tokens(first_orphan_lyrics_sequence + [lyric_tokens_segmented[first_orphan_lyrics_idx[1]+1][0]])
+                    
 
                     del lyric_tokens_segmented[first_orphan_lyrics_idx[0]:first_orphan_lyrics_idx[1]+1]
                 elif first_orphan_lyrics_sequence is None and first_orphan_timestamp_sequence is not None:
@@ -272,7 +344,7 @@ class LyricSynchronizer:
             
             assert len(new_lyric_tokens) == len(new_words)
 
-            print(new_lyric_tokens, new_words)
+            print(new_lyric_tokens, new_words, "original_lyrics: ", lyric_tokens_cleaned, "original_subtitle_tokens", timestamp_tokens_cleaned)
 
             #print(words)
             return SyncedLyricsSegmentWithWordLevelTimestamp(

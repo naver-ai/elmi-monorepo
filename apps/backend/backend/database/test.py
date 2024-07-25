@@ -1,34 +1,26 @@
 from sqlmodel import select
 
-from backend.database.models import Song, User
+from backend.database.models import User
 from backend.database.engine import db_sessionmaker
 from backend.tasks.media_preparation import prepare_song
 from backend.tasks.preprocessing import preprocess_song
-from backend.utils import genius
-from backend.utils.media import MediaManager
 
-from pydantic import TypeAdapter
 from sqlmodel import select
 
-from backend.config import ElmiConfig
-from backend.utils.genius import genius
-from backend.utils.lyric_data_types import SyncedLyricsSegmentWithWordLevelTimestamp
-from backend.utils.media import MediaManager
 from .models import *
-from math import floor, ceil
 
 async def create_test_db_entities():
     async with db_sessionmaker() as db:
-        async with db.begin():
-            query = select(User).where(User.alias == 'test')
-            test_users = await db.exec(query)
-            test_user = test_users.first()
-            if test_user is None:
+        query = select(User).where(User.alias == 'test')
+        test_users = await db.exec(query)
+        test_user = test_users.first()
+        if test_user is None:
 
-                song1 = await prepare_song("Dynamite", "BTS", "gdZLi9oWNZg", db)
+            song1 = await prepare_song("Dynamite", "BTS", "gdZLi9oWNZg", db)
 
-                song2 = await prepare_song(title="Viva La Vida", artist="Coldplay", reference_youtube_id="dvgZkm1xWPE", db=db)
-
+            song2 = await prepare_song(title="Viva La Vida", artist="Coldplay", reference_youtube_id="dvgZkm1xWPE", db=db)
+                
+            async with db.begin_nested():
                 print("Create test user...")
                 user = User(alias="test", callable_name="Sue Yoo", sign_language=SignLanguageType.ASL, passcode="12345")
                 project1 = Project(song=song1, 
