@@ -1,13 +1,18 @@
 from difflib import Match, SequenceMatcher
 from io import BytesIO
 import re
-from pydantic import TypeAdapter, validate_call
+from langchain_openai import ChatOpenAI
+from pydantic import BaseModel, TypeAdapter, validate_call
 from backend.utils.env_helper import get_env_variable, EnvironmentVariables
 import openai
 from openai.types.audio import Transcription
 from youtube_transcript_api import YouTubeTranscriptApi
 from rapidfuzz import fuzz
 from pydub import AudioSegment
+from langchain_core.runnables import Runnable
+from langchain_core.prompts.chat import ChatPromptTemplate
+from langchain_core.output_parsers import PydanticOutputParser
+
 import json
 
 from .genius import LyricsPackage, clean_lyric_line
@@ -87,22 +92,51 @@ def find_subsequent_indices(lst: list, condition) -> tuple[int, int] | None:
         return [subsequence_start, subsequence_start]
     else:
         return None
-    
+
+class BestMatchOutput(BaseModel):
+    index: int
+
+async def find_best_match_llm(ref: str, candidates: list[str])->int:
+    prompt= ChatPromptTemplate.from_messages(
+        [("system", """
+You are a helpful assistant that matches the reference lyrics with automatically-generated subtitles which may be dirty.
+Given the reference lyric phrase and a candidate list of subtitles, find a candidate that best matches the reference.
+
+[Output Format]
+Yield a json object formatted as follows:
+{{
+    "index": number // an index of the candidate. Start with 0. If there are no matches, return -1.
+}}
+"""),
+        ("human", "[Reference]\n{ref}\n\n[Candidates]\n{candidates}")
+        ]
+    )
+
+    model = ChatOpenAI(api_key=get_env_variable(EnvironmentVariables.OPENAI_API_KEY), 
+                                model_name="gpt-4o", 
+                                temperature=0, 
+                                max_tokens=256,
+                                model_kwargs=dict(
+                                    frequency_penalty=0, 
+                                    presence_penalty=0
+                                ))
+
+    chain = prompt | model | PydanticOutputParser(pydantic_object=BestMatchOutput)
+
+    result: BestMatchOutput = await chain.ainvoke({"ref": f"\"{ref}\"", "candidates": "\n".join([f"{i}: \"{c}\"" for i, c in enumerate(candidates)])})
+
+    return result.index
 
 class LyricSynchronizer:
     
     def __init__(self) -> None:
         self.openai_client = openai.AsyncClient(api_key=get_env_variable(EnvironmentVariables.OPENAI_API_KEY))
 
-    async def create_synced_lyrics(self, lyrics: LyricsPackage, youtube_id: str, audio_path: str) -> list[SyncedLyricsSegmentWithWordLevelTimestamp]:
-        line_level_synced_lyrics = await self.apply_line_level_timestamps(lyrics, self.retrieve_segment_timestamped_subtitles_from_youtube(youtube_id))
-        print(line_level_synced_lyrics)
+    def retrieve_segment_timestamped_subtitles_from_youtube(self, youtube_id: str, expand_duration_millis: int = 1000) -> list[SyncedText]:
 
-        return await self.apply_word_level_timestamps(line_level_synced_lyrics, audio_path)
+        subtitles = [SyncedText(text=clean_lyric_line(seg["text"]), start=seg["start"], end=seg["start"] + seg["duration"]) for seg in YouTubeTranscriptApi.get_transcript(youtube_id)]
 
-    def retrieve_segment_timestamped_subtitles_from_youtube(self, youtube_id: str) -> list[SyncedText]:
-        return [SyncedText(text=clean_lyric_line(seg["text"]), start=seg["start"], end=seg["start"] + seg["duration"]).model_dump() for seg in YouTubeTranscriptApi.get_transcript(youtube_id)]
-    
+        return subtitles
 
     @validate_call
     async def apply_line_level_timestamps_llm(self, lyrics: LyricsPackage, subtitles: list[SyncedText])->list[SyncedLyricSegment]:
@@ -139,10 +173,11 @@ class LyricSynchronizer:
         return merged
 
     @validate_call
-    async def apply_line_level_timestamps(self, lyrics: LyricsPackage, subtitles: list[SyncedText])->list[SyncedLyricSegment]:
+    async def apply_line_level_timestamps(self, lyrics: LyricsPackage, subtitles: list[SyncedText], song_duration_sec: float)->list[SyncedLyricSegment]:
         merged = [SyncedLyricSegment(**subt.model_dump(), original_lyric_ids=[]) for subt in subtitles]
         last_subtitle_idx_paired = -1
         for line_i, lyric_line in enumerate(lyrics.lines):
+            print("Try match line - ", lyric_line.text, line_i, len(lyrics.lines))
             candidates: list[SyncedLyricSegment] = []
             if last_subtitle_idx_paired >=0:
                 candidates.append(merged[last_subtitle_idx_paired])
@@ -162,29 +197,69 @@ class LyricSynchronizer:
 
             highest_similarity = max(similarities)
             # highest_similarity_with_next_line = max(similarities_with_next_line)
-            highest_similarity_with_switched_subtitles = max(similarities_stitched_subtitles)
+            highest_similarity_with_stitched_subtitles = max(similarities_stitched_subtitles) if len(similarities_stitched_subtitles) > 0 else -1
 
-            if highest_similarity >= highest_similarity_with_switched_subtitles:
-                cand_highest_similarity = candidates[similarities.index(highest_similarity)]
-                subt_idx = merged.index(cand_highest_similarity)
-                merged[subt_idx].original_lyric_ids.append(line_i)
-                last_subtitle_idx_paired = subt_idx if highest_similarity < 100 else subt_idx + 1
-            elif highest_similarity_with_switched_subtitles > highest_similarity:
-                # merge the two subtitles
-                cand1, cand2 = stitched_candidates[similarities_stitched_subtitles.index(highest_similarity_with_switched_subtitles)]
-                print(f"Merge subtitles: {cand1.text} + {cand2.text}")
+            if max(highest_similarity, highest_similarity_with_stitched_subtitles) > 40:
+                if highest_similarity >= highest_similarity_with_stitched_subtitles:
+                    cand_highest_similarity = candidates[similarities.index(highest_similarity)]
+                    subt_idx = merged.index(cand_highest_similarity)
+                    merged[subt_idx].original_lyric_ids.append(line_i)
+                    last_subtitle_idx_paired = subt_idx
+                elif highest_similarity_with_stitched_subtitles > highest_similarity:
+                    # merge the two subtitles
+                    cand1, cand2 = stitched_candidates[similarities_stitched_subtitles.index(highest_similarity_with_stitched_subtitles)]
+                    print(f"Merge subtitles: {cand1.text} + {cand2.text}")
+                    
+                    cand1.end = cand2.end
+                    cand1.text += " " + cand2.text
+                    cand1_index = merged.index(cand1)
+                    del merged[cand1_index+1]
+                    cand1.original_lyric_ids.append(line_i)
+                    last_subtitle_idx_paired = cand1_index
                 
-                cand1.end = cand2.end
-                cand1.text += " " + cand2.text
-                cand1_index = merged.index(cand1)
-                del merged[cand1_index+1]
-                cand1.original_lyric_ids.append(line_i)
-                last_subtitle_idx_paired = cand1_index if highest_similarity < 100 else cand1_index
-            
-            print("original: ", lyric_line.text, ", candidates: ", candidates, stitched_candidates, similarities, similarities_stitched_subtitles, last_subtitle_idx_paired)
-            print("-------------")
+                print("original: ", lyric_line.text, ", candidates: ", candidates, stitched_candidates, similarities, similarities_stitched_subtitles, last_subtitle_idx_paired)
+                print("-------------")
+            else:
+                print("Find best match using LLM")
+                normalized_candidates = []
+                for i, candidate in enumerate(candidates):
+                    normalized_candidates.append((candidate.text, False, i))
+                for i, (candidate1, candidate2) in enumerate(stitched_candidates):
+                    normalized_candidates.append((candidate1.text + " " + candidate2.text, True, i))
+                
+                best_match_index = await find_best_match_llm(lyric_line.text, [c[0] for c in normalized_candidates])
+                print(f"Best match index for {lyric_line.text}, among {[c[0] for c in normalized_candidates]}: ", best_match_index)
+                if best_match_index >= 0:
+                    best_match_normalized_candidate = normalized_candidates[best_match_index]
+                    if best_match_normalized_candidate[1] == False:
+                        candidate = candidates[best_match_normalized_candidate[2]]
+                        subt_idx = merged.index(candidate)
+                        merged[subt_idx].original_lyric_ids.append(line_i)
+                        last_subtitle_idx_paired = subt_idx
+                    else:
+                        cand1, cand2 = stitched_candidates[best_match_normalized_candidate[2]]
+                        print(f"Merge subtitles: {cand1.text} + {cand2.text}")
+                        
+                        cand1.end = cand2.end
+                        cand1.text += " " + cand2.text
+                        cand1_index = merged.index(cand1)
+                        del merged[cand1_index+1]
+                        cand1.original_lyric_ids.append(line_i)
+                        last_subtitle_idx_paired = cand1_index
+                else:
+                    print("Did not find the lyrics line match. Make a new bridge subtitle...")
+                    merged.insert(last_subtitle_idx_paired+1, SyncedLyricSegment(
+                        start=merged[last_subtitle_idx_paired].end,
+                        end=merged[last_subtitle_idx_paired + 1].start if last_subtitle_idx_paired < len(merged) - 1 else song_duration_sec,
+                        text=lyric_line.text,
+                        original_lyric_ids=[line_i]
+                    ))
+                    last_subtitle_idx_paired += 1
 
 
+        for seg in merged:
+            if len(seg.original_lyric_ids)>0:
+                seg.text = " ".join([lyrics.lines[lyric_line_id].text for lyric_line_id in seg.original_lyric_ids]) 
 
         print(json.dumps([l.model_dump() for l in merged], indent=4))
 
@@ -202,6 +277,8 @@ class LyricSynchronizer:
             buffer = BytesIO()
             buffer.name="audio.mp3"
             audio_segment.export(buffer, format="mp3")
+
+            print(f"Try dictating segment - {lyric_segment.text}, audio range: {lyric_segment.start} - {lyric_segment.end}")
 
             retryLeft = 10
             maximum_similarity: float = -100

@@ -82,10 +82,12 @@ async def extract_lyrics_and_description(song_path: str) -> tuple[LyricsPackage|
                 if len(verses) == 0:
                     default_verse = LyricVerse(title=None)
                     verses.append(default_verse)
-      
-                line_info = LyricLine(text=clean_lyric_line(line), text_original=line, verse_id=verses[len(verses)-1].id)
-                line_counter += 1
-                lines.append(line_info)
+
+                cleaned_lyric_line = clean_lyric_line(line)
+                if len(cleaned_lyric_line.strip()) > 0:
+                    line_info = LyricLine(text=cleaned_lyric_line, text_original=line, verse_id=verses[len(verses)-1].id)
+                    line_counter += 1
+                    lines.append(line_info)
 
         lyrics = LyricsPackage(lines=lines, verses=verses)
     

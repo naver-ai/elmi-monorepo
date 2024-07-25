@@ -34,11 +34,9 @@ async def create_test_db_entities():
                 await db.commit()
 
     async with db_sessionmaker() as db:
-        async with db.begin():
-            query = select(User).where(User.alias == 'test')
-            test_users = await db.exec(query)
-            test_user = test_users.first()
-            if test_user is not None:
-                for project in test_user.projects:
-                    await preprocess_song(project.id, db, force=False)
-                
+        query = select(User).where(User.alias == 'test')
+        test_users = await db.exec(query)
+        test_user = test_users.first()
+        if test_user is not None:
+            for project in test_user.projects:
+                await preprocess_song(project.id, db, force=False)

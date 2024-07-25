@@ -48,7 +48,7 @@ async def prepare_song(title: str, artist: str, reference_youtube_id: str, db: A
         print("Segmented lyrics from YouTube:")
         print(segmented_lyrics)
         
-        line_synced_lyrics = await synchronizer.apply_line_level_timestamps(song_info.lyrics, segmented_lyrics)
+        line_synced_lyrics = await synchronizer.apply_line_level_timestamps(song_info.lyrics, segmented_lyrics, audio.duration_seconds)
         print("Line-synced lyrics:")
         print(line_synced_lyrics)
 

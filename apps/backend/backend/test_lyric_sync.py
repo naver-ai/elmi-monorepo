@@ -11,9 +11,9 @@ import asyncio
 
 async def run():
 
-    song_info = await genius.retrieve_song_info("Dynamite", "BTS")
-    segmented_lyrics = synchronizer.retrieve_segment_timestamped_subtitles_from_youtube("gdZLi9oWNZg")
-    await synchronizer.apply_line_level_timestamps(song_info.lyrics, segmented_lyrics)
+    song_info = await genius.retrieve_song_info("Viva La Vida", "Coldplay")
+    segmented_lyrics = synchronizer.retrieve_segment_timestamped_subtitles_from_youtube("dvgZkm1xWPE")
+    await synchronizer.apply_line_level_timestamps(song_info.lyrics, segmented_lyrics, 300)
     #with open(path.join(ElmiConfig.DIR_DATA, "test_lyric_segment_timestamp.json"), "r") as f:
     #    await synchronizer.apply_word_level_timestamps(TypeAdapter(list[SyncedLyricSegment]).validate_json(f.read()), 
     #                                                   ElmiConfig.get_song_dir("QCX3WwmjCh9N4Yo5Vma1Q") + "/dynamite-bts-youtube.mp3"
