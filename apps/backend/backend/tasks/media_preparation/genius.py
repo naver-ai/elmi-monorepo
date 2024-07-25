@@ -4,6 +4,7 @@ import httpx
 from nanoid import generate
 from pydantic import BaseModel, Field
 from bs4 import BeautifulSoup
+from retry import retry
 
 from backend.utils.env_helper import get_env_variable, EnvironmentVariables
 
@@ -39,6 +40,7 @@ def clean_lyric_line(line: str) -> str:
     return cleaned_line
 
 # Modified from https://github.com/johnwmillr/LyricsGenius/blob/master/lyricsgenius/genius.py
+@retry()
 async def extract_lyrics_and_description(song_path: str) -> tuple[LyricsPackage|None, str|None]:
     url = f"https://genius.com{song_path}"
 
@@ -80,10 +82,12 @@ async def extract_lyrics_and_description(song_path: str) -> tuple[LyricsPackage|
                 if len(verses) == 0:
                     default_verse = LyricVerse(title=None)
                     verses.append(default_verse)
-      
-                line_info = LyricLine(text=clean_lyric_line(line), text_original=line, verse_id=verses[len(verses)-1].id)
-                line_counter += 1
-                lines.append(line_info)
+
+                cleaned_lyric_line = clean_lyric_line(line)
+                if len(cleaned_lyric_line.strip()) > 0:
+                    line_info = LyricLine(text=cleaned_lyric_line, text_original=line, verse_id=verses[len(verses)-1].id)
+                    line_counter += 1
+                    lines.append(line_info)
 
         lyrics = LyricsPackage(lines=lines, verses=verses)
     
@@ -104,7 +108,7 @@ class GeniusManager:
     def __init__(self) -> None:
         self.token = get_env_variable(EnvironmentVariables.GENIUS_ACCESS_TOKEN)
     
-
+    retry()
     async def retrieve_song_info(self, title: str, artist: str) -> GeniusSongInfo | None:
 
         params = {"q": f"{title}"}
@@ -114,7 +118,7 @@ class GeniusManager:
             }
 
         async with httpx.AsyncClient() as client:
-            response = await client.get(url=self.ENDPOINT_SEARCH, params=params, headers=headers)
+            response = await client.get(url=self.ENDPOINT_SEARCH, params=params, headers=headers, timeout=20000)
             songs = [hit["result"] for hit in response.json()["response"]["hits"] if hit["type"] == "song"]
             if len(songs) > 0:
                 print(f"{len(songs)} songs")

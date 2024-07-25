@@ -1,18 +1,10 @@
 import json
 from os import getcwd, path
 
-from pydantic import TypeAdapter
-from sqlmodel import select
-
-from backend.config import ElmiConfig
-from backend.utils.genius import genius
-from backend.utils.lyric_data_types import SyncedLyricsSegmentWithWordLevelTimestamp
-from backend.utils.media import MediaManager
 from .models import *
 from sqlalchemy.ext.asyncio import AsyncEngine, create_async_engine
 from sqlmodel.ext.asyncio.session import AsyncSession
 from sqlalchemy.orm import sessionmaker
-from math import floor, ceil
 
 def json_serializer(a):
     print("serialize JSON", a)

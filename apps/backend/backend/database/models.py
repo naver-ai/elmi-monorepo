@@ -33,6 +33,9 @@ class IdTimestampMixin(BaseModel):
 class SongInfo(IdTimestampMixin):
     title: str
     artist: str
+    duration_seconds: int
+    reference_video_id: str
+    reference_video_service: str = "youtube"
     description: str | None = Field(nullable=True)
     cover_image_stored: bool = Field(default=False, nullable=False)
 
