@@ -128,7 +128,7 @@ const LyricLineView = (props: {lineId: string}) => {
     const isInLineLoopMode = useSelector(state => state.mediaPlayer.linePlayInfo != null)
     const isPositionHitting = useSelector(state => state.mediaPlayer.hitLyricTokenInfo?.lineId == props.lineId)
 
-    return <div className={`transition-all mb-3 last:mb-0 p-1.5 rounded-lg hover:bg-orange-400/20 ${isSelected ? 'point-gradient-bg-light':''} ${isInLineLoopMode == false && isAudioPlaying && isPositionHitting ? 'bg-orange-400/20':''}`}>
+    return <div className={`transition-all mb-3 last:mb-0 p-1.5 rounded-lg hover:bg-orange-400/20 ${isSelected ? 'point-gradient-bg-light':''} ${isInLineLoopMode == true && isAudioPlaying && isPositionHitting ? "outline animate-music-indicate" : ""} ${isInLineLoopMode == false && isAudioPlaying && isPositionHitting ? 'bg-orange-400/20 outline animate-music-indicate':''}`}>
         {
             line == null ? <Skeleton title={false} active/> : <>
             <div className={`mb-1 pl-1 cursor-pointer transition-colors flex items-baseline`} onClick={onClick}>
@@ -156,8 +156,15 @@ export const VerseView = (props: {verseId: string}) => {
     const verse = useSelector(state => verseSelectors.selectById(state, props.verseId))
     const lineIds = useSelector(state => selectLineIdsByVerseId(state, props.verseId))
 
-    return <div className="relative bg-white/50 shadow-sm backdrop:blur-md rounded-lg my-8 first:mt-0 last:mb-0 p-2">
-        {verse.title != null ? <div className="text-slate-400 mb-2 font-bold ml-2">[{verse.title}]</div> : null}
+    const isAudioPlaying = useSelector(state => state.mediaPlayer.status == MediaPlayerStatus.Playing)
+    const isInLineLoopMode = useSelector(state => state.mediaPlayer.linePlayInfo != null)
+    const isPositionHitting = useSelector(state => state.mediaPlayer.hitLyricTokenInfo?.verseId == props.verseId)
+
+    const highlightVerse = lineIds.length == 0 && isAudioPlaying && isInLineLoopMode === false && isPositionHitting === true
+
+
+    return <div className={`relative bg-white/50 shadow-sm backdrop:blur-md rounded-lg my-8 first:mt-0 last:mb-0 p-2 ${highlightVerse ? "!bg-orange-300 outline outline-orange-400 animate-music-indicate" : ""}`}>
+        {verse.title != null ? <div className={`text-slate-400 mb-2 last:mb-0 font-bold ml-2 ${highlightVerse ? "text-white animate-bounce-fast" : ""}`}>[{verse.title}]</div> : null}
         {
             lineIds.map(lineId => <LyricLineView lineId={lineId} key={lineId}/>)
         }

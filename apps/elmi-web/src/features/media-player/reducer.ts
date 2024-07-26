@@ -23,7 +23,7 @@ export interface MediaPlayerState {
     status: MediaPlayerStatus;
     songDurationMillis?: number;
     linePlayInfo: (TimestampRange & { lineId: string }) | undefined;
-    hitLyricTokenInfo: {lineId: string, index: number} | undefined;
+    hitLyricTokenInfo: {verseId: string, lineId?: string, index?: number} | undefined;
     songSamples?: Array<number>
 }
 
@@ -69,7 +69,7 @@ const mediaPlayerSlice = createSlice({
             state.linePlayInfo = undefined;
         },
 
-        _setHitLyricTokenInfo: (state, action: PayloadAction<{lineId: string, index: number}|undefined>) => {
+        _setHitLyricTokenInfo: (state, action: PayloadAction<{verseId: string, lineId?: string, index?: number}|undefined>) => {
             state.hitLyricTokenInfo = action.payload;
         },
 
@@ -213,12 +213,15 @@ export namespace MediaPlayer {
                                         );
                                         dispatch(
                                             mediaPlayerSlice.actions._setHitLyricTokenInfo({
+                                                verseId: verse.id,
                                                 lineId: line.id,
                                                 index:tokenIndex
                                             }));
                                     } else {
                                         dispatch(
-                                            mediaPlayerSlice.actions._setHitLyricTokenInfo(undefined)
+                                            mediaPlayerSlice.actions._setHitLyricTokenInfo({
+                                                verseId: verse.id
+                                            })
                                         );
                                     }
                                 } else {
