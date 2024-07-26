@@ -3,13 +3,15 @@ import authReducer from '../features/auth/reducer'
 import projectsReducer from '../features/projects/reducer'
 import signingReducer from '../features/signing/reducer'
 import mediaPlayerReducer from '../features/media-player/reducer'
+import chatReducer from '../features/chat/reducer'
 import {FLUSH, PAUSE, PERSIST, PURGE, Persistor, REGISTER, REHYDRATE, persistReducer, persistStore} from 'redux-persist'
 
 const rootReducer = combineReducers({
     auth: authReducer,
     projects: projectsReducer,
     editor: signingReducer,
-    mediaPlayer: mediaPlayerReducer
+    mediaPlayer: mediaPlayerReducer,
+    chat: chatReducer
 })
 
 const store = configureStore({

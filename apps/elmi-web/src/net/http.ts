@@ -30,6 +30,9 @@ export class Http{
     static ENDPOINT_APP_MEDIA_SONGS_ID_AUDIO_SAMPLES = `${this.ENDPOINT_APP_MEDIA_SONGS_ID_AUDIO}/samples`
     
 
+    static ENDPOINT_APP_PROJECTS_ID_CHAT = `${this.ENDPOINT_APP_PROJECTS_ID}/chat`
+    static ENDPOINT_APP_PROJECTS_ID_CHAT_ALL = `${this.ENDPOINT_APP_PROJECTS_ID_CHAT}/all`
+    
     
 
     static getTemplateEndpoint(template: string, values: {[key:string]: string}): string {
@@ -47,7 +50,7 @@ export class Http{
         return this._axiosInstance!
     }
 
-    static async getSignedInHeaders(token: string): Promise<any> {
+    static getSignedInHeaders(token: string): any {
         return {
           "Authorization": `Bearer ${token}`
         }

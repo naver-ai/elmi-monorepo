@@ -10,7 +10,7 @@ export function useVerifyToken(): {verify: ()=>Promise<boolean>, isSignedIn: boo
         if(token != null){
             try{
                 const resp = await Http.axios.get(Http.ENDPOINT_APP_AUTH_VERIFY, {
-                    headers: await Http.getSignedInHeaders(token)
+                    headers: Http.getSignedInHeaders(token)
                 })
                 if(resp.status === 200){
                     setIsSignedIn(true)

@@ -162,7 +162,7 @@ export namespace MediaPlayer {
                             song_id: songId,
                         }),
                         {
-                            headers: await Http.getSignedInHeaders(state.auth.token!),
+                            headers: Http.getSignedInHeaders(state.auth.token!),
                             responseType: 'blob',
                         }
                     );
@@ -272,7 +272,7 @@ export namespace MediaPlayer {
 
                     try{
                         const resp = await Http.axios.get(Http.getTemplateEndpoint(Http.ENDPOINT_APP_MEDIA_SONGS_ID_AUDIO_SAMPLES, {song_id: songId}), {
-                            headers: await Http.getSignedInHeaders(state.auth.token!)
+                            headers: Http.getSignedInHeaders(state.auth.token!)
                         })
                         const samples: Array<number> = resp.data
                         dispatch(mediaPlayerSlice.actions._setSongSamples(samples))
@@ -323,7 +323,7 @@ export namespace MediaPlayer {
                 }
             }else{
                 Howler.stop();
-                if(state.mediaPlayer.status == MediaPlayerStatus.Paused && forcePlay == false){
+                if((state.mediaPlayer.status == MediaPlayerStatus.Paused || state.mediaPlayer.status == MediaPlayerStatus.Standby) && forcePlay == false){
                     dispatch(mediaPlayerSlice.actions._setStatus(MediaPlayerStatus.Standby));
                     lineHowl?.seek(line.start_millis)
                 }else if(prevStatus == MediaPlayerStatus.Standby){

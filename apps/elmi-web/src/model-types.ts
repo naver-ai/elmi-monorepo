@@ -82,3 +82,15 @@ export interface LineAnnotation{
     gloss_alts: Array<GlossDescription>
 }
 
+export interface ChatThread{
+    id: string
+    line_id: string
+}
+
+export interface ThreadMessage {
+    id: string
+    thread_id: string
+    role: string
+    message: string
+    mode: string
+}

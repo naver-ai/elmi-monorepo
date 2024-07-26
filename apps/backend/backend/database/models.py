@@ -176,6 +176,9 @@ class Project(SQLModel, IdTimestampMixin, UserIdMixin, SongIdMixin, table=True):
     inspections: list["LineInspection"] = Relationship(back_populates="project", sa_relationship_kwargs={'lazy': 'selectin'})
     annotations: list["LineAnnotation"] = Relationship(back_populates="project", sa_relationship_kwargs={'lazy': 'selectin'})
 
+    threads: list["Thread"] = Relationship(back_populates="project", sa_relationship_kwargs={'lazy': 'selectin'})
+    messages: list["ThreadMessage"] = Relationship(back_populates="project", sa_relationship_kwargs={'lazy': 'selectin'})
+    
 
 class ProjectIdMixin(BaseModel):
     project_id: str = Field(foreign_key=f"{Project.__tablename__}.id")
@@ -235,14 +238,14 @@ class LineAnnotation(SQLModel, IdTimestampMixin, LineIdMixin, ProjectIdMixin, ta
 
 
 # New models for Chat :)
-class Thread(SQLModel, IdTimestampMixin, table=True):
-    start_line_id: str = Field(nullable=False)
-    end_line_id: Optional[str] = Field(nullable=True)
+class Thread(SQLModel, IdTimestampMixin, ProjectIdMixin, LineIdMixin, table=True):
     messages: list["ThreadMessage"] = Relationship(back_populates="thread", sa_relationship_kwargs={'lazy': 'selectin'})
+    project: Project = Relationship(back_populates="threads") 
 
-class ThreadMessage(SQLModel, IdTimestampMixin, table=True):
+class ThreadMessage(SQLModel, IdTimestampMixin, ProjectIdMixin, table=True):
     thread_id: str = Field(foreign_key="thread.id")
     role: str = Field(nullable=False)  # user or assistant
     message: str = Field(nullable=False)
     mode: str = Field(nullable=False)
     thread: Thread = Relationship(back_populates="messages")
+    project: Project = Relationship(back_populates="messages")

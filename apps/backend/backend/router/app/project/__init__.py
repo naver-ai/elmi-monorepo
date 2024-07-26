@@ -9,6 +9,7 @@ from backend.database.engine import with_db_session
 from backend.database.models import Line, LineAnnotation, LineInfo, LineInspection, Project, Song, SongInfo, User, Verse, VerseInfo
 from backend.router.app.common import get_signed_in_user
 from backend.database.crud.project import fetch_line_annotations_by_project, fetch_line_inspections_by_project
+from backend.router.app.project.chat import router as chatRouter
 
 router = APIRouter()
 
@@ -72,3 +73,5 @@ async def get_line_annotations(project_id: str, user: Annotated[User, Depends(ge
                        db: Annotated[AsyncSession, Depends(with_db_session)]):
     return await fetch_line_annotations_by_project(db, project_id, user.id)
 
+
+router.include_router(chatRouter, prefix="/{project_id}/chat")

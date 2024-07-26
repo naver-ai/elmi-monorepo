@@ -106,4 +106,4 @@ async def prepare_song(title: str, artist: str, reference_youtube_id: str, db: A
         for line in line_orms:
             db.add(line)
 
-        return song.id
+        return song

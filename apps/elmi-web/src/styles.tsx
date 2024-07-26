@@ -1,4 +1,4 @@
-import { ThemeConfig } from "antd";
+import { ConfigProvider, ThemeConfig, theme as AntdTheme } from "antd";
 
 export const theme: ThemeConfig = {
     token: {
@@ -19,4 +19,12 @@ export const theme: ThemeConfig = {
             textPaddingInline: 0
         }
     }
+}
+
+export const PartialDarkThemeProvider = (props: {children: any}) => {
+    return <ConfigProvider theme={{
+        algorithm: AntdTheme.darkAlgorithm
+    }}>
+        {props.children}
+    </ConfigProvider>
 }

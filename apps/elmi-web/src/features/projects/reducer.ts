@@ -42,7 +42,7 @@ export function fetchProjectInfos(): AppThunk {
             
 
             try{
-                const resp = await Http.axios.get(Http.ENDPOINT_APP_PROJECTS, {headers: await Http.getSignedInHeaders(state.auth.token)})
+                const resp = await Http.axios.get(Http.ENDPOINT_APP_PROJECTS, {headers: Http.getSignedInHeaders(state.auth.token)})
                 console.log(resp.data)
                 dispatch(projectsSlice.actions.setProjects(resp.data))
             }catch(ex){
