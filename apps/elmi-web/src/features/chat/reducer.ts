@@ -1,4 +1,4 @@
-import { PayloadAction, createEntityAdapter, createSelector, createSlice } from "@reduxjs/toolkit";
+import { PayloadAction, createEntityAdapter, createSelector, createSlice, nanoid } from "@reduxjs/toolkit";
 import { ChatThread, ThreadMessage } from "../../model-types";
 import { AppState, AppThunk } from "../../redux/store";
 import { Http } from "../../net/http";
@@ -40,7 +40,7 @@ const chatSlice = createSlice({
             state.isLoadingChatData = action.payload
         },
 
-        _setChatData: (state, action: PayloadAction<{
+        _upsertChatData: (state, action: PayloadAction<{
             threads: Array<ChatThread>, messages: Array<ThreadMessage>,
             overwrite: boolean
         }>) => {
@@ -76,6 +76,7 @@ export const selectThreadIdByLineId = createSelector([(state: AppState, lineId: 
 
 export const selectMessagesByThreadId = createSelector([chatMessageSelectors.selectAll, (state: AppState, threadId: string | undefined) => threadId], 
     (messages, threadId) => {
+        console.log(messages, threadId)
         return threadId != null ? messages.filter(m => m.thread_id == threadId) : []
     })
 
@@ -103,6 +104,42 @@ export function fetchChatData(projectId: string): AppThunk{
 export function initializeThread(lineId: string, mode: string): AppThunk {
     return async (dispatch, getState) => {
         //TODO 
+    }
+}
+
+export function sendMessage(lineId: string, mode: string, message: string): AppThunk {
+    return async (dispatch, getState) => {
+        const state = getState()
+        let thread: ChatThread | undefined = selectThreadByLineId(state, lineId)
+        if(!thread){
+            //It this is an initial state, make a thread object.
+            thread = {
+                id: nanoid(),
+                line_id: lineId
+            }
+            dispatch(chatSlice.actions._upsertChatData({threads: [thread], messages: [], overwrite: false}))
+        }
+
+        const messageInfo: ThreadMessage = {
+            id: nanoid(),
+            thread_id: thread.id,
+            role: 'user',
+            message,
+            mode
+        }
+
+        dispatch(chatSlice.actions._upsertChatData({threads: [], messages: [messageInfo], overwrite: false}))
+                
+            //TODO replace with server API call
+        const responseMessage: ThreadMessage = {
+            id: nanoid(),
+            thread_id: thread.id,
+            role: 'assistant',
+            message: 'Hi! this is a dummy response.',
+            mode
+        }
+    
+        dispatch(chatSlice.actions._upsertChatData({threads: [], messages: [responseMessage], overwrite: false}))
     }
 }
 
