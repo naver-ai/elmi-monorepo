@@ -50,7 +50,7 @@ export const SigningEditorPage = () => {
             dispatch(initializeChatState())
             dispatch(MediaPlayer.dispose())
         }
-    }, [projectId])
+    }, [projectId]) 
 
     return <SignedInScreenFrame headerContent={<HeaderLeftContent/>}>
         <div className="h-full flex flex-row w-[100vw]">

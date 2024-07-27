@@ -9,6 +9,7 @@ import { GlobalMediaPlayer } from "./GlobalMediaPlayer"
 import { useThrottleCallback } from "@react-hook/throttle"
 import { PartialDarkThemeProvider } from "../../../styles"
 import { initializeThread, selectThreadIdByLineId, setActiveThreadLineId } from "../../chat/reducer"
+import { usePrevious } from "@uidotdev/usehooks"
 
 const LYRIC_TOKEN_ACTIVE_CLASSNAME_SELECTED = "outline-[2px] outline outline-offset-[0px] bg-white/20 scale-110"
 const LYRIC_TOKEN_ACTIVE_CLASSNAME_UNSELECTED = "outline-[2px] outline outline-offset-[0px] outline-pink-400 scale-110"
@@ -78,7 +79,7 @@ const LyricLineControlPanel = (props: {lineId: string}) => {
         }
     }, [throttledSetAudioPercentage])
 
-    return <div className="flex items-center gap-x-1">
+    return <div className="flex items-center gap-x-1" aria-selected="false">
     <Button onClick={onClickPause} type="text" className="m-0 p-0 rounded-full aspect-square relative items-center justify-center" tabIndex={-1}>
         <Progress size={24} type="circle" percent={audioPercentage} 
         showInfo={false} strokeWidth={12} strokeColor={"white"} trailColor="rgba(255,255,255,0.3)"/>
@@ -101,7 +102,6 @@ const LyricLineView = (props: {lineId: string}) => {
     useEffect(()=>{
         if(isSelected){
             inputRef.current?.focus()
-            dispatch(MediaPlayer.playLineLoop(props.lineId, false))
         }
     }, [isSelected])
 
@@ -223,6 +223,22 @@ export const LyricsView = (props: {
     className?: string
 }) => {
     const verseIds = useSelector(verseSelectors.selectIds)
+
+    const dispatch = useDispatch()
+
+    const detailLineId = useSelector(state => state.editor.detailLineId)
+    const prevDetailLineId = usePrevious(detailLineId)
+
+    useEffect(()=>{
+        if(prevDetailLineId != null && detailLineId == null){
+            // Closed
+            dispatch(MediaPlayer.exitLineLoop())
+        }else if(prevDetailLineId != detailLineId && detailLineId != null){
+            // Selected new
+            dispatch(MediaPlayer.playLineLoop(detailLineId, false))
+        }
+
+    }, [prevDetailLineId, detailLineId])
 
     return <div className={`lyric-panel-layout ${props.className}`}>
         <div className="px-2">
