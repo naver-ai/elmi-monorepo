@@ -81,5 +81,4 @@ async def get_audio(song_id: str, db: Annotated[AsyncSession, Depends(with_db_se
         max_val = np.max(np.abs(samples))
         normalized_samples = samples/max_val
 
-        print(normalized_samples)
         return normalized_samples

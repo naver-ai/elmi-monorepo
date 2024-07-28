@@ -2,7 +2,7 @@ import { Button, Input, InputRef, Skeleton, Progress, ConfigProvider, theme, Bad
 import { useDispatch, useSelector } from "../../../redux/hooks"
 import { lineInspectionSelectors, lineSelectors, selectLineIdsByVerseId, selectLineInspectionByLineId, setDetailLineId, toggleDetailLineId, verseSelectors } from "../reducer"
 import { FocusEventHandler, MouseEventHandler, useCallback, useEffect, useMemo, useRef, useState } from "react"
-import { MediaPlayer } from "../../media-player/reducer"
+import { MediaPlayer } from "../../media-player"
 import { MediaPlayerStatus } from "../../media-player/types"
 import { ChatBubbleLeftIcon, ChatBubbleLeftEllipsisIcon, PauseIcon, PlayIcon, HandRaisedIcon, ArrowRightIcon } from "@heroicons/react/20/solid"
 import { GlobalMediaPlayer } from "./GlobalMediaPlayer"
@@ -156,7 +156,28 @@ const LyricLineView = (props: {lineId: string}) => {
         }
     }, [line?.id])
 
-    return <div className={`transition-all mb-3 last:mb-0 p-1.5 rounded-lg hover:bg-orange-400/20 ${isSelected ? 'point-gradient-bg-light':''} ${isInLineLoopMode == true && isAudioPlaying && isPositionHitting ? "outline animate-music-indicate" : ""} ${isInLineLoopMode == false && isAudioPlaying && isPositionHitting ? 'bg-orange-400/20 outline animate-music-indicate':''}`}>
+    const scrollAnchorRef = useRef<HTMLDivElement>(null)
+
+    useEffect(()=>{
+        const subscription = MediaPlayer.getTimelineClickEventObservable().subscribe({
+            next: ({ positionMillis, lyricCoord }) => {
+                if(lyricCoord?.lineId == props.lineId){
+                    console.log("Clicked.")
+                    scrollAnchorRef.current?.scrollIntoView({
+                        behavior: 'smooth',
+                        block: 'start'
+                    })
+                }
+            }
+        })
+
+        return () => {
+            subscription.unsubscribe()
+        }
+    }, [props.lineId])
+
+    return <div  className={`transition-all relative mb-3 last:mb-0 p-1.5 rounded-lg hover:bg-orange-400/20 ${isSelected ? 'point-gradient-bg-light':''} ${isInLineLoopMode == true && isAudioPlaying && isPositionHitting ? "outline animate-music-indicate" : ""} ${isInLineLoopMode == false && isAudioPlaying && isPositionHitting ? 'bg-orange-400/20 outline animate-music-indicate':''}`}>
+        <div ref={scrollAnchorRef} className="scroll-anchor absolute top-[-30px] left-0 w-5 h-5 pointer-events-none"/>
         {
             line == null ? <Skeleton title={false} active/> : <>
                 <div className={`mb-1 pl-1 cursor-pointer transition-colors flex items-baseline`} onClick={onClick}>

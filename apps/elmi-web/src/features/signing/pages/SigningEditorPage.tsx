@@ -8,7 +8,7 @@ import { useCallback, useEffect } from "react"
 import { fetchProjectDetail, initializeEditorState } from "../reducer"
 import { LyricsView } from "../components/LyricsView"
 import { LyricDetailPanel } from "../components/LyricDetailPanel"
-import { MediaPlayer } from "../../media-player/reducer"
+import { MediaPlayer } from "../../media-player"
 import { fetchChatData, initializeChatState } from "../../chat/reducer"
 import { ChatThreadSidePanel } from "../components/ChatThreadSidePanel"
 

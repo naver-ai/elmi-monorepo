@@ -3,7 +3,7 @@ import { LineAnnotation, LineInspection, LyricLine, ProjectInfo, Song, Verse } f
 import { PayloadAction } from '@reduxjs/toolkit'
 import { AppState, AppThunk } from "../../redux/store"
 import { Http } from "../../net/http"
-import { MediaPlayer } from "../media-player/reducer"
+import { MediaPlayer } from "../media-player"
 
 
 

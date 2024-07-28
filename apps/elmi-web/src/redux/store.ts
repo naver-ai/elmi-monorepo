@@ -2,7 +2,7 @@ import {Action, ThunkAction, combineReducers, configureStore} from '@reduxjs/too
 import authReducer from '../features/auth/reducer'
 import projectsReducer from '../features/projects/reducer'
 import signingReducer from '../features/signing/reducer'
-import mediaPlayerReducer from '../features/media-player/reducer'
+import mediaPlayerReducer from '../features/media-player'
 import chatReducer from '../features/chat/reducer'
 import {FLUSH, PAUSE, PERSIST, PURGE, Persistor, REGISTER, REHYDRATE, persistReducer, persistStore} from 'redux-persist'
 

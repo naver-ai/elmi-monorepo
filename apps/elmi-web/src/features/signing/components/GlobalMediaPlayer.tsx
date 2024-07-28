@@ -1,6 +1,6 @@
 import { MinusIcon, PauseIcon, PlayIcon, PlusIcon } from "@heroicons/react/20/solid"
 import { Button, Slider, Tooltip } from "antd"
-import { MediaPlayer } from "../../media-player/reducer"
+import { MediaPlayer } from "../../media-player"
 import { MouseEventHandler, useCallback, useEffect, useMemo, useState } from "react"
 import { useThrottleCallback } from "@react-hook/throttle"
 import { useDispatch, useSelector } from "../../../redux/hooks"
@@ -85,7 +85,9 @@ const SongTimelineView = (props:{
     const onTimelineClick = useCallback<MouseEventHandler<any>>((ev)=>{
         ev.stopPropagation()
         const position = xToPositionMillis(ev.nativeEvent.offsetX)
+        console.log("timeline clicked!")
         if(position){
+            dispatch(MediaPlayer.dispatchTimelineClickEvent(position))
             if(highlightedLineInfo){
                 //Jump to another line
                 dispatch(MediaPlayer.directAccessLineLoop(position, true))
@@ -95,7 +97,7 @@ const SongTimelineView = (props:{
                 dispatch(MediaPlayer.seekGlobalMediaPosition(position))
             }
         }
-    },[highlightedLineInfo])
+    },[highlightedLineInfo, xToPositionMillis])
 
     useEffect(()=>{
 
