@@ -15,6 +15,23 @@ module.exports = {
       colors: {
         "systembg": "#e8e9ee",
         "audiopanelbg": "#050505"
+      },
+
+      keyframes: {
+        slideIn: {
+          "0%": {opacity: 0.5, transform: "translateY(120%)"},
+          "100%": {opacity: 1, transform: "translateY(0)"}
+        },
+
+        fadeIn: {
+          "0%": {opacity: 0},
+          "100%": {opacity: 1}
+        }
+      },
+
+      animation: {
+        slidein: "slideIn .25s ease-out",
+        fadein: "fadeIn, 0.5s"
       }
     },
   },

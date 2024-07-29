@@ -169,13 +169,22 @@ export const LyricsView = (props: {
 }) => {
     const verseIds = useSelector(verseSelectors.selectIds)
 
-    return <div className={`lyric-panel-layout ${props.className}`}>
-        <div className="px-2">
-        {
-            verseIds.map(verseId => <VerseView verseId={verseId} key={verseId}/>)
-        }
-        </div>
+    const isLoadingProject = useSelector(state => state.editor.isProjectLoading)
 
-        <GlobalMediaPlayer className="lyric-panel-layout block absolute bottom-0 z-10"/>
+    const isLoadingSong = useSelector(state => state.mediaPlayer.status == MediaPlayerStatus.LoadingMedia)
+
+
+
+    return <div className={`lyric-panel-layout ${props.className}`}>
+        {
+            isLoadingProject !== true ? <div className="px-2 animate-fadein">
+            {
+                verseIds.map(verseId => <VerseView verseId={verseId} key={verseId}/>)
+            }
+            </div> : null
+        }        
+        {
+            isLoadingSong !== true ? <GlobalMediaPlayer className="animate-slidein lyric-panel-layout block absolute bottom-0 z-10"/> : null
+        }        
     </div>
 }

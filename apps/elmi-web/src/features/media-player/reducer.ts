@@ -254,8 +254,6 @@ export namespace MediaPlayer {
                     }, {});
 
                     sprites[songId] = [verses[0].start_millis, verses[verses.length - 1].end_millis, true];
-
-                    console.log(sprites, sprites[songId], verses)
                     
                     lineHowl = await createHowl(
                         currentSongObjectURL,
