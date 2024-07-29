@@ -12,7 +12,7 @@ export function useNetworkImageSource(endpoint: string | undefined, fileName: st
             const loadImage = async () => {
                 try {
                     const response = await Http.axios.get(endpoint, {
-                        headers: await Http.getSignedInHeaders(token),
+                        headers: Http.getSignedInHeaders(token),
                         responseType: 'blob'
                     })
 

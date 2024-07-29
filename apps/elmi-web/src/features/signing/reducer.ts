@@ -3,7 +3,7 @@ import { LineAnnotation, LineInspection, LyricLine, ProjectInfo, Song, Verse } f
 import { PayloadAction } from '@reduxjs/toolkit'
 import { AppState, AppThunk } from "../../redux/store"
 import { Http } from "../../net/http"
-import { MediaPlayer } from "../media-player/reducer"
+import { MediaPlayer } from "../media-player"
 
 
 
@@ -64,10 +64,6 @@ const signingEditorSlice = createSlice({
             verseEntityAdapter.setAll(state.verseEntityState, action.payload.verses)
             lineEntityAdapter.setAll(state.lineEntityState, action.payload.lines)
 
-            console.log(
-                action.payload.annotations, action.payload.inspections
-            )
-
             lineAnnotationEntityAdapter.setAll(state.lineAnnotationEntityState, action.payload.annotations)
             lineInspectionEntityAdapter.setAll(state.lineInspectionEntityState, action.payload.inspections)
         },
@@ -120,7 +116,7 @@ export function fetchProjectDetail(projectId: string): AppThunk {
         if(state.auth.token){
             dispatch(signingEditorSlice.actions.setProjectLoadingFlag(true))
             try{
-                const resp = await Http.axios.get(Http.getTemplateEndpoint(Http.ENDPOINT_APP_PROJECTS_ID, {project_id: projectId}), {headers: await Http.getSignedInHeaders(state.auth.token!)})
+                const resp = await Http.axios.get(Http.getTemplateEndpoint(Http.ENDPOINT_APP_PROJECTS_ID, {project_id: projectId}), {headers: Http.getSignedInHeaders(state.auth.token!)})
                 dispatch(signingEditorSlice.actions.mountProjectDetail(resp.data))
 
                 // Mount song

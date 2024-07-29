@@ -8,7 +8,9 @@ import { useCallback, useEffect } from "react"
 import { fetchProjectDetail, initializeEditorState } from "../reducer"
 import { LyricsView } from "../components/LyricsView"
 import { LyricDetailPanel } from "../components/LyricDetailPanel"
-import { MediaPlayer } from "../../media-player/reducer"
+import { MediaPlayer } from "../../media-player"
+import { fetchChatData, initializeChatState } from "../../chat/reducer"
+import { ChatThreadSidePanel } from "../components/ChatThreadSidePanel"
 
 const HeaderLeftContent = () => {
 
@@ -37,20 +39,26 @@ export const SigningEditorPage = () => {
 
     const projectId = useProjectIdInRoute()!
 
+    const isDetailPanelOpen = useSelector(state => state.editor.detailLineId != null)
+
     useEffect(()=>{
         dispatch(fetchProjectDetail(projectId))
+        dispatch(fetchChatData(projectId))
 
         return () => {
             dispatch(initializeEditorState())
+            dispatch(initializeChatState())
             dispatch(MediaPlayer.dispose())
         }
-    }, [projectId])
+    }, [projectId]) 
 
     return <SignedInScreenFrame headerContent={<HeaderLeftContent/>}>
         <div className="h-full flex flex-row w-[100vw]">
             <LyricDetailPanel/>
-            <Layout.Content className="overflow-y-scroll">
+            <Layout.Content className="overflow-y-scroll flex">
+                <div className={`transition-all ${isDetailPanelOpen ? `flex-[0.2]` : 'flex-1'}`}/>
                 <LyricsView className="mt-10 mb-16 pb-10"/>
+                <ChatThreadSidePanel/>
             </Layout.Content>
             
         </div>

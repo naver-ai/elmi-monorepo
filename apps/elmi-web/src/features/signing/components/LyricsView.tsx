@@ -1,12 +1,15 @@
-import { Button, Input, InputRef, Skeleton, Progress } from "antd"
+import { Button, Input, InputRef, Skeleton, Progress, ConfigProvider, theme, Badge, Tooltip } from "antd"
 import { useDispatch, useSelector } from "../../../redux/hooks"
-import { lineSelectors, selectLineIdsByVerseId, setDetailLineId, toggleDetailLineId, verseSelectors } from "../reducer"
-import { FocusEventHandler, MouseEventHandler, useCallback, useEffect, useRef, useState } from "react"
-import { MediaPlayer } from "../../media-player/reducer"
+import { lineInspectionSelectors, lineSelectors, selectLineIdsByVerseId, selectLineInspectionByLineId, setDetailLineId, toggleDetailLineId, verseSelectors } from "../reducer"
+import { FocusEventHandler, MouseEventHandler, useCallback, useEffect, useMemo, useRef, useState } from "react"
+import { MediaPlayer } from "../../media-player"
 import { MediaPlayerStatus } from "../../media-player/types"
-import { PauseIcon, PlayIcon } from "@heroicons/react/20/solid"
+import { ChatBubbleLeftIcon, ChatBubbleLeftEllipsisIcon, PauseIcon, PlayIcon, HandRaisedIcon, ArrowRightIcon } from "@heroicons/react/20/solid"
 import { GlobalMediaPlayer } from "./GlobalMediaPlayer"
 import { useThrottleCallback } from "@react-hook/throttle"
+import { PartialDarkThemeProvider } from "../../../styles"
+import { initializeThread, selectThreadIdByLineId, setActiveThreadLineId } from "../../chat/reducer"
+import { usePrevious } from "@uidotdev/usehooks"
 
 const LYRIC_TOKEN_ACTIVE_CLASSNAME_SELECTED = "outline-[2px] outline outline-offset-[0px] bg-white/20 scale-110"
 const LYRIC_TOKEN_ACTIVE_CLASSNAME_UNSELECTED = "outline-[2px] outline outline-offset-[0px] outline-pink-400 scale-110"
@@ -76,7 +79,7 @@ const LyricLineControlPanel = (props: {lineId: string}) => {
         }
     }, [throttledSetAudioPercentage])
 
-    return <div className="flex items-center gap-x-1">
+    return <div className="flex items-center gap-x-1" aria-selected="false">
     <Button onClick={onClickPause} type="text" className="m-0 p-0 rounded-full aspect-square relative items-center justify-center" tabIndex={-1}>
         <Progress size={24} type="circle" percent={audioPercentage} 
         showInfo={false} strokeWidth={12} strokeColor={"white"} trailColor="rgba(255,255,255,0.3)"/>
@@ -99,7 +102,6 @@ const LyricLineView = (props: {lineId: string}) => {
     useEffect(()=>{
         if(isSelected){
             inputRef.current?.focus()
-            dispatch(MediaPlayer.playLineLoop(props.lineId, false))
         }
     }, [isSelected])
 
@@ -128,24 +130,91 @@ const LyricLineView = (props: {lineId: string}) => {
     const isInLineLoopMode = useSelector(state => state.mediaPlayer.linePlayInfo != null)
     const isPositionHitting = useSelector(state => state.mediaPlayer.hitLyricTokenInfo?.lineId == props.lineId)
 
-    return <div className={`transition-all mb-3 last:mb-0 p-1.5 rounded-lg hover:bg-orange-400/20 ${isSelected ? 'point-gradient-bg-light':''} ${isInLineLoopMode == false && isAudioPlaying && isPositionHitting ? 'bg-orange-400/20':''}`}>
+    const inspection = useSelector(state => selectLineInspectionByLineId(state, line?.id))
+
+    const threadId = useSelector(state => selectThreadIdByLineId(state, line?.id))
+    const isThreadActive = useSelector(state => state.chat.activeLineId == line?.id)
+
+    const showChatButton = isSelected === true && threadId == null && isThreadActive == false
+
+    const onClickInspectionIndicator = useCallback<MouseEventHandler<HTMLElement>>((ev) => {
+        ev.stopPropagation()
+        if(line?.id != null){
+            dispatch(setDetailLineId(line?.id))
+            dispatch(MediaPlayer.pauseMedia())
+            dispatch(setActiveThreadLineId(line?.id))
+            dispatch(initializeThread(line?.id, ""))
+        }
+    }, [line?.id])
+
+    const onClickChatThreadButton = useCallback<MouseEventHandler<HTMLElement>>((ev) => {
+        ev.stopPropagation()
+        if(line?.id != null){
+            dispatch(setDetailLineId(line?.id))
+            dispatch(MediaPlayer.pauseMedia())
+            dispatch(setActiveThreadLineId(line?.id))
+        }
+    }, [line?.id])
+
+    const scrollAnchorRef = useRef<HTMLDivElement>(null)
+
+    useEffect(()=>{
+        const subscription = MediaPlayer.getTimelineClickEventObservable().subscribe({
+            next: ({ positionMillis, lyricCoord }) => {
+                if(lyricCoord?.lineId == props.lineId){
+                    console.log("Clicked.")
+                    scrollAnchorRef.current?.scrollIntoView({
+                        behavior: 'smooth',
+                        block: 'start'
+                    })
+                }
+            }
+        })
+
+        return () => {
+            subscription.unsubscribe()
+        }
+    }, [props.lineId])
+
+    return <div  className={`transition-all relative mb-3 last:mb-0 p-1.5 rounded-lg hover:bg-orange-400/20 ${isSelected ? 'point-gradient-bg-light':''} ${isInLineLoopMode == true && isAudioPlaying && isPositionHitting ? "outline animate-music-indicate" : ""} ${isInLineLoopMode == false && isAudioPlaying && isPositionHitting ? 'bg-orange-400/20 outline animate-music-indicate':''}`}>
+        <div ref={scrollAnchorRef} className="scroll-anchor absolute top-[-30px] left-0 w-5 h-5 pointer-events-none"/>
         {
             line == null ? <Skeleton title={false} active/> : <>
-            <div className={`mb-1 pl-1 cursor-pointer transition-colors flex items-baseline`} onClick={onClick}>
-                <div className="flex-1">
-                {
-                    line.tokens.map((tok, i) => {
-                        return <LyricToken key={i} text={tok} lineId={line.id} index={i}
-                            enableHighlighting={(isSelected && isAudioPlaying === true) || isInLineLoopMode === false} {...line.timestamps[i]} 
-                            className={isSelected ? "text-white" : undefined}/>
-                })
-                }
+                <div className={`mb-1 pl-1 cursor-pointer transition-colors flex items-baseline`} onClick={onClick}>
+                    <div className="flex-1">
+                    {
+                        line.tokens.map((tok, i) => {
+                            return <LyricToken key={i} text={tok} lineId={line.id} index={i}
+                                enableHighlighting={(isSelected && isAudioPlaying === true) || isInLineLoopMode === false} {...line.timestamps[i]} 
+                                className={isSelected ? "text-white" : undefined}/>
+                    })
+                    }
+                    </div>
+                    {
+                        isSelected === true ? <LyricLineControlPanel lineId={props.lineId}/> : (
+                            inspection != null ? <PartialDarkThemeProvider>
+                                <Tooltip title={<><span>{inspection.description}</span><br/><span className="font-bold">Click to chat with me about this!</span></>}>
+                                    <Button tabIndex={-1} size="small" className="rounded-full aspect-square p-0 bg-rose-400 hover:!bg-rose-300 border-none" 
+                                    onClick={onClickInspectionIndicator}><HandRaisedIcon className="w-4 h-4 text-white"/></Button></Tooltip>
+                                </PartialDarkThemeProvider> : null
+                        )
+                    }
                 </div>
-                {isSelected && <LyricLineControlPanel lineId={props.lineId}/>}
-            </div>
-            <Input ref={inputRef} className="interactive rounded-md" 
-                onClickCapture={onClickInput}
-                onFocusCapture={onFocusInput}/></>
+                <Input ref={inputRef} className="interactive rounded-md" 
+                    onClickCapture={onClickInput}
+                    onFocusCapture={onFocusInput}/>
+                {
+                    showChatButton && <div className="flex justify-end itms-center mt-2">
+                        <PartialDarkThemeProvider>
+                            {
+                                inspection != null ? <Button type="text" tabIndex={-1} size="small" icon={<HandRaisedIcon className="w-4 h-4 animate-bounce-emphasized"/>} onClick={onClickInspectionIndicator}><span>Elmi has thoughts on this line</span><ArrowRightIcon className="w-4 h-4"/></Button> : 
+                                <Button type="text" tabIndex={-1} size="small" icon={<ChatBubbleLeftIcon className="w-4 h-4"/>} onClick={onClickChatThreadButton}>Chat<ArrowRightIcon className="w-4 h-4"/></Button>
+                            }
+                            
+                        </PartialDarkThemeProvider>
+                    </div>
+                }
+            </>
         }
     </div>
 }
@@ -156,8 +225,15 @@ export const VerseView = (props: {verseId: string}) => {
     const verse = useSelector(state => verseSelectors.selectById(state, props.verseId))
     const lineIds = useSelector(state => selectLineIdsByVerseId(state, props.verseId))
 
-    return <div className="relative bg-white/50 shadow-sm backdrop:blur-md rounded-lg my-8 first:mt-0 last:mb-0 p-2">
-        {verse.title != null ? <div className="text-slate-400 mb-2 font-bold ml-2">[{verse.title}]</div> : null}
+    const isAudioPlaying = useSelector(state => state.mediaPlayer.status == MediaPlayerStatus.Playing)
+    const isInLineLoopMode = useSelector(state => state.mediaPlayer.linePlayInfo != null)
+    const isPositionHitting = useSelector(state => state.mediaPlayer.hitLyricTokenInfo?.verseId == props.verseId)
+
+    const highlightVerse = lineIds.length == 0 && isAudioPlaying && isInLineLoopMode === false && isPositionHitting === true
+
+
+    return <div className={`relative bg-white/50 shadow-sm backdrop:blur-md rounded-lg my-8 first:mt-0 last:mb-0 p-2 ${highlightVerse ? "!bg-orange-300 outline outline-orange-400 animate-music-indicate" : ""}`}>
+        {verse.title != null ? <div className={`text-slate-400 mb-2 last:mb-0 font-bold ml-2 ${highlightVerse ? "text-white animate-bounce-fast" : ""}`}>[{verse.title}]</div> : null}
         {
             lineIds.map(lineId => <LyricLineView lineId={lineId} key={lineId}/>)
         }
@@ -169,10 +245,27 @@ export const LyricsView = (props: {
 }) => {
     const verseIds = useSelector(verseSelectors.selectIds)
 
+
     const isLoadingProject = useSelector(state => state.editor.isProjectLoading)
 
     const isLoadingSong = useSelector(state => state.mediaPlayer.status == MediaPlayerStatus.LoadingMedia)
 
+
+    const dispatch = useDispatch()
+
+    const detailLineId = useSelector(state => state.editor.detailLineId)
+    const prevDetailLineId = usePrevious(detailLineId)
+
+    useEffect(()=>{
+        if(prevDetailLineId != null && detailLineId == null){
+            // Closed
+            dispatch(MediaPlayer.exitLineLoop())
+        }else if(prevDetailLineId != detailLineId && detailLineId != null){
+            // Selected new
+            dispatch(MediaPlayer.playLineLoop(detailLineId, false))
+        }
+
+    }, [prevDetailLineId, detailLineId])
 
 
     return <div className={`lyric-panel-layout ${props.className}`}>
