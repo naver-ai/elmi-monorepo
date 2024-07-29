@@ -56,15 +56,15 @@ const SongTimelineView = (props:{
         if(millis != null && songDuration != null){
                 return millis/songDuration * timelineWidth
         }else return undefined
-    }, [songDuration])
+    }, [songDuration, timelineWidth])
 
     const xToPositionMillis = useCallback((position: number) => {
         if(songDuration != null){
-            return position / props.width * songDuration
+            return position / timelineWidth * songDuration
         }else{
             return undefined
         }
-    }, [songDuration])
+    }, [songDuration, timelineWidth])
     
     const progressX = useMemo(()=>{
         return x(progress)

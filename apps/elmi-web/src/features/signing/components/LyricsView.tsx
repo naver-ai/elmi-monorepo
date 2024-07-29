@@ -241,7 +241,7 @@ export const VerseView = (props: {verseId: string}) => {
 }
 
 export const LyricsView = (props: {
-    className?: string
+    lyricsContainerClassName?: string
 }) => {
     const verseIds = useSelector(verseSelectors.selectIds)
 
@@ -268,9 +268,9 @@ export const LyricsView = (props: {
     }, [prevDetailLineId, detailLineId])
 
 
-    return <div className={`lyric-panel-layout ${props.className}`}>
+    return <div className={`lyric-panel-layout`}>
         {
-            isLoadingProject !== true ? <div className="px-2 animate-fadein">
+            isLoadingProject !== true ? <div className={`px-2 animate-fadein ${props.lyricsContainerClassName}`}>
             {
                 verseIds.map(verseId => <VerseView verseId={verseId} key={verseId}/>)
             }

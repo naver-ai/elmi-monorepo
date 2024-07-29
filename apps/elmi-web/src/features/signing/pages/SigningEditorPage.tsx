@@ -57,7 +57,7 @@ export const SigningEditorPage = () => {
             <LyricDetailPanel/>
             <Layout.Content className="overflow-y-scroll flex">
                 <div className={`transition-all ${isDetailPanelOpen ? `flex-[0.2]` : 'flex-1'}`}/>
-                <LyricsView className="mt-10 mb-16 pb-10"/>
+                <LyricsView lyricsContainerClassName="mt-10 pb-32"/>
                 <ChatThreadSidePanel/>
             </Layout.Content>
             
