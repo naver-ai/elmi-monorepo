@@ -161,6 +161,13 @@ export namespace MediaPlayer {
     });
   }
 
+  function dispatchSongPosition(dispatch: any, state: AppState, positionMillis: number) {
+    if(timestampBehaviorSubject.value != positionMillis) {
+      timestampBehaviorSubject.next(positionMillis);
+      dispatch(mediaPlayerSlice.actions._setHitLyricTokenInfo(calcLyricTokenCoord(state, positionMillis)))
+    }
+  }
+
   function calcLyricTokenCoord(
     state: AppState,
     positionMillis: number
@@ -236,15 +243,14 @@ export namespace MediaPlayer {
             let animationFrameRef: number | null = null;
 
             const onAnimationFrame = () => {
-              const timestamp = Math.round(howl.seek() * 1000);
-
+              
               if (howl.playing()) {
                 const timestamp = Math.round(howl.seek() * 1000);
                 if (timestamp > howl.duration() * 1000) {
                   howl.seek(verses[0].start_millis / 1000);
                 }
-                timestampBehaviorSubject.next(timestamp);
-                dispatch(mediaPlayerSlice.actions._setHitLyricTokenInfo(calcLyricTokenCoord(state, timestamp)))
+
+                dispatchSongPosition(dispatch, state, timestamp)
 
                 animationFrameRef = requestAnimationFrame(onAnimationFrame);
               } else {
@@ -279,9 +285,7 @@ export namespace MediaPlayer {
             verses[verses.length - 1].end_millis,
             true,
           ];
-
-          console.log(sprites, sprites[songId], verses);
-
+          
           lineHowl = await createHowl(
             currentSongObjectURL,
             sprites,
@@ -325,8 +329,8 @@ export namespace MediaPlayer {
 
   export function dispatchTimelineClickEvent(positionMillis: number): AppThunk {
     return async (dispatch, getState) => {
-        const lyricCoord = calcLyricTokenCoord(getState(), positionMillis)
-        timelineClickEventSubject.next({positionMillis, lyricCoord})
+      const lyricCoord = calcLyricTokenCoord(getState(), positionMillis)
+      timelineClickEventSubject.next({ positionMillis, lyricCoord })
     };
   }
 
@@ -334,13 +338,11 @@ export namespace MediaPlayer {
     lineId: string,
     forcePlay: boolean = false
   ): AppThunk {
-    return async (dispatch, getState) => {
+    return (dispatch, getState) => {
       const state = getState();
       const line = lineSelectors.selectById(state, lineId);
 
-      const prevLineId = state.mediaPlayer.linePlayInfo?.lineId;
-
-      const prevStatus = state.mediaPlayer.status;
+      const prevLineId = state.mediaPlayer.linePlayInfo?.lineId
 
       dispatch(mediaPlayerSlice.actions._setStatus(MediaPlayerStatus.Playing));
       dispatch(
@@ -353,33 +355,21 @@ export namespace MediaPlayer {
       let resumePosition: number | undefined = undefined;
       if (prevLineId == lineId) {
         if (state.mediaPlayer.status == MediaPlayerStatus.Paused) {
-          resumePosition = lineHowl?.seek();
+          resumePosition = lineHowl!.seek() * 1000;
         }
+      }
 
-        Howler.stop();
-        lineHowl?.play(lineId);
-        if (resumePosition) {
-          lineHowl?.seek(resumePosition);
+      Howler.stop();
+      if (state.mediaPlayer.status == MediaPlayerStatus.Paused || state.mediaPlayer.status == MediaPlayerStatus.Standby) {
+        dispatch(mediaPlayerSlice.actions._setStatus(MediaPlayerStatus.Standby));
+        const position = resumePosition != null ? resumePosition : line.start_millis
+        dispatchSongPosition(dispatch, state, position)
+        if (forcePlay === true) {
+          lineHowl?.play(lineId)
         }
+        lineHowl?.seek(position/1000);
       } else {
-        Howler.stop();
-        if (
-          (state.mediaPlayer.status == MediaPlayerStatus.Paused ||
-            state.mediaPlayer.status == MediaPlayerStatus.Standby) &&
-          forcePlay == false
-        ) {
-          dispatch(
-            mediaPlayerSlice.actions._setStatus(MediaPlayerStatus.Standby)
-          );
-          lineHowl?.seek(line.start_millis);
-        } else if (prevStatus == MediaPlayerStatus.Standby) {
-          dispatch(
-            mediaPlayerSlice.actions._setStatus(MediaPlayerStatus.Standby)
-          );
-          lineHowl?.seek(line.start_millis);
-        } else {
-          lineHowl?.play(lineId);
-        }
+        lineHowl?.play(lineId);
       }
     };
   }
@@ -397,7 +387,7 @@ export namespace MediaPlayer {
           positionMillis <= line.end_millis
       );
       if (line != null) {
-        await playLineLoop(line.id, false)(dispatch, getState, null);
+        playLineLoop(line.id, false)(dispatch, getState, null);
         if (select === true) {
           dispatch(setDetailLineId(line.id));
         }
@@ -465,8 +455,10 @@ export namespace MediaPlayer {
     return async (dispatch, getState) => {
       const state = getState();
       const isInLineLoopMode = state.mediaPlayer.linePlayInfo;
-      if (!isInLineLoopMode) {
+      if (!isInLineLoopMode && lineHowl != null) {
         lineHowl?.seek(positionMillis / 1000);
+        const timestamp = Math.round(lineHowl.seek() * 1000);
+        dispatchSongPosition(dispatch, state, timestamp)
       }
     };
   }

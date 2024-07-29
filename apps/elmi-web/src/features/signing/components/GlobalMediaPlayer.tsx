@@ -41,6 +41,7 @@ const SongTimelineView = (props:{
     const songDuration = useSelector(state => state.mediaPlayer.songDurationMillis)
 
     const highlightedLineInfo = useSelector(state => state.mediaPlayer.linePlayInfo)
+    const mediaPlayerStatus = useSelector(state => state.mediaPlayer.status)
 
     const dispatch = useDispatch()
 
@@ -93,11 +94,11 @@ const SongTimelineView = (props:{
                 dispatch(MediaPlayer.directAccessLineLoop(position, true))
             }else{
                 //Global navigation
-                dispatch(MediaPlayer.performGlobalPlay())
                 dispatch(MediaPlayer.seekGlobalMediaPosition(position))
+                            
             }
         }
-    },[highlightedLineInfo, xToPositionMillis])
+    },[highlightedLineInfo, xToPositionMillis, mediaPlayerStatus])
 
     useEffect(()=>{
 
