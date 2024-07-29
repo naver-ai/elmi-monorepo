@@ -6,6 +6,7 @@ import { MediaPlayerStatus } from "../../media-player/types"
 import { GlobalMediaPlayer } from "./GlobalMediaPlayer"
 import { usePrevious } from "@uidotdev/usehooks"
 import { LyricLineView } from "./LyricLineView"
+import { Skeleton } from "antd"
 
 
 export const VerseView = (props: {verseId: string}) => {
@@ -59,11 +60,11 @@ export const LyricsView = (props: {
 
     return <div className={`lyric-panel-layout`}>
         {
-            isLoadingProject !== true ? <div className={`px-2 animate-fadein ${props.lyricsContainerClassName}`}>
+            isLoadingSong !== true ? <div className={`px-2 animate-fadein ${props.lyricsContainerClassName}`}>
             {
                 verseIds.map(verseId => <VerseView verseId={verseId} key={verseId}/>)
             }
-            </div> : null
+            </div> : <div className="px-2 py-10"><Skeleton active /></div>
         }        
         {
             isLoadingSong !== true ? <GlobalMediaPlayer className="animate-slidein lyric-panel-layout block absolute bottom-0 z-10"/> : null

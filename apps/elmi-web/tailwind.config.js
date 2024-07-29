@@ -45,7 +45,7 @@ module.exports = {
         "music-indicate": "music-indicate 0.7s linear infinite",
         "bounce-emphasized": "bounce-emphasized 0.7s infinite", 
         slidein: "slideIn .25s ease-out",
-        fadein: "fadeIn, 0.5s"
+        fadein: "fadeIn, 5s"
       },
     },
   },
