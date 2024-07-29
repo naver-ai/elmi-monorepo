@@ -1,6 +1,8 @@
 from difflib import Match, SequenceMatcher
 from io import BytesIO
+from math import ceil, floor
 import re
+from backend.database.models import Line, TimestampRangeMixin, Verse
 from langchain_openai import ChatOpenAI
 from pydantic import BaseModel, TypeAdapter, validate_call
 from backend.utils.env_helper import get_env_variable, EnvironmentVariables
@@ -15,7 +17,7 @@ from langchain_core.output_parsers import PydanticOutputParser
 
 import json
 
-from .genius import LyricsPackage, clean_lyric_line
+from .genius import LyricLine, LyricsPackage, clean_lyric_line
 from backend.utils.lyric_data_types import SyncedLyricSegment, SyncedLyricsSegmentWithWordLevelTimestamp, SyncedText, SyncedTimestamps
 
 PROMPT_LINE_MATCH = """
@@ -261,6 +263,7 @@ class LyricSynchronizer:
             if len(seg.original_lyric_ids)>0:
                 seg.text = " ".join([lyrics.lines[lyric_line_id].text for lyric_line_id in seg.original_lyric_ids]) 
 
+
         print(json.dumps([l.model_dump() for l in merged], indent=4))
 
         return merged
@@ -480,3 +483,77 @@ class LyricSynchronizer:
 
         assert match.a == match.b == 0 and match.size == len(a_tokens_perfect)
         return match, b_token_indices[match.size-1]+1
+    
+    @validate_call
+    def convert_lyrics_to_orms(self, song_id: str, lyrics: LyricsPackage, song_duration_millis: int, 
+                               word_synced_lyrics: list[SyncedLyricsSegmentWithWordLevelTimestamp],
+                               insert_instrumental_verses: bool = True,
+                               instrumental_verse_threshold_millis: int = 5000,
+                               instrumental_verse_name: list[str] = ["Intro", "Instrumental", "Outro"]
+                               ) -> tuple[list[Verse], list[Line]]:
+
+        verse_orms: list[Verse] = [Verse(title=lyric_verse.title, song_id=song_id, verse_ordering=i) for i, lyric_verse in enumerate(lyrics.verses)]
+    
+        verses_by_lyric_verse_id: dict[str, Verse] = {lyric_verse.id:verse_orm for lyric_verse, verse_orm in zip(lyrics.verses, verse_orms)}
+        
+        line_orms: list[Line] = []
+
+        line_counter: int = 0
+        verse_orm: Verse | None = None
+        for synced_lyric_line in word_synced_lyrics:
+                            
+            this_verse_orm = verses_by_lyric_verse_id[lyrics.lines[synced_lyric_line.original_lyric_ids[0]].verse_id]
+            if verse_orm != this_verse_orm:
+                line_counter = 0
+                verse_orm = this_verse_orm
+            
+            line_orm = Line(line_number=line_counter, lyric=synced_lyric_line.text, tokens=synced_lyric_line.tokens, 
+                            timestamps=[TimestampRangeMixin(start_millis=floor(word.start * 1000), end_millis=ceil(word.end * 1000)).model_dump() for word in synced_lyric_line.words],
+                            start_millis=floor(synced_lyric_line.start * 1000),
+                            end_millis=ceil(synced_lyric_line.end * 1000),
+                            verse_id=this_verse_orm.id, song_id=song_id)
+            line_orms.append(line_orm)
+            line_counter += 1
+               
+        for verse in verse_orms:
+            lines = [l for l in line_orms if l.verse_id == verse.id]
+            if len(lines) > 0:
+                verse.start_millis = lines[0].start_millis
+                verse.end_millis = lines[-1].end_millis
+
+
+        for i, verse in enumerate(verse_orms):
+            if verse.start_millis is None:
+                if i > 0:
+                    verse.start_millis = verse_orms[i-1].end_millis
+                else:
+                    verse.start_millis = 0
+            
+            if verse.end_millis is None:
+                if i < len(verse_orms)-1:
+                    verse.end_millis = verse_orms[i+1].start_millis
+                else:
+                    verse.end_millis = song_duration_millis
+
+        if insert_instrumental_verses:
+            pointer = 0
+
+            #Intro
+            if verse_orms[pointer].start_millis > instrumental_verse_threshold_millis:
+                verse_orms.insert(0, Verse(start_millis=0, end_millis=verse_orms[pointer].start_millis, title=instrumental_verse_name[0], song_id=song_id))
+                pointer += 1
+
+            while pointer < len(verse_orms) - 1:
+                if verse_orms[pointer+1].start_millis - verse_orms[pointer].end_millis > instrumental_verse_threshold_millis:
+                    verse_orms.insert(pointer+1, Verse(start_millis=verse_orms[pointer].end_millis, end_millis=verse_orms[pointer+1].start_millis, title=instrumental_verse_name[1], song_id=song_id))
+                    pointer += 1
+
+                pointer += 1
+
+            if song_duration_millis - verse_orms[-1].end_millis > instrumental_verse_threshold_millis:
+                verse_orms.append(Verse(start_millis=verse_orms[-1].end_millis, end_millis=song_duration_millis, title=instrumental_verse_name[2], song_id=song_id))
+
+            for i, verse in enumerate(verse_orms):
+                verse.verse_ordering = i
+
+        return verse_orms, line_orms

@@ -38,7 +38,7 @@ async def prepare_song(title: str, artist: str, reference_youtube_id: str, db: A
         song.duration_seconds = audio.duration_seconds
         db.add(song)
 
-        duration_millis = audio.duration_seconds * 1000
+        duration_millis = round(audio.duration_seconds * 1000)
 
         print("Reference Lyrics from Genius:")
         print(song_info.lyrics)
@@ -56,53 +56,11 @@ async def prepare_song(title: str, artist: str, reference_youtube_id: str, db: A
         word_synced_lyrics = await synchronizer.apply_word_level_timestamps(line_synced_lyrics, song.get_audio_file_path())
         word_synced_lyrics = synchronizer.split_multiline_lyrics(song_info.lyrics, word_synced_lyrics)
 
-        verses_by_lyric_verse_id: dict[str, Verse] = {lyric_verse.id:Verse(title=lyric_verse.title, song_id=song.id, verse_ordering=i) for i, lyric_verse in enumerate(song_info.lyrics.verses)}
-        line_orms: list[Line] = []
-
-        line_counter: int = 0
-        verse_orm: Verse | None = None
-        for synced_lyric_line in word_synced_lyrics:
-                            
-            this_verse_orm = verses_by_lyric_verse_id[song_info.lyrics.lines[synced_lyric_line.original_lyric_ids[0]].verse_id]
-            if verse_orm != this_verse_orm:
-                line_counter = 0
-                verse_orm = this_verse_orm
-            
-            line_orm = Line(line_number=line_counter, lyric=synced_lyric_line.text, tokens=synced_lyric_line.tokens, 
-                            timestamps=[TimestampRangeMixin(start_millis=floor(word.start * 1000), end_millis=ceil(word.end * 1000)).model_dump() for word in synced_lyric_line.words],
-                            start_millis=floor(synced_lyric_line.start * 1000),
-                            end_millis=ceil(synced_lyric_line.end * 1000),
-                            verse_id=this_verse_orm.id, song_id=song.id)
-            line_orms.append(line_orm)
-            line_counter += 1
-
-        verses: list[Verse] = []                
-        for _, verse in verses_by_lyric_verse_id.items():
-            lines = [l for l in line_orms if l.verse_id == verse.id]
-            if len(lines) > 0:
-                verse.start_millis = lines[0].start_millis
-                verse.end_millis = lines[-1].end_millis
-
-            db.add(verse)
-            verses.append(verse)
-        
-        for i, verse in enumerate(verses):
-            if verse.start_millis is None:
-                if i > 0:
-                    verse.start_millis = verses[i-1].end_millis
-                else:
-                    verse.start_millis = 0
-                    
-                db.add(verse)
-            
-            if verse.end_millis is None:
-                if i < len(verses)-1:
-                    verse.end_millis = verses[i+1].start_millis
-                else:
-                    verse.end_millis = duration_millis
-
-                db.add(verse)
+        verse_orms, line_orms = synchronizer.convert_lyrics_to_orms(song.id, song_info.lyrics, duration_millis, word_synced_lyrics)
                         
+        for verse in verse_orms:
+            db.add(verse)
+
         for line in line_orms:
             db.add(line)
 

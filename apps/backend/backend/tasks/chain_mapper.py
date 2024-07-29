@@ -44,7 +44,7 @@ class ChainMapper(ABC, Generic[InputType, OutputType]):
         # Initialize the chain
         self._chain = self.__input_parser | RunnableRetry(name="LLM-routin", bound = chat_prompt | chat_model | PydanticOutputParser(pydantic_object=outputModel) | self._postprocess_output,
                                                          retry_exception_types=(ValidationError, AssertionError, OutputParserException), 
-                                                         max_attempt_number=5)
+                                                         max_attempt_number=5, wait_exponential_jitter=True)
 
     @classmethod
     def __input_parser(cls, input: InputType, config: RunnableConfig)->dict:
