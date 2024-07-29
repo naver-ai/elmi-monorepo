@@ -17,13 +17,22 @@ export const theme: ThemeConfig = {
         Divider: {
             orientationMargin: 0,
             textPaddingInline: 0
-        }
+        },
     }
 }
 
 export const PartialDarkThemeProvider = (props: {children: any}) => {
     return <ConfigProvider theme={{
-        algorithm: AntdTheme.darkAlgorithm
+        algorithm: AntdTheme.darkAlgorithm,
+        token: {
+            colorPrimary: 'white'
+        },
+        components: {
+            Progress: {
+                defaultColor: "white",
+                remainingColor: 'rgba(255,255,255,0.45)'
+            }
+        }
     }}>
         {props.children}
     </ConfigProvider>

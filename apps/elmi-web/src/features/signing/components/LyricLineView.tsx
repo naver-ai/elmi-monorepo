@@ -8,6 +8,7 @@ import { ChatBubbleLeftIcon, PauseIcon, PlayIcon, HandRaisedIcon, ArrowRightIcon
 import { useThrottleCallback } from "@react-hook/throttle"
 import { PartialDarkThemeProvider } from "../../../styles"
 import { initializeThread, selectThreadIdByLineId, setActiveThreadLineId } from "../../chat/reducer"
+import { useAudioSegmentPositionPercentage } from "../hooks"
 
 const LYRIC_TOKEN_ACTIVE_CLASSNAME_SELECTED = "outline-[2px] outline outline-offset-[0px] bg-white/20 scale-110"
 const LYRIC_TOKEN_ACTIVE_CLASSNAME_UNSELECTED = "outline-[2px] outline outline-offset-[0px] outline-pink-400 scale-110"
@@ -41,18 +42,7 @@ const LyricLineControlPanel = (props: {lineId: string}) => {
     const mediaPlayerStatus = useSelector(state => state.mediaPlayer.status)
     const isAudioPlaying = mediaPlayerStatus == MediaPlayerStatus.Playing
 
-    const [audioPercentage, setAudioPercentage] = useState<number>(0)
-    const throttledSetAudioPercentage = useThrottleCallback(useCallback((sec: number|null) => {
-        if(line != null && sec != null){
-            if(sec < line.start_millis || sec > line.end_millis){
-                setAudioPercentage(0)
-            }else{
-                setAudioPercentage(Math.round((sec - line.start_millis) / (line.end_millis - line.start_millis) * 100))
-            }
-        }else{
-            setAudioPercentage(0)
-        }
-    }, [line?.start_millis, line?.end_millis]), 60)
+    const audioPercentage = useAudioSegmentPositionPercentage(line?.start_millis, line?.end_millis)
 
     const onClickPause = useCallback<MouseEventHandler<HTMLDivElement>>((ev)=>{
         ev.stopPropagation()
@@ -64,18 +54,6 @@ const LyricLineControlPanel = (props: {lineId: string}) => {
     }, [mediaPlayerStatus, line?.id])
 
     const IconClass = isAudioPlaying ? PauseIcon : PlayIcon
-
-    useEffect(()=>{
-        const audioPositionSubscription = MediaPlayer.getTimestampObservable().subscribe({
-            next: (millis) => {
-                throttledSetAudioPercentage(millis)
-            }
-        })
-
-        return () => {
-            audioPositionSubscription.unsubscribe()
-        }
-    }, [throttledSetAudioPercentage])
 
     return <div className="flex items-center gap-x-1" aria-selected="false">
     <Button onClick={onClickPause} type="text" className="m-0 p-0 rounded-full aspect-square relative items-center justify-center" tabIndex={-1}>

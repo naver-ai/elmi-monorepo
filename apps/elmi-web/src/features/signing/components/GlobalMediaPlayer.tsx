@@ -8,6 +8,7 @@ import { useResizeDetector } from "react-resize-detector"
 import { LapsIcon } from "../../../components/svg-icons"
 import { setDetailLineId } from "../reducer"
 import { MediaPlayerStatus } from "../../media-player/types"
+import { formatDuration } from "../../../utils/time"
 
 const TIMELINE_PADDING = 1
 
@@ -130,13 +131,6 @@ const SongTimelineView = (props:{
         </g>
         
     </svg>
-}
-
-
-function formatDuration(durationMillis: number): string {
-    const minutes = Math.floor(durationMillis / (60*1000))
-    const seconds = Math.floor((durationMillis % (60*1000))/1000)
-    return `${String(minutes).padStart(2, "0")}:${String(seconds).padStart(2, "0")}`
 }
 
 export const GlobalMediaPlayer = (props: {
