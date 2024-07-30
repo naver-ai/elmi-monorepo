@@ -1,20 +1,21 @@
-import { Button, Divider, Typography } from "antd"
+import { Button, Divider, Spin, Typography } from "antd"
 import { useDispatch, useSelector } from "../../../redux/hooks"
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { lineSelectors, selectLineAnnotationByLineId, setDetailLineId } from "../reducer";
 import { LeftDoubleArrowIcon } from "../../../components/svg-icons";
 import { LineAnnotation } from "apps/elmi-web/src/model-types";
 import { Http } from "../../../net/http";
+import { MediaPlayerStatus } from "../../media-player/types";
 
-export const LyricDetailPanel = () => {
+const ReferenceVideoView = () => {
 
     const songId = useSelector(state => state.editor.song?.id)
     const lineId = useSelector(state => state.editor.detailLineId)
     const line = useSelector(state => lineSelectors.selectById(state, lineId || ""))
 
-    const annotation: LineAnnotation | undefined = useSelector(state => selectLineAnnotationByLineId(state, lineId || ""))
-
+    const [isLoadingVideo, setIsLoadingVideo] = useState<boolean>(false)
     const [videoBlobUrl, setVideoBlobUrl] = useState<string|undefined>(undefined)
+    const mediaPlayerStatus = useSelector(state => state.mediaPlayer.status)
     const token = useSelector(state => state.auth.token)
 
     const mountVideoFile = useCallback(async () => {
@@ -23,6 +24,9 @@ export const LyricDetailPanel = () => {
                 song_id: songId,
                 line_id: lineId
             })
+
+            setIsLoadingVideo(true)
+            setVideoBlobUrl(undefined)
 
             try{
                 const result = await Http.axios.get(url, {
@@ -34,9 +38,13 @@ export const LyricDetailPanel = () => {
                 console.log("Video download success.")
             }catch(ex){
                 console.log(ex)
+            }finally{
+                setIsLoadingVideo(false)
             }
         }
     }, [token, songId, lineId])
+
+    const videoViewRef = useRef<HTMLVideoElement>(null)
 
     useEffect(() => {
         mountVideoFile().then()
@@ -48,6 +56,19 @@ export const LyricDetailPanel = () => {
         }
     }, [token, songId, lineId])
 
+    return <div className="transition-all">
+        {
+            isLoadingVideo === true ? <Spin/> : <video ref={videoViewRef} className="mt-3 w-full rounded-lg" src={videoBlobUrl} loop/>
+        }
+        
+    </div> 
+}
+
+export const LyricDetailPanel = () => {
+
+    const lineId = useSelector(state => state.editor.detailLineId)
+
+    const annotation: LineAnnotation | undefined = useSelector(state => selectLineAnnotationByLineId(state, lineId || ""))
 
     const dispatch = useDispatch()
 
@@ -67,8 +88,7 @@ export const LyricDetailPanel = () => {
                         <h4>Music Video</h4>
                     </Divider>
 
-                    <video className="mt-3 w-full rounded-lg" src={videoBlobUrl} autoPlay loop/>
-                
+                    <ReferenceVideoView/>              
 
                     <Divider orientation="left" plain>
                         <h4>Mood</h4>
