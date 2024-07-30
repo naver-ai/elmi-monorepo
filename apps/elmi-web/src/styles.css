@@ -61,3 +61,11 @@ body{
 .line-detail-panel h4{
     @apply text-lg font-bold !ps-0;
 }
+
+.line-detail-panel h5{
+    @apply font-medium text-black !ps-0 m-0 p-0 mt-4;
+}
+
+.line-detail-panel .detail-panel-content-wrapper {
+    @apply mb-8 last:mb-0;
+}

@@ -1,4 +1,4 @@
-import { MinusIcon, PauseIcon, PlayIcon, PlusIcon } from "@heroicons/react/20/solid"
+import { MinusIcon, PauseIcon, PlayIcon, PlusIcon, ArrowsPointingOutIcon, ArrowsPointingInIcon } from "@heroicons/react/20/solid"
 import { Button, Slider, Tooltip } from "antd"
 import { MediaPlayer } from "../../media-player"
 import { MouseEventHandler, useCallback, useEffect, useMemo, useState } from "react"
@@ -147,7 +147,20 @@ const GlobalVideoView = () => {
         }else return undefined
     }, [songId])
 
-    return url ? <ReferenceVideoView containerClassName="" videoUrl={url} segStart={0}/> : null
+    const [isVideoShrinked, setIsVideoShrinked] = useState<boolean>(true)
+
+    const onShrinkButtonClick = useCallback(()=>{
+        setIsVideoShrinked(!isVideoShrinked)
+    }, [isVideoShrinked])
+
+    const IconClass = isVideoShrinked ? ArrowsPointingOutIcon : ArrowsPointingInIcon
+
+    return <div className="self-stretch flex justify-center relative">
+        <Button className="absolute right-1 top-1 z-10 p-1 aspect-square" type="text" onClick={onShrinkButtonClick}><IconClass className="w-5 h-5 text-white/80"/></Button>
+        {
+        url ? <ReferenceVideoView containerClassName={`${isVideoShrinked == true ? "w-[50%]" : 'w-full'}`} videoUrl={url} segStart={0}/> : null
+        }
+        </div>
 }
 
 export const GlobalMediaPlayer = (props: {

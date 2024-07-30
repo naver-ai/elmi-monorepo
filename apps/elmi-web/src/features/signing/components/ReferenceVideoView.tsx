@@ -84,11 +84,11 @@ export const ReferenceVideoView = (props: {
         }
     }, [prevMediaPlayerStatus, mediaPlayerStatus, syncVideoTime()])
 
-    return <div className={`transition-all ${props.containerClassName}`}>
+    return <div className={`transition-all aspect-video bg-white/20 ${props.containerClassName} ${props.frameClassName}`}>
         {
-            isLoadingVideo === true ? <div className={`aspect-video bg-gray-200 flex justify-center items-center ${props.frameClassName}`}><Spin /></div> : <video onLoadedData={onVideoLoaded}
+            isLoadingVideo === true ? <div className={`aspect-video animate-pulse flex justify-center items-center ${props.frameClassName}`}><Spin/></div> : <video onLoadedData={onVideoLoaded}
 
-                ref={videoViewRef} className={`w-full ${props.frameClassName}`} src={videoBlobUrl} loop />
+                ref={videoViewRef} className={`w-full animate-fadein ${props.frameClassName}`} src={videoBlobUrl} loop />
         }
 
     </div>

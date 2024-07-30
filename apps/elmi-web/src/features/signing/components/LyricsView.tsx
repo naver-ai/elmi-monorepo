@@ -33,7 +33,7 @@ export const VerseView = (props: {verseId: string}) => {
         }
     }, [audioPercentage, verse?.end_millis, verse?.start_millis])
 
-    return <div className={`relative bg-white/50 shadow-sm backdrop:blur-md rounded-lg my-8 first:mt-0 last:mb-0 p-2 ${highlightVerse ? "!bg-orange-300 outline outline-orange-400 animate-music-indicate" : ""}`}>
+    return <div className={`relative bg-white/50 shadow-sm backdrop:blur-md rounded-2xl my-8 first:mt-0 last:mb-0 p-2 ${highlightVerse ? "!bg-orange-300 outline outline-orange-400 animate-music-indicate" : ""}`}>
         <div className={`flex gap-x-4 items-center mb-2 last:mb-0 ${verse.title == null ? 'justify-end' : 'justify-between'}`}>
             {verse.title != null ? <div className={`flex- 1 text-slate-400 font-bold ml-2 ${highlightVerse ? "text-white animate-bounce-fast" : ""}`}>[{verse.title}]</div> : null}
             <span className={`text-sm font-medium shrink-0 mr-2 ${highlightVerse === true ? 'text-white' : 'text-gray-500'}`}>
