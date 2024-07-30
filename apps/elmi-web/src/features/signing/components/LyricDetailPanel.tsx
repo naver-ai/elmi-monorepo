@@ -6,6 +6,8 @@ import { LeftDoubleArrowIcon } from "../../../components/svg-icons";
 import { LineAnnotation } from "apps/elmi-web/src/model-types";
 import { Http } from "../../../net/http";
 import { MediaPlayerStatus } from "../../media-player/types";
+import { MediaPlayer } from "../../media-player";
+import { usePrevious } from "@uidotdev/usehooks";
 
 const ReferenceVideoView = () => {
 
@@ -16,6 +18,7 @@ const ReferenceVideoView = () => {
     const [isLoadingVideo, setIsLoadingVideo] = useState<boolean>(false)
     const [videoBlobUrl, setVideoBlobUrl] = useState<string|undefined>(undefined)
     const mediaPlayerStatus = useSelector(state => state.mediaPlayer.status)
+    const prevMediaPlayerStatus = usePrevious(mediaPlayerStatus)
     const token = useSelector(state => state.auth.token)
 
     const mountVideoFile = useCallback(async () => {
@@ -56,9 +59,39 @@ const ReferenceVideoView = () => {
         }
     }, [token, songId, lineId])
 
+    const syncVideoTime = useCallback(()=>{
+        const absPosition = MediaPlayer.getCurrentTimestampMillis()
+        if(line?.start_millis != null && absPosition != null && videoViewRef.current){
+            const position = absPosition - line.start_millis
+            videoViewRef.current.currentTime = (position / 1000)
+        }
+    }, [line?.start_millis])
+
+    const onVideoLoaded = useCallback<React.ReactEventHandler<HTMLVideoElement>>((ev)=>{
+        console.log("video loaded")
+        syncVideoTime()
+        if(mediaPlayerStatus == MediaPlayerStatus.Playing){
+            videoViewRef.current?.play()
+        }
+    }, [mediaPlayerStatus, syncVideoTime])
+
+    useEffect(()=>{
+        if(prevMediaPlayerStatus != mediaPlayerStatus){
+            if(mediaPlayerStatus == MediaPlayerStatus.Paused){
+                syncVideoTime()
+                videoViewRef.current?.pause()
+            }else if(mediaPlayerStatus == MediaPlayerStatus.Playing){
+                syncVideoTime()
+                videoViewRef.current?.play().then()
+            }
+        }
+    }, [prevMediaPlayerStatus, mediaPlayerStatus, syncVideoTime()])
+
     return <div className="transition-all">
         {
-            isLoadingVideo === true ? <Spin/> : <video ref={videoViewRef} className="mt-3 w-full rounded-lg" src={videoBlobUrl} loop/>
+            isLoadingVideo === true ? <div className="aspect-video bg-gray-200 rounded-lg flex justify-center items-center"><Spin/></div> : <video onLoadedData={onVideoLoaded} 
+            
+                ref={videoViewRef} className="mt-3 w-full rounded-lg" src={videoBlobUrl} loop/>
         }
         
     </div> 
