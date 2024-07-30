@@ -26,7 +26,8 @@ async def preprocess_song(project_id: str, db: AsyncSession, force: bool = True)
                 # Clear previuse annotations and inspections
                 await db.exec(delete(LineAnnotation).where(LineAnnotation.project_id == project_id))
                 await db.exec(delete(LineInspection).where(LineInspection.project_id == project_id))
-                
+                await db.refresh(project)
+
                 processing_id = generate(size=8)
 
                 user_settings = ProjectConfiguration(**project.user_settings)
@@ -51,8 +52,6 @@ async def preprocess_song(project_id: str, db: AsyncSession, force: bool = True)
                         line_batches.append(curr_batch)
                 else:
                     line_batches = list(batched([line for verse in project.song.verses for line in verse.lines], n=10))
-
-                print(line_batches)
 
                 async def batch_analysis(lines: list[Line], batch_id: int):
 

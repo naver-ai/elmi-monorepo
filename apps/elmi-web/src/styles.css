@@ -70,3 +70,6 @@ body{
 .line-detail-panel .detail-panel-content-wrapper {
     @apply mb-8 last:mb-0;
 }
+.line-detail-panel p > em, .line-detail-panel p > strong{
+    @apply font-normal italic text-rose-400;
+}
