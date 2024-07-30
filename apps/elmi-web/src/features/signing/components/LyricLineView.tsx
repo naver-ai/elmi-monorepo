@@ -197,7 +197,7 @@ export const LyricLineView = (props: {lineId: string}) => {
                         isSelected == true ? <LineReferenceVideoView key={"line-video-player"}/> : null
                 }
                 <div className={`mb-1 pl-1 cursor-pointer transition-colors flex items-baseline`} onClick={onClick}>
-                    <div className="flex-1">
+                    <div className="flex-1 text-[13pt]">
                     {
                         line.tokens.map((tok, i) => {
                             return <LyricToken key={i} text={tok} lineId={line.id} index={i}

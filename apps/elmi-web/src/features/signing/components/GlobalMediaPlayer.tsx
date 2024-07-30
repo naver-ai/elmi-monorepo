@@ -264,7 +264,7 @@ export const GlobalMediaPlayer = (props: {
         }
         <SongTimelineView width={width || 100}/>
         <div className="flex justify-between text-white flex-1 items-stretch py-2 px-2 bg-red">
-            <div className="global-player-control-wrapper h-8 text-center font-light text-[8pt] flex items-center justify-center pointer-events-none">{progressText}</div>
+            <div className="global-player-control-wrapper h-8 text-center font-regular text-xs flex items-center pt-1 justify-center pointer-events-none">{progressText}</div>
             <div className="flex items-center transition-transform gap-x-2">
                 {
                     isInLineLoopMode === true ? <Tooltip title="Exit line loop mode"><Button type="text" size="small" className={`bg-white/10 rounded-full text-white text-xs`} onClick={onLoopModeButtonClick} icon={<LapsIcon className={`w-4 ${isInLineLoopMode===true ? 'fill-white' : "fill-gray-500"}`}/>}>Exit Line Loop</Button></Tooltip> : null

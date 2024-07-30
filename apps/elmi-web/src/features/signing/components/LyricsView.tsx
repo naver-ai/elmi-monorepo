@@ -45,7 +45,7 @@ export const VerseView = (props: {verseId: string}) => {
 
                 }
                 {
-                    audioPercentage < 100 ? <div className="text-[0.65rem] leading-[0.65rem] flex justify-between">
+                    audioPercentage < 100 ? <div className="text-[0.75rem] leading-[0.75rem] flex justify-between">
                         <div>{versePositionElapsedText}</div>
                         <div>{versePositionRemainingText}</div>
                     </div> : null

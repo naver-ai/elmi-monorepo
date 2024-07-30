@@ -31,7 +31,7 @@ export const LyricDetailPanel = () => {
                     {
                         annotation != null ? <div className="detail-panel-content-wrapper">
                             <div className="flex flex-wrap gap-2">{annotation.mood.map((mood, i) => <div key={i} className="text-black">#{mood}</div>)}</div>
-                            <p className="mt-3 font-light italic">{annotation.emotion_description}</p>
+                            <p className="mt-3 font-regular italic">{annotation.emotion_description}</p>
                             </div> : null
                     }
                     
@@ -41,9 +41,9 @@ export const LyricDetailPanel = () => {
                     {
                         annotation != null ? <div className="detail-panel-content-wrapper">
                             <h5>Gestures</h5>
-                            <p className="font-light italic">{annotation.body_gesture}</p>
+                            <p className="font-regular italic">{annotation.body_gesture}</p>
                             <h5>Facial Expressions</h5>
-                            <p className="font-light italic">{annotation.facial_expression}</p>
+                            <p className="font-regular italic">{annotation.facial_expression}</p>
                             </div> : null
                     }
                 </div>
