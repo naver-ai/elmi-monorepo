@@ -1,7 +1,7 @@
 import { Button, Input, InputRef, Skeleton, Progress, Tooltip } from "antd"
 import { useDispatch, useSelector } from "../../../redux/hooks"
 import { lineSelectors, selectLineInspectionByLineId, setDetailLineId, toggleDetailLineId } from "../reducer"
-import { FocusEventHandler, MouseEventHandler, useCallback, useEffect, useRef, useState } from "react"
+import { FocusEventHandler, MouseEventHandler, useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { MediaPlayer } from "../../media-player"
 import { MediaPlayerStatus } from "../../media-player/types"
 import { ChatBubbleLeftIcon, PauseIcon, PlayIcon, HandRaisedIcon, ArrowRightIcon } from "@heroicons/react/20/solid"
@@ -9,6 +9,26 @@ import { useThrottleCallback } from "@react-hook/throttle"
 import { PartialDarkThemeProvider } from "../../../styles"
 import { initializeThread, selectThreadIdByLineId, setActiveThreadLineId } from "../../chat/reducer"
 import { useAudioSegmentPositionPercentage } from "../hooks"
+import { Http } from "../../../net/http"
+import { ReferenceVideoView } from "./ReferenceVideoView"
+
+const LineReferenceVideoView = () => {
+
+    const songId = useSelector(state => state.editor.song?.id)
+    const lineId = useSelector(state => state.editor.detailLineId)
+    const line = useSelector(state => lineSelectors.selectById(state, lineId || ""))
+
+    const url = useMemo(()=>{
+        if(songId != null && lineId != null){
+            return Http.getTemplateEndpoint(Http.ENDPOINT_APP_MEDIA_SONGS_ID_LINES_ID_VIDEO, {
+                song_id: songId,
+                line_id: lineId
+            })
+        }else return undefined
+    }, [songId, lineId])
+
+    return url != null && line != null ? <ReferenceVideoView videoUrl={url} segStart={line?.start_millis} containerClassName="mb-4" frameClassName="rounded-lg"/> : null
+}
 
 const LYRIC_TOKEN_ACTIVE_CLASSNAME_SELECTED = "outline-[2px] outline outline-offset-[0px] bg-white/20 scale-110"
 const LYRIC_TOKEN_ACTIVE_CLASSNAME_UNSELECTED = "outline-[2px] outline outline-offset-[0px] outline-pink-400 scale-110"
@@ -78,6 +98,12 @@ export const LyricLineView = (props: {lineId: string}) => {
     useEffect(()=>{
         if(isSelected){
             inputRef.current?.focus()
+            requestAnimationFrame(()=>{
+                scrollAnchorRef?.current?.scrollIntoView({
+                    behavior: 'smooth',
+                    block: 'start'
+                })
+            })
         }
     }, [isSelected])
 
@@ -135,7 +161,18 @@ export const LyricLineView = (props: {lineId: string}) => {
     const scrollAnchorRef = useRef<HTMLDivElement>(null)
 
     useEffect(()=>{
-        const subscription = MediaPlayer.getTimelineClickEventObservable().subscribe({
+        if(isPositionHitting === true && isInLineLoopMode == false && scrollAnchorRef.current != null){
+            const viewBounding = scrollAnchorRef.current.getBoundingClientRect()
+            console.log(scrollAnchorRef.current.nodeName)
+            scrollAnchorRef.current?.scrollIntoView({
+                behavior: 'smooth',
+                block: 'start'
+            })
+        }
+    },[isPositionHitting, isInLineLoopMode])
+
+    useEffect(()=>{
+        const timelineClickEventSubscription = MediaPlayer.getTimelineClickEventObservable().subscribe({
             next: ({ positionMillis, lyricCoord }) => {
                 if(lyricCoord?.lineId == props.lineId){
                     console.log("Clicked.")
@@ -148,16 +185,19 @@ export const LyricLineView = (props: {lineId: string}) => {
         })
 
         return () => {
-            subscription.unsubscribe()
+            timelineClickEventSubscription.unsubscribe()
         }
     }, [props.lineId])
 
-    return <div  className={`transition-all relative mb-3 last:mb-0 p-1.5 rounded-lg hover:bg-orange-400/20 ${isSelected ? 'point-gradient-bg-light':''} ${isInLineLoopMode == true && isAudioPlaying && isPositionHitting ? "outline animate-music-indicate" : ""} ${isInLineLoopMode == false && isAudioPlaying && isPositionHitting ? 'bg-orange-400/20 outline animate-music-indicate':''}`}>
-        <div ref={scrollAnchorRef} className="scroll-anchor absolute top-[-30px] left-0 w-5 h-5 pointer-events-none"/>
+    return <div  className={`transition-all relative mb-3 last:mb-0 p-1.5 rounded-xl hover:bg-orange-400/20 ${isSelected ? 'point-gradient-bg-light':''} ${isInLineLoopMode == true && isAudioPlaying && isPositionHitting ? "outline animate-music-indicate" : ""} ${isInLineLoopMode == false && isAudioPlaying && isPositionHitting ? 'bg-orange-400/20 outline animate-music-indicate':''}`}>
+        <div ref={scrollAnchorRef} className="scroll-anchor absolute top-[-30px] bottom-[-30px] left-0 w-5 h-5 pointer-events-none"/>
         {
             line == null ? <Skeleton title={false} active/> : <>
+                {
+                        isSelected == true ? <LineReferenceVideoView key={"line-video-player"}/> : null
+                }
                 <div className={`mb-1 pl-1 cursor-pointer transition-colors flex items-baseline`} onClick={onClick}>
-                    <div className="flex-1">
+                    <div className="flex-1 text-[13pt]">
                     {
                         line.tokens.map((tok, i) => {
                             return <LyricToken key={i} text={tok} lineId={line.id} index={i}

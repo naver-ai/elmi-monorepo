@@ -1,4 +1,5 @@
 from io import BytesIO
+import os
 import gdown
 from os import path
 from PIL import Image
@@ -15,9 +16,13 @@ class MediaManager:
         gdown.download(id=gdrive_file_id, output=file_path)
 
     @staticmethod
-    @retry()
+    @retry(tries=3)
     def retrieve_song_from_youtube(song_id: str, filename: str, youtube_id: str):
         file_path = path.join(ElmiConfig.get_song_dir(song_id), filename.replace('.mp3', ''))
+        
+        if path.exists(file_path):
+            os.remove(file_path)
+        
         opts = {
             "outtmpl": file_path,
             "format": "bestaudio/best",
@@ -29,8 +34,26 @@ class MediaManager:
         }
         YoutubeDL(opts).download(f"https://www.youtube.com/watch?v={youtube_id}")
 
+
     @staticmethod
-    @retry()
+    @retry(tries=3)
+    def retrieve_video_from_youtube(song_id: str, filename: str, youtube_id: str):
+        file_path = path.join(ElmiConfig.get_song_dir(song_id), filename.replace('.mp3', ''))
+        if path.exists(file_path):
+            os.remove(file_path)
+        
+        opts = {
+            "outtmpl": file_path,
+            "format": "bv*[vcodec^=avc]",
+             'postprocessors': [{  # Add post-processor
+                'key': 'FFmpegVideoConvertor',
+                'preferedformat': 'mp4',  # Convert to mp4 after download
+            }],
+        }
+        YoutubeDL(opts).download(f"https://www.youtube.com/watch?v={youtube_id}")
+
+    @staticmethod
+    @retry(tries=3)
     async def retrieve_song_image_file(song_id: str, image_url: str) -> bool:
         try:
             async with httpx.AsyncClient() as client:

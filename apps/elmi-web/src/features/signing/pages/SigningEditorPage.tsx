@@ -4,13 +4,15 @@ import { useProjectIdInRoute } from "../hooks"
 import {ArrowLeftStartOnRectangleIcon} from '@heroicons/react/20/solid'
 import { Button, Layout } from "antd"
 import { useNavigate } from "react-router-dom"
-import { useCallback, useEffect } from "react"
+import { useCallback, useEffect, useMemo } from "react"
 import { fetchProjectDetail, initializeEditorState } from "../reducer"
 import { LyricsView } from "../components/LyricsView"
 import { LyricDetailPanel } from "../components/LyricDetailPanel"
 import { MediaPlayer } from "../../media-player"
 import { fetchChatData, initializeChatState } from "../../chat/reducer"
 import { ChatThreadSidePanel } from "../components/ChatThreadSidePanel"
+import { ReferenceVideoView } from "../components/ReferenceVideoView"
+import { Http } from "../../../net/http"
 
 const HeaderLeftContent = () => {
 
@@ -56,8 +58,8 @@ export const SigningEditorPage = () => {
         <div className="h-full flex flex-row w-[100vw]">
             <LyricDetailPanel/>
             <Layout.Content className="overflow-y-scroll flex">
-                <div className={`transition-all ${isDetailPanelOpen ? `flex-[0.2]` : 'flex-1'}`}/>
-                <LyricsView lyricsContainerClassName="mt-10 pb-32"/>
+                <div className={`transition-all relative ${isDetailPanelOpen ? `flex-[0.2]` : 'flex-1'}`}/>
+                <LyricsView/>
                 <ChatThreadSidePanel/>
             </Layout.Content>
             

@@ -1,4 +1,4 @@
-import { MinusIcon, PauseIcon, PlayIcon, PlusIcon } from "@heroicons/react/20/solid"
+import { MinusIcon, PauseIcon, PlayIcon, PlusIcon, ArrowsPointingOutIcon, ArrowsPointingInIcon } from "@heroicons/react/20/solid"
 import { Button, Slider, Tooltip } from "antd"
 import { MediaPlayer } from "../../media-player"
 import { MouseEventHandler, useCallback, useEffect, useMemo, useState } from "react"
@@ -6,9 +6,11 @@ import { useThrottleCallback } from "@react-hook/throttle"
 import { useDispatch, useSelector } from "../../../redux/hooks"
 import { useResizeDetector } from "react-resize-detector"
 import { LapsIcon } from "../../../components/svg-icons"
-import { setDetailLineId } from "../reducer"
+import { setDetailLineId, setGlobalMediaPlayerHeight } from "../reducer"
 import { MediaPlayerStatus } from "../../media-player/types"
 import { formatDuration } from "../../../utils/time"
+import { Http } from "../../../net/http"
+import { ReferenceVideoView } from "./ReferenceVideoView"
 
 const TIMELINE_PADDING = 1
 
@@ -133,6 +135,34 @@ const SongTimelineView = (props:{
     </svg>
 }
 
+
+const GlobalVideoView = () => {
+    const songId = useSelector(state => state.editor.song?.id)
+
+    const url = useMemo(()=>{
+        if(songId != null){
+            return Http.getTemplateEndpoint(Http.ENDPOINT_APP_MEDIA_SONGS_ID_VIDEO, {
+                song_id: songId
+            })
+        }else return undefined
+    }, [songId])
+
+    const [isVideoShrinked, setIsVideoShrinked] = useState<boolean>(true)
+
+    const onShrinkButtonClick = useCallback(()=>{
+        setIsVideoShrinked(!isVideoShrinked)
+    }, [isVideoShrinked])
+
+    const IconClass = isVideoShrinked ? ArrowsPointingOutIcon : ArrowsPointingInIcon
+
+    return <div className="self-stretch flex justify-center relative">
+        <Button className="absolute right-1 top-1 z-10 p-1 aspect-square" type="text" onClick={onShrinkButtonClick}><IconClass className="w-5 h-5 text-white/80"/></Button>
+        {
+        url ? <ReferenceVideoView containerClassName={`${isVideoShrinked == true ? "w-[50%]" : 'w-full'}`} videoUrl={url} segStart={0}/> : null
+        }
+        </div>
+}
+
 export const GlobalMediaPlayer = (props: {
     className?: string
 }) => {
@@ -177,7 +207,7 @@ export const GlobalMediaPlayer = (props: {
     const onProgressUpdate = useThrottleCallback(updateProgressText)
 
       const { width, height, ref } = useResizeDetector({
-        handleHeight: false,
+        handleHeight: true,
         refreshMode: 'debounce',
         refreshRate: 50
       });
@@ -200,6 +230,10 @@ export const GlobalMediaPlayer = (props: {
     useEffect(()=>{
         updateProgressText(null)
     }, [songDuration])
+
+    useEffect(()=>{
+        dispatch(setGlobalMediaPlayerHeight(height))
+    }, [height])
 
     useEffect(()=>{
         const volumeSubscription = MediaPlayer.getVolumeObservable().subscribe({
@@ -225,9 +259,12 @@ export const GlobalMediaPlayer = (props: {
     const PlayButtonIconClass = mediaPlayerStatus == MediaPlayerStatus.Playing ? PauseIcon : PlayIcon
 
     return <div ref={ref} className={`${props.className} bg-audiopanelbg/90 backdrop-blur-md bottom-1 rounded-lg overflow-hidden outline outline-1 outline-audiopanelbg shadow-lg flex flex-col select-none`}>
+        {
+            !isInLineLoopMode ?  <GlobalVideoView/> : null
+        }
         <SongTimelineView width={width || 100}/>
         <div className="flex justify-between text-white flex-1 items-stretch py-2 px-2 bg-red">
-            <div className="global-player-control-wrapper h-8 text-center font-light text-[8pt] flex items-center justify-center pointer-events-none">{progressText}</div>
+            <div className="global-player-control-wrapper h-8 text-center font-regular text-xs flex items-center pt-1 justify-center pointer-events-none">{progressText}</div>
             <div className="flex items-center transition-transform gap-x-2">
                 {
                     isInLineLoopMode === true ? <Tooltip title="Exit line loop mode"><Button type="text" size="small" className={`bg-white/10 rounded-full text-white text-xs`} onClick={onLoopModeButtonClick} icon={<LapsIcon className={`w-4 ${isInLineLoopMode===true ? 'fill-white' : "fill-gray-500"}`}/>}>Exit Line Loop</Button></Tooltip> : null

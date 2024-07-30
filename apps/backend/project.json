@@ -70,6 +70,14 @@
       }
     },
 
+    "test_media_download": {
+      "executor": "@nxlv/python:run-commands",
+      "options": {
+        "command": "poetry run python backend/test_media_download.py",
+        "cwd": "apps/backend"
+      }
+    },
+
     "test_lyric_sync": {
       "executor": "@nxlv/python:run-commands",
       "options": {

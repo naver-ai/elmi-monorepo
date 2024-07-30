@@ -116,6 +116,10 @@ export namespace MediaPlayer {
     return timestampBehaviorSubject;
   }
 
+  export function getCurrentTimestampMillis(): number | null {
+    return timestampBehaviorSubject.value
+  }
+
   export function getTimelineClickEventObservable(): Observable<{
     positionMillis: number;
     lyricCoord?: LyricTokenCoord;
@@ -285,7 +289,7 @@ export namespace MediaPlayer {
             verses[verses.length - 1].end_millis,
             true,
           ];
-          
+
           lineHowl = await createHowl(
             currentSongObjectURL,
             sprites,
