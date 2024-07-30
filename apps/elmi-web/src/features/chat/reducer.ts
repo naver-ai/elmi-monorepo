@@ -113,6 +113,8 @@ export function initializeThread(projectId: string, lineId: string, mode: string
     return async (dispatch, getState) => {
       const state = getState()
       const token = state.auth.token
+      console.log("token: " , token, "project:", projectId, "lineId:",  lineId, "mode: ", mode)
+
       if (token != null && projectId != null && lineId != null && mode != null) {
         try {
           const data = await Http.initializeThread(projectId, lineId, mode, token)

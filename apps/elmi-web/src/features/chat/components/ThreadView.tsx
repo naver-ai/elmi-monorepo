@@ -7,22 +7,20 @@ import { useForm } from "react-hook-form"
 import { yupResolver } from "@hookform/resolvers/yup"
 import { FormItem } from "react-hook-form-antd"
 import { useCallback, useEffect } from "react"
-import { Http } from "../../../net/http";
 
 const schema = yup.object({
     message: yup.string().trim().required()
 }).required()
 
 export const ThreadView = (props: {
-    projectId: string, // Add projectId prop
     lineId: string
 }) => {
 
     const dispatch = useDispatch()
 
-    const line = useSelector(state => lineSelectors.selectById(state, props.lineId))
+    const projectId = useSelector(state => state.editor.projectId)
 
-    const thread = useSelector(state => selectThreadByLineId(state, line?.id))
+    const thread = useSelector(state => selectThreadByLineId(state, props.lineId))
 
     const messages = useSelector(state => selectMessagesByThreadId(state, thread?.id))
 
@@ -34,22 +32,27 @@ export const ThreadView = (props: {
     // Initialize thread when component mounts
     useEffect(() => {
         // const projectId = "10UXpcShGb4oJBaAj8tuR";  // Retrieve the projectId from your state management or context
-        if (line?.id) {
-        dispatch(initializeThread("10UXpcShGb4oJBaAj8tuR", line.id, "default"));  // Replace "default" with appropriate mode if necessary
+        if (props.lineId != null && projectId != null) {
+            console.log("Initialize thread... - ", props.lineId)    
+            dispatch(initializeThread(projectId, props.lineId, "default"));  // Replace "default" with appropriate mode if necessary
         }
-    }, [dispatch, line?.id]);
+    }, [projectId, props.lineId]);
   
 
 
     // Edit this function :)
     const submitMessage = useCallback(async(values: {message: string}) => {
         // dispatch(sendMessage(line.id, "", values.message))
-        if (line?.id) {
-            dispatch(sendMessage("10UXpcShGb4oJBaAj8tuR", line.id, "default", values.message));
+        if (props.lineId != null && projectId != null) {
+            if(thread == null){
+                dispatch(initializeThread(projectId, props.lineId, "default"))
+            }else{
+                dispatch(sendMessage(projectId, props.lineId, "default", values.message));
+            }
         }
-    }, [dispatch, "10UXpcShGb4oJBaAj8tuR", line.id])
+    }, [dispatch, props.lineId, thread, projectId, projectId])
 
-    return <Card title={line?.lyric}>
+    return <Card title={"Line"}>
         <div>
             {
                 messages.map((m, i) => <div key={i}>{m.message}</div>) //TODO redesign callouts

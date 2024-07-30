@@ -2,9 +2,10 @@ from sqlmodel.ext.asyncio.session import AsyncSession
 from backend.database.models import Thread, ThreadMessage
 # Save a message to the ThreadMessage table.
 
-async def save_thread_message(session: AsyncSession, thread_id, role, message, mode):
+async def save_thread_message(session: AsyncSession, project_id: str, thread_id: str, role, message, mode):
     new_message = ThreadMessage(
         thread_id=thread_id,
+        project_id=project_id,
         role=role,
         message=message,
         mode=mode
@@ -13,8 +14,8 @@ async def save_thread_message(session: AsyncSession, thread_id, role, message, m
     await session.commit()
 
 # Create a new thread and return its ID."""
-async def create_thread(session: AsyncSession, start_line_id):
-    new_thread = Thread(start_line_id=start_line_id, end_line_id=None)
+async def create_thread(session: AsyncSession, project_id: str, line_id: str):
+    new_thread = Thread(line_id=line_id, project_id=project_id)
     session.add(new_thread)
     await session.commit()
     return new_thread.id

@@ -1,10 +1,14 @@
 # This file is for proactivechatbot
 
+from enum import StrEnum, auto
 import json
 import asyncio
 from os import path
 
-from pydantic import BaseModel
+from backend.tasks.chain_mapper import ChainMapper
+from langchain_core.language_models.chat_models import BaseChatModel
+from langchain_core.runnables import RunnableConfig
+from pydantic import BaseModel, ConfigDict
 from sqlalchemy.future import select
 
 from backend.database import db_sessionmaker
@@ -44,10 +48,23 @@ def get_session_history(session_id: str) -> BaseChatMessageHistory:
         store[session_id] = InMemoryChatMessageHistory()
     return store[session_id]
 
+class ChatIntent(StrEnum):
+    Meaning=auto()
+    Glossing=auto()
+    Emoting=auto()
+    Timing=auto()
+    Other=auto()
 
-# Function to classify user intent
-def classify_user_intent(user_input: str):
-    classification_system_prompt = '''
+
+class IntentClassification(BaseModel):
+    model_config=ConfigDict(use_enum_values=True)
+
+    intent: ChatIntent
+
+class IntentClassifier(ChainMapper[str, IntentClassification]):
+
+    def __init__(self, model: BaseChatModel | None) -> None:
+        super().__init__("intent_classifier", IntentClassification, '''
     You are a helpful assistant that classifies user queries into one of the following categories:
 
     1. Meaning: Questions about understanding or interpreting the lyrics.
@@ -55,36 +72,46 @@ def classify_user_intent(user_input: str):
     3. Emoting: Questions about expressing emotions through facial expressions and body language.
     4. Timing: Questions about the timing or rhythm of the gloss, including changing and adjusting the gloss (shorter or longer).
 
-    You will receive input in the following format:
-    {user_query}
-
-    Classify the query into one of these categories:
+    Classify the user query into one of these categories:
     - Meaning
     - Glossing
     - Emoting
     - Timing
+    - Other: Messages that do not fall within the above four categories.
 
-    Provide the output as one of these strings: Meaning, Glossing, Emoting, Timing.
-    '''
+    [Output format]
+    Return a JSON object formatted as follows:
+    {{
+        "intent": string // The five categories. "meaning" | "glossing" | "emoting" | "timing" | "other"
+    }}
+    ''', model)
+
+    @classmethod
+    def _postprocess_output(cls, output: IntentClassification, config: RunnableConfig) -> IntentClassification:
+        return output
+
+    @classmethod
+    def _input_to_str(cls, input: str, config: RunnableConfig) -> str:
+        return input
 
 
-    # Define the prompt template
-    prompt_template = PromptTemplate(
-      template = classification_system_prompt
-    )
-    # Initialize the chain
-    llm_chain = prompt_template | client | StrOutputParser()
+intent_classifier = IntentClassifier(client)
 
-
+# Function to classify user intent
+async def classify_user_intent(user_input: str)->ChatIntent:
+    
     # Execute the chain with the lyrics input
-    response_classification= llm_chain.invoke({"user_query": user_input})
+    try:
+        response_classification = await intent_classifier.run(user_input)
+    except Exception as ex:
+        print(ex)
 
-    return response_classification
+    return response_classification.intent
     
 
 # Create a formatted system template string with inference results.
-def create_system_template(intent: str, result: BaseModel) -> str:
-    if intent == "Meaning":
+def create_system_template(intent: ChatIntent, result: BaseModel) -> str:
+    if intent == ChatIntent.Meaning:
         system_template = '''
         Your name is ELMI, a helpful chatbot that helps users translate ENG lyrics to ASL.
         ELMI specializes in guiding users to have a critical thinking process about the lyrics.
@@ -125,7 +152,7 @@ def create_system_template(intent: str, result: BaseModel) -> str:
         '''
         return system_template.format(line_inspection_results=result.model_dump_json(include={"challenges", "description"}))
     
-    if intent == "Glossing":
+    if intent == ChatIntent.Glossing:
         system_template = '''
         Your name is ELMI, a helpful chatbot that helps users translate ENG lyrics to ASL gloss.
         ELMI specializes in guiding users to have a critical thinking process about the lyrics.
@@ -166,7 +193,7 @@ def create_system_template(intent: str, result: BaseModel) -> str:
         '''
         return system_template.format(line_glossing_results=result.model_dump_json(include={"gloss", "gloss_description"}))
 
-    if intent == "Emoting":
+    if intent == ChatIntent.Emoting:
         system_template = '''
         Your name is ELMI, a helpful chatbot that helps users translate ENG lyrics to ASL.
         ELMI specializes in guiding users to have a critical thinking process about the lyrics.
@@ -208,7 +235,7 @@ def create_system_template(intent: str, result: BaseModel) -> str:
         return system_template.format(line_emoting_results=result.model_dump_json(include={"mood", "facial_expression", "body_gesture", "emotion_description"}))
     
 
-    elif intent == "Timing":
+    elif intent == ChatIntent.Timing:
         system_template = '''
         Your name is ELMI, a helpful chatbot that helps users translate ENG lyrics to ASL.
         ELMI specializes in guiding users to have a critical thinking process about the lyrics.
@@ -250,7 +277,7 @@ def create_system_template(intent: str, result: BaseModel) -> str:
         return system_template.format(line_timing_results=result.model_dump_json(include={"gloss_alts"}))
 
 # Initiate a proactive chat session with a user based on a specific line ID.
-async def proactive_chat(project_id: str, line_id: str, user_input: str, intent: str, is_button_click=False):
+async def proactive_chat(project_id: str, line_id: str, user_input: str, intent: ChatIntent | None, is_button_click=False):
     async with db_sessionmaker() as session:
         # Log input parameters
         print(f"proactive_chat called with project_id: {project_id}, line_id: {line_id}, user_input: {user_input}, intent: {intent}, is_button_click: {is_button_click}")
@@ -259,86 +286,77 @@ async def proactive_chat(project_id: str, line_id: str, user_input: str, intent:
         
 
         # Use the provided intent directly if it's a button click
-        if is_button_click:
-            print(f"Button click detected, using provided intent: {intent}")
-        else:
-            classification_result = classify_user_intent(user_input)
+        if intent is None:
+            classification_result = await classify_user_intent(user_input)
             intent = classification_result
             print(f"Classified intent: {intent}")
 
-        if intent == "Meaning":
+        if intent == ChatIntent.Meaning:
             system_template = create_system_template(intent, line_inspection)
             input_variables = ["line_inspection_results", "history", "input"]
-        elif intent == "Glossing":
+        elif intent == ChatIntent.Glossing:
             system_template = create_system_template(intent, line_annotation)
             input_variables = ["line_glossing_results", "history", "input"]
-        elif intent == "Emoting":
+        elif intent == ChatIntent.Emoting:
             system_template = create_system_template(intent, line_annotation)
             input_variables = ["line_emoting_results", "history", "input"]
-        elif intent == "Timing":
+        elif intent == ChatIntent.Timing:
+            system_template = create_system_template(intent, line_annotation)
+            input_variables = ["line_timing_results", "history", "input"]
+        elif intent == ChatIntent.Other: # TODO: Implement general chat scenario
             system_template = create_system_template(intent, line_annotation)
             input_variables = ["line_timing_results", "history", "input"]
         else:
             print(f"Feature {intent} is not yet implemented.")
             return
-        
-        custom_prompt_template = PromptTemplate(
-            input_variables=input_variables,
-            template=system_template + "\n\n{history}\nUser: {input}\nELMI:"
-        )
 
-        conversation_chain = RunnableWithMessageHistory(
-            runnable=client,
-            get_session_history=get_session_history,
-            prompt=custom_prompt_template
-        )
-
-        config = {"configurable": {"session_id": "unique_session_id"}}  # Change session_id as needed
-
-        initial_messages = [
-            SystemMessage(content=system_template)
-        ]
-
-        
-        thread_id = await create_thread(session, line_id)
-        print(f"Created thread: thread_id={thread_id}")
-
-        # Save the initial user message or hidden user message
-        initial_user_message = user_input
-
-        await save_thread_message(session, thread_id, 'user', initial_user_message, 'initial')
-
-        initial_response = await conversation_chain.ainvoke(
-                initial_messages,
-                config=config
-        )
-
-        # Save the initial assistant message
-        await save_thread_message(session, thread_id, 'assistant', initial_response.content, 'initial')
-
-        if is_button_click:
-            # For button clicks, return hidden user message + AI message
-            # print(f"Hidden User Message: {user_input}\nAI Message: {initial_response.content}")
-            return f"Hidden User Message: {user_input}\nAI Message: {initial_response.content}"
-        else:
-            # For normal open-ended questions, return only the AI message
-            # print(f"AI Message: {initial_response.content}")
-            return initial_response.content
-
-        while True:
-            user_input = input("You: ")
-            if user_input.lower() in ["exit", "quit"]:
-                break
-
-            await save_thread_message(session, thread_id, 'user', user_input, 'ongoing')
-
-            assistant_response = await conversation_chain.ainvoke(
-                [HumanMessage(content=user_input)],
-                config=config
+        try:
+            custom_prompt_template = PromptTemplate(
+                input_variables=input_variables,
+                template=system_template + "\n\n{history}\nUser: {input}\nELMI:"
             )
-            print(f"ELMI: {assistant_response.content}")
-            await save_thread_message(session, thread_id, 'assistant', assistant_response.content, 'ongoing')
 
+            conversation_chain = RunnableWithMessageHistory(
+                runnable=client,
+                get_session_history=get_session_history,
+                prompt=custom_prompt_template
+            )
+
+            config = {"configurable": {"session_id": "unique_session_id"}}  # Change session_id as needed
+
+            initial_messages = [
+                SystemMessage(content=system_template)
+            ]
+
+            
+            thread_id = await create_thread(session, project_id, line_id)
+            print(f"Created thread: thread_id={thread_id}")
+
+            # Save the initial user message or hidden user message
+            initial_user_message = user_input
+
+            await save_thread_message(session, project_id, thread_id, 'user', initial_user_message, 'initial')
+
+            initial_response = await conversation_chain.ainvoke(
+                    initial_messages,
+                    config=config
+            )
+
+            # Save the initial assistant message
+            await save_thread_message(session, project_id, thread_id, 'assistant', initial_response.content, 'initial')
+
+            if is_button_click:
+                # For button clicks, return hidden user message + AI message
+                # print(f"Hidden User Message: {user_input}\nAI Message: {initial_response.content}")
+                return f"Hidden User Message: {user_input}\nAI Message: {initial_response.content}"
+            else:
+                # For normal open-ended questions, return only the AI message
+                # print(f"AI Message: {initial_response.content}")
+                return initial_response.content
+
+        except Exception as ex:
+            print(ex)
+            raise ex
 
 if __name__ == "__main__":
     project_id = "yd_dd-qg5YqCnqTYmscj9"  # Replace with actual project ID

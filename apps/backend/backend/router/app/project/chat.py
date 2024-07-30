@@ -2,7 +2,7 @@ from typing import Annotated
 from backend.database.engine import with_db_session
 from backend.database.models import Project, Thread, ThreadMessage, User
 from backend.router.app.common import get_signed_in_user
-from backend.chatbot import classify_user_intent, proactive_chat
+from backend.chatbot import ChatIntent, classify_user_intent, proactive_chat
 from fastapi import APIRouter, HTTPException, status, Depends
 from pydantic import BaseModel
 from sqlmodel.ext.asyncio.session import AsyncSession
@@ -103,6 +103,7 @@ class ChatRequest(BaseModel):
     project_id: str
     line_id: str
     user_input: str
+    intent: ChatIntent | None = None
 
 class ChatResponse(BaseModel):
     message: str
@@ -114,11 +115,7 @@ async def chat_with_bot(request: ChatRequest, user: Annotated[User, Depends(get_
 
     async with db:
         try:
-            logger.info(f"Received chat request: {request}")
-            intent = classify_user_intent(request.user_input)
-            logger.info(f"Classified intent: {intent}")
-
-            response_message = await proactive_chat(request.project_id, request.line_id, request.user_input, intent, is_button_click=False)
+            response_message = await proactive_chat(request.project_id, request.line_id, request.user_input, request.intent, is_button_click=False)
             logger.info(f"Response message: {response_message}")
 
             return ChatResponse(message=response_message)
