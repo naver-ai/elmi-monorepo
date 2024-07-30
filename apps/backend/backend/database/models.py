@@ -41,6 +41,7 @@ class SongInfo(IdTimestampMixin):
 
 class Song(SQLModel, SongInfo, table=True):
     audio_filename: Optional[str] = Field(nullable=True)
+    video_filename: Optional[str] = Field(nullable=True)
     projects: list['Project'] = Relationship(back_populates="song", sa_relationship_kwargs={'lazy': 'selectin'})
     verses: list['Verse'] = Relationship(back_populates="song", sa_relationship_kwargs={'lazy': 'selectin'})
     trimmed_media: list['TrimmedMedia'] = Relationship(back_populates="song", sa_relationship_kwargs={'lazy': 'selectin'})
@@ -49,8 +50,14 @@ class Song(SQLModel, SongInfo, table=True):
     def get_audio_file_path(self)->str:
         return path.join(ElmiConfig.get_song_dir(self.id), self.audio_filename)
     
+    def get_video_file_path(self)->str:
+        return path.join(ElmiConfig.get_song_dir(self.id), self.video_filename)
+    
     def audio_file_exists(self)->bool:
         return path.exists(self.get_audio_file_path())
+    
+    def video_file_exists(self)->bool:
+        return path.exists(self.get_video_file_path())
     
     def get_lyrics(self,include_verse_title: bool = True, sep="\n")->str:
         lines = []
@@ -187,9 +194,12 @@ class MediaType(StrEnum):
     Video="video"
     Audio="audio"
 
+MEDIA_IDENTIFIER_REFERENCE = "reference"
+
 class TrimmedMedia(SQLModel, IdTimestampMixin, SongIdMixin, table=True):
     trimmed_filename: str = Field(nullable=False)
     type: MediaType = Field(nullable=False)
+    identifier: str = Field(nullable=False)  
     start_millis: Optional[int] = Field(nullable=True, default=None)
     end_millis: Optional[int] = Field(nullable=True, default=None)
 

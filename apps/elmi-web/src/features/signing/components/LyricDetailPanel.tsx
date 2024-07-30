@@ -1,16 +1,52 @@
-import { Button, Divider, Layout, Typography } from "antd"
+import { Button, Divider, Typography } from "antd"
 import { useDispatch, useSelector } from "../../../redux/hooks"
-import { useCallback, useMemo } from "react";
-import { selectLineAnnotationByLineId, setDetailLineId } from "../reducer";
+import { useCallback, useEffect, useState } from "react";
+import { lineSelectors, selectLineAnnotationByLineId, setDetailLineId } from "../reducer";
 import { LeftDoubleArrowIcon } from "../../../components/svg-icons";
 import { LineAnnotation } from "apps/elmi-web/src/model-types";
-const { Title } = Typography;
+import { Http } from "../../../net/http";
 
 export const LyricDetailPanel = () => {
 
+    const songId = useSelector(state => state.editor.song?.id)
     const lineId = useSelector(state => state.editor.detailLineId)
+    const line = useSelector(state => lineSelectors.selectById(state, lineId || ""))
 
     const annotation: LineAnnotation | undefined = useSelector(state => selectLineAnnotationByLineId(state, lineId || ""))
+
+    const [videoBlobUrl, setVideoBlobUrl] = useState<string|undefined>(undefined)
+    const token = useSelector(state => state.auth.token)
+
+    const mountVideoFile = useCallback(async () => {
+        if(songId != null && lineId != null && token != null){
+            const url = Http.getTemplateEndpoint(Http.ENDPOINT_APP_MEDIA_SONGS_ID_LINES_ID_VIDEO, {
+                song_id: songId,
+                line_id: lineId
+            })
+
+            try{
+                const result = await Http.axios.get(url, {
+                    headers: {...Http.getSignedInHeaders(token), 
+                        'Content-Type': 'video/*'},
+                    responseType: 'blob'
+                })
+                setVideoBlobUrl(URL.createObjectURL(result.data))
+                console.log("Video download success.")
+            }catch(ex){
+                console.log(ex)
+            }
+        }
+    }, [token, songId, lineId])
+
+    useEffect(() => {
+        mountVideoFile().then()
+
+        return function cleanup() {
+            if (videoBlobUrl != null) {
+                URL.revokeObjectURL(videoBlobUrl)
+            }
+        }
+    }, [token, songId, lineId])
 
 
     const dispatch = useDispatch()
@@ -30,6 +66,10 @@ export const LyricDetailPanel = () => {
                     <Divider orientation="left" plain rootClassName="!mt-0">
                         <h4>Music Video</h4>
                     </Divider>
+
+                    <video className="mt-3 w-full rounded-lg" src={videoBlobUrl} autoPlay loop/>
+                
+
                     <Divider orientation="left" plain>
                         <h4>Mood</h4>
                     </Divider>
