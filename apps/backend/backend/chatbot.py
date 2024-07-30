@@ -252,6 +252,8 @@ def create_system_template(intent: str, result: BaseModel) -> str:
 # Initiate a proactive chat session with a user based on a specific line ID.
 async def proactive_chat(project_id: str, line_id: str, user_input: str, intent: str, is_button_click=False):
     async with db_sessionmaker() as session:
+        # Log input parameters
+        print(f"proactive_chat called with project_id: {project_id}, line_id: {line_id}, user_input: {user_input}, intent: {intent}, is_button_click: {is_button_click}")
         line_inspection: LineInspection = await fetch_line_inspection_by_line(session, project_id, line_id)
         line_annotation: LineAnnotation = await fetch_line_annotation_by_line(session,  project_id, line_id)
         
@@ -299,6 +301,7 @@ async def proactive_chat(project_id: str, line_id: str, user_input: str, intent:
 
         
         thread_id = await create_thread(session, line_id)
+        print(f"Created thread: thread_id={thread_id}")
 
         # Save the initial user message or hidden user message
         initial_user_message = user_input
@@ -315,10 +318,12 @@ async def proactive_chat(project_id: str, line_id: str, user_input: str, intent:
 
         if is_button_click:
             # For button clicks, return hidden user message + AI message
-            print(f"Hidden User Message: {user_input}\nAI Message: {initial_response.content}")
+            # print(f"Hidden User Message: {user_input}\nAI Message: {initial_response.content}")
+            return f"Hidden User Message: {user_input}\nAI Message: {initial_response.content}"
         else:
             # For normal open-ended questions, return only the AI message
-            print(f"AI Message: {initial_response.content}")
+            # print(f"AI Message: {initial_response.content}")
+            return initial_response.content
 
         while True:
             user_input = input("You: ")
