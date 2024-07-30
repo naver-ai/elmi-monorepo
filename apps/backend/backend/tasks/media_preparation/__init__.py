@@ -32,7 +32,12 @@ async def prepare_song(title: str, artist: str, reference_youtube_id: str, db: A
         audio_filename = f"{spinalcase(title)}_{spinalcase(artist)}.mp3".lower()
         MediaManager.retrieve_song_from_youtube(song.id, audio_filename, song.reference_video_id)
         song.audio_filename = audio_filename
-       
+        print(f"Saved audio file at {song.get_audio_file_path()}")
+
+        video_filename = f"{spinalcase(title)}_{spinalcase(artist)}.mp4".lower()
+        MediaManager.retrieve_video_from_youtube(song.id, video_filename, song.reference_video_id)
+        song.video_filename = video_filename
+        print(f"Saved video file at {song.get_video_file_path()}")
 
         audio: AudioSegment = AudioSegment.from_mp3(song.get_audio_file_path())
         song.duration_seconds = audio.duration_seconds

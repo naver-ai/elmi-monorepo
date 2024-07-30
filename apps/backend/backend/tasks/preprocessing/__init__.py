@@ -38,19 +38,19 @@ async def preprocess_song(project_id: str, db: AsyncSession, force: bool = True)
                 if len(project.song.verses) > 1:
                     curr_batch = []
                     for verse_i, verse in enumerate(project.song.verses):
-                        if len(curr_batch) > 0 and len(curr_batch) + len(verse.lines) > 20:
+                        if len(curr_batch) > 0 and len(curr_batch) + len(verse.lines) > 15:
                             line_batches.append(curr_batch)
                             curr_batch = []
                         
                         curr_batch += verse.lines
                         
-                        if len(curr_batch) >= 15:
+                        if len(curr_batch) >= 10:
                             line_batches.append(curr_batch)
                             curr_batch = []
                     if len(curr_batch) > 0:
                         line_batches.append(curr_batch)
                 else:
-                    line_batches = list(batched([line for verse in project.song.verses for line in verse.lines], n=20))
+                    line_batches = list(batched([line for verse in project.song.verses for line in verse.lines], n=10))
 
                 print(line_batches)
 
