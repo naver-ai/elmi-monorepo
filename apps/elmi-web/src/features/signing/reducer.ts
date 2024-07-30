@@ -27,6 +27,7 @@ export interface SigningEditorState {
     lineAnnotationEntityState: typeof initial_line_annotation_entity_state,
     lineInspectionEntityState: typeof initial_line_inspection_entity_state
     detailLineId?: string | undefined,
+    globelMediaPlayerHeight?: number | undefined
 }
 
 const INITIAL_STATE: SigningEditorState = {
@@ -38,7 +39,8 @@ const INITIAL_STATE: SigningEditorState = {
     lineAnnotationEntityState: initial_line_annotation_entity_state,
     lineInspectionEntityState: initial_line_inspection_entity_state,
     detailLineId: undefined,
-    isLineAnnotionLoading: false
+    isLineAnnotionLoading: false,
+    globelMediaPlayerHeight: undefined
 }
 
 interface ProjectDetail{
@@ -83,6 +85,10 @@ const signingEditorSlice = createSlice({
             }else{
                 state.detailLineId = undefined
             }
+        },
+
+        setGlobalMediaPlayerHeight: (state, action: PayloadAction<number|undefined>) => {
+            state.globelMediaPlayerHeight = action.payload
         }
     }
 })
@@ -131,6 +137,6 @@ export function fetchProjectDetail(projectId: string): AppThunk {
     }
 }
 
-export const { initialize: initializeEditorState, setDetailLineId, toggleDetailLineId } = signingEditorSlice.actions
+export const { initialize: initializeEditorState, setDetailLineId, toggleDetailLineId, setGlobalMediaPlayerHeight } = signingEditorSlice.actions
 
 export default signingEditorSlice.reducer

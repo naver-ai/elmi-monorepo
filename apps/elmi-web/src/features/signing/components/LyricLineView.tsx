@@ -135,7 +135,18 @@ export const LyricLineView = (props: {lineId: string}) => {
     const scrollAnchorRef = useRef<HTMLDivElement>(null)
 
     useEffect(()=>{
-        const subscription = MediaPlayer.getTimelineClickEventObservable().subscribe({
+        if(isPositionHitting === true && isInLineLoopMode == false && scrollAnchorRef.current != null){
+            const viewBounding = scrollAnchorRef.current.getBoundingClientRect()
+            console.log(scrollAnchorRef.current.nodeName)
+            scrollAnchorRef.current?.scrollIntoView({
+                behavior: 'smooth',
+                block: 'start'
+            })
+        }
+    },[isPositionHitting, isInLineLoopMode])
+
+    useEffect(()=>{
+        const timelineClickEventSubscription = MediaPlayer.getTimelineClickEventObservable().subscribe({
             next: ({ positionMillis, lyricCoord }) => {
                 if(lyricCoord?.lineId == props.lineId){
                     console.log("Clicked.")
@@ -148,12 +159,12 @@ export const LyricLineView = (props: {lineId: string}) => {
         })
 
         return () => {
-            subscription.unsubscribe()
+            timelineClickEventSubscription.unsubscribe()
         }
     }, [props.lineId])
 
     return <div  className={`transition-all relative mb-3 last:mb-0 p-1.5 rounded-lg hover:bg-orange-400/20 ${isSelected ? 'point-gradient-bg-light':''} ${isInLineLoopMode == true && isAudioPlaying && isPositionHitting ? "outline animate-music-indicate" : ""} ${isInLineLoopMode == false && isAudioPlaying && isPositionHitting ? 'bg-orange-400/20 outline animate-music-indicate':''}`}>
-        <div ref={scrollAnchorRef} className="scroll-anchor absolute top-[-30px] left-0 w-5 h-5 pointer-events-none"/>
+        <div ref={scrollAnchorRef} className="scroll-anchor absolute top-[-30px] bottom-[-30px] left-0 w-5 h-5 pointer-events-none"/>
         {
             line == null ? <Skeleton title={false} active/> : <>
                 <div className={`mb-1 pl-1 cursor-pointer transition-colors flex items-baseline`} onClick={onClick}>

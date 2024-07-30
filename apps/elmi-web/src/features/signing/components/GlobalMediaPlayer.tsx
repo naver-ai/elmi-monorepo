@@ -6,9 +6,11 @@ import { useThrottleCallback } from "@react-hook/throttle"
 import { useDispatch, useSelector } from "../../../redux/hooks"
 import { useResizeDetector } from "react-resize-detector"
 import { LapsIcon } from "../../../components/svg-icons"
-import { setDetailLineId } from "../reducer"
+import { setDetailLineId, setGlobalMediaPlayerHeight } from "../reducer"
 import { MediaPlayerStatus } from "../../media-player/types"
 import { formatDuration } from "../../../utils/time"
+import { Http } from "../../../net/http"
+import { ReferenceVideoView } from "./ReferenceVideoView"
 
 const TIMELINE_PADDING = 1
 
@@ -133,6 +135,21 @@ const SongTimelineView = (props:{
     </svg>
 }
 
+
+const GlobalVideoView = () => {
+    const songId = useSelector(state => state.editor.song?.id)
+
+    const url = useMemo(()=>{
+        if(songId != null){
+            return Http.getTemplateEndpoint(Http.ENDPOINT_APP_MEDIA_SONGS_ID_VIDEO, {
+                song_id: songId
+            })
+        }else return undefined
+    }, [songId])
+
+    return url ? <ReferenceVideoView containerClassName="" videoUrl={url} segStart={0}/> : null
+}
+
 export const GlobalMediaPlayer = (props: {
     className?: string
 }) => {
@@ -177,7 +194,7 @@ export const GlobalMediaPlayer = (props: {
     const onProgressUpdate = useThrottleCallback(updateProgressText)
 
       const { width, height, ref } = useResizeDetector({
-        handleHeight: false,
+        handleHeight: true,
         refreshMode: 'debounce',
         refreshRate: 50
       });
@@ -200,6 +217,10 @@ export const GlobalMediaPlayer = (props: {
     useEffect(()=>{
         updateProgressText(null)
     }, [songDuration])
+
+    useEffect(()=>{
+        dispatch(setGlobalMediaPlayerHeight(height))
+    }, [height])
 
     useEffect(()=>{
         const volumeSubscription = MediaPlayer.getVolumeObservable().subscribe({
@@ -225,6 +246,9 @@ export const GlobalMediaPlayer = (props: {
     const PlayButtonIconClass = mediaPlayerStatus == MediaPlayerStatus.Playing ? PauseIcon : PlayIcon
 
     return <div ref={ref} className={`${props.className} bg-audiopanelbg/90 backdrop-blur-md bottom-1 rounded-lg overflow-hidden outline outline-1 outline-audiopanelbg shadow-lg flex flex-col select-none`}>
+        {
+            !isInLineLoopMode ?  <GlobalVideoView/> : null
+        }
         <SongTimelineView width={width || 100}/>
         <div className="flex justify-between text-white flex-1 items-stretch py-2 px-2 bg-red">
             <div className="global-player-control-wrapper h-8 text-center font-light text-[8pt] flex items-center justify-center pointer-events-none">{progressText}</div>

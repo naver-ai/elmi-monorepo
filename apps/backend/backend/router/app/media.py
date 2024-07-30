@@ -73,6 +73,16 @@ async def get_audio(song_id: str,
     else:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=ErrorType.ItemNotFound)
     
+
+    
+@router.get("/songs/{song_id}/video", dependencies=[Depends(get_signed_in_user)], response_class=FileResponse)
+async def get_video(song_id: str,
+                    db: Annotated[AsyncSession, Depends(with_db_session)]):
+    song = await db.get(Song, song_id)
+    if song is not None and song.video_file_exists():
+        video_file_path = song.get_video_file_path()
+        return FileResponse(video_file_path, media_type="video/mp4")
+    
 @router.get("/songs/{song_id}/lines/{line_id}/video", dependencies=[Depends(get_signed_in_user)], response_class=FileResponse)
 async def get_video(song_id: str, 
                     line_id: str,

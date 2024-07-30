@@ -77,6 +77,8 @@ export const LyricsView = (props: {
     const detailLineId = useSelector(state => state.editor.detailLineId)
     const prevDetailLineId = usePrevious(detailLineId)
 
+    const globalMediaPlayerHeight = useSelector(state => state.editor.globelMediaPlayerHeight)
+
     useEffect(()=>{
         if(prevDetailLineId != null && detailLineId == null){
             // Closed
@@ -91,7 +93,7 @@ export const LyricsView = (props: {
 
     return <div className={`lyric-panel-layout`}>
         {
-            isLoadingSong !== true ? <div className={`px-2 animate-fadein ${props.lyricsContainerClassName}`}>
+            isLoadingSong !== true ? <div id="scroller" className={`px-2 animate-fadein mt-10 ${props.lyricsContainerClassName}`} style={{paddingBottom: (globalMediaPlayerHeight || 24) + 32}}>
             {
                 verseIds.map(verseId => <VerseView verseId={verseId} key={verseId}/>)
             }
