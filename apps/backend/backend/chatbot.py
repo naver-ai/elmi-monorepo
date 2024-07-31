@@ -68,7 +68,7 @@ class IntentClassifier(ChainMapper[str, IntentClassification]):
     You are a helpful assistant that classifies user queries into one of the following categories:
 
     1. Meaning: Questions about understanding or interpreting the lyrics.
-    2. Glossing: Questions about how to sign specific words or phrases.
+    2. Glossing: Questions about how to sign specific words or phrases. ASL translation.
     3. Emoting: Questions about expressing emotions through facial expressions and body language.
     4. Timing: Questions about the timing or rhythm of the gloss, including changing and adjusting the gloss (shorter or longer).
 
@@ -78,6 +78,12 @@ class IntentClassifier(ChainMapper[str, IntentClassification]):
     - Emoting
     - Timing
     - Other: Messages that do not fall within the above four categories.
+                         
+    Here are some examples of user queries for each category:
+    - Meaning: "What is the deeper meaning of this line?"
+    - Glossing: "How do I sign this specific line in ASL?"
+    - Emoting: "How can I convey the emotion in this line?"
+    - Timing: "Can you show me how to modify the gloss?"
 
     [Output format]
     Return a JSON object formatted as follows:
@@ -235,7 +241,7 @@ def create_system_template(intent: ChatIntent, result: BaseModel) -> str:
         return system_template.format(line_emoting_results=result.model_dump_json(include={"mood", "facial_expression", "body_gesture", "emotion_description"}))
     
 
-    elif intent == ChatIntent.Timing:
+    if intent == ChatIntent.Timing:
         system_template = '''
         Your name is ELMI, a helpful chatbot that helps users translate ENG lyrics to ASL.
         ELMI specializes in guiding users to have a critical thinking process about the lyrics.
@@ -275,6 +281,42 @@ def create_system_template(intent: ChatIntent, result: BaseModel) -> str:
         When you suggest something, make sure to ask if the user wants other things.
         '''
         return system_template.format(line_timing_results=result.model_dump_json(include={"gloss_alts"}))
+    
+    elif intent == ChatIntent.Other:
+            system_template = '''
+        Your name is ELMI, a helpful chatbot that assists users with various queries related to translating ENG lyrics to ASL.
+        ELMI specializes in guiding users to have a critical thinking process about the lyrics.
+        ELMI you are an active listener.
+        You are not giving all the possible answers, instead, listen to what the users are thinking and ask them to reflect on little things a bit more (What does the user want?)
+        The user decides whether or not they care to engage in further chat.
+
+        You start by prompting questions to users.
+
+        You are answering to questions that may not fit into predefined categories.
+
+        Thus, you will need to adapt your responses to the user's query and provide the necessary guidance to below categories:
+        1. Meaning: Questions about understanding or interpreting the lyrics.
+        2. Glossing: Questions about how to sign specific words or phrases. ASL translation.
+        3. Emoting: Questions about expressing emotions through facial expressions and body language.
+        4. Timing: Questions about the timing or rhythm of the gloss, including changing and adjusting the gloss (shorter or longer).
+
+        Key characteristics of ELMI:
+        - Clear Communication: ELMI offers simple, articulate instructions with engaging examples.
+        - Humor: ELMI infuses the sessions with light-hearted humour to enhance the enjoyment. Add some emojis.
+        - Empathy and Sensitivity: ELMI shows understanding and empathy, aligning with the participant's emotional state.
+
+        Support and Encouragement:
+        - EMLI offers continuous support, using her identity to add fun and uniqueness to her encouragement.
+        For additional assistance, she reminds participants to reach out to the study team.
+
+        Your role:
+        Handling Conversations: (This is your main role)
+        - Redirecting Off-Topic Chats: ELMI gently guides the conversation back to lyrics interpretation topics, suggesting social interaction with friends for other discussions.
+        - Support and Encouragement: EMLI offers continuous support, using her identity to add fun and uniqueness to her encouragement.
+        - Your role is to help users with their queries by providing thoughtful responses and guiding them through their thought processes.
+        '''
+    return system_template
+
 
 # Initiate a proactive chat session with a user based on a specific line ID.
 async def proactive_chat(project_id: str, line_id: str, user_input: str, intent: ChatIntent | None, is_button_click=False):
@@ -303,12 +345,10 @@ async def proactive_chat(project_id: str, line_id: str, user_input: str, intent:
         elif intent == ChatIntent.Timing:
             system_template = create_system_template(intent, line_annotation)
             input_variables = ["line_timing_results", "history", "input"]
-        elif intent == ChatIntent.Other: # TODO: Implement general chat scenario
+        elif intent == ChatIntent.Other: 
             system_template = create_system_template(intent, line_annotation)
-            input_variables = ["line_timing_results", "history", "input"]
-        else:
-            print(f"Feature {intent} is not yet implemented.")
-            return
+            input_variables = ["history", "input"]
+    
 
         try:
             custom_prompt_template = PromptTemplate(
@@ -368,7 +408,7 @@ if __name__ == "__main__":
     
     # Prompt for a normal user input
     user_input = input("Enter your query: ")
-    intent = classify_user_intent(user_input)
+    intent =  asyncio.run(classify_user_intent(user_input))
     asyncio.run(proactive_chat(project_id,line_id, user_input, intent, is_button_click=False))
 
 
