@@ -1,7 +1,7 @@
 import { Button, Card, Form, Input } from "antd"
 import { useDispatch, useSelector } from "../../../redux/hooks"
 import { lineSelectors } from "../../signing/reducer"
-import { selectMessagesByThreadId, selectThreadByLineId, sendMessage, initializeThread} from "../reducer"
+import { selectMessagesByThreadId, selectThreadByLineId, sendMessage, initializeThread, fetchMeaning, fetchEmoting, fetchGlossing, fetchTiming} from "../reducer"
 import * as yup from 'yup'
 import { useForm } from "react-hook-form"
 import { yupResolver } from "@hookform/resolvers/yup"
@@ -47,12 +47,32 @@ export const ThreadView = (props: {
             if(thread == null){
                 dispatch(initializeThread(projectId, props.lineId, "default"))
             }else{
-                dispatch(sendMessage(projectId, props.lineId, "default", values.message));
+                // dispatch(sendMessage(projectId, props.lineId, "default", values.message));
+                dispatch(sendMessage(projectId, props.lineId, values.message, "user", "default"));
+
             }
         }
     }, [dispatch, props.lineId, thread, projectId])
+    
+    const handleButtonClick = (intent: string) => {
+        if (props.lineId != null && projectId != null) {
+            dispatch(sendMessage(projectId, props.lineId, intent, "user", "default", true));
+        }
+    };
 
     return <Card title={"Line"}>
+        <div className="mb-3">
+                <Button type="primary" block onClick={() => handleButtonClick("meaning")}>Meaning</Button>
+            </div>
+            <div className="mb-3">
+                <Button type="primary" block onClick={() => handleButtonClick("glossing")}>Glossing</Button>
+            </div>
+            <div className="mb-3">
+                <Button type="primary" block onClick={() => handleButtonClick("emoting")}>Emoting</Button>
+            </div>
+            <div className="mb-3">
+                <Button type="primary" block onClick={() => handleButtonClick("timing")}>Timing</Button>
+        </div>
         <div>
             {
                 // messages.map((m, i) => <div key={i}>{m.message}</div>) //TODO redesign callouts

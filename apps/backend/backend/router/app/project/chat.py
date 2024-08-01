@@ -63,6 +63,7 @@ class MessageCreate(BaseModel):
     role: str
     message: str
     mode: str
+    is_button_click: bool = False  # Add this field
 
 @router.post("/message", response_model=ThreadMessage)
 async def create_message(data: MessageCreate, 
@@ -79,17 +80,20 @@ async def create_message(data: MessageCreate,
     if not project:
         raise HTTPException(status_code=404, detail="NoSuchProject")
 
+    
     new_message = ThreadMessage(thread_id=data.thread_id, role=data.role, message=data.message, mode=data.mode, project_id=project.id)
-    db.add(new_message)
-    await db.commit()
-    await db.refresh(new_message)
+    if data.role == 'user':
+        db.add(new_message)
+        await db.commit()
+        await db.refresh(new_message)
 
     # Forward the user input to chat_with_bot
     if data.role == 'user':
         chat_request = ChatRequest(
             project_id=project.id,
             line_id=thread.line_id,
-            user_input=data.message
+            user_input=data.message,
+            is_button_click=data.is_button_click
         )
     response = await chat_with_bot(chat_request, user, db)
     # logger.info(f"Chatbot response: {response.message}")
@@ -117,6 +121,7 @@ class ChatRequest(BaseModel):
     line_id: str
     user_input: str
     intent: ChatIntent | None = None
+    is_button_click: bool = False
 
 class ChatResponse(BaseModel):
     message: str
@@ -128,8 +133,14 @@ async def chat_with_bot(request: ChatRequest, user: Annotated[User, Depends(get_
 
     async with db:
         try:
-            response_message = await proactive_chat(request.project_id, request.line_id, request.user_input, request.intent, is_button_click=False)
-            logger.info(f"Response message 123: {response_message}")
+            # Handle the logic for button clicks by setting the intent directly
+            if request.is_button_click:
+                request.intent = ChatIntent(request.user_input)
+                
+            response_message = await proactive_chat(request.project_id, request.line_id, request.user_input, request.intent, is_button_click=request.is_button_click)
+            logger.info(f"Response message: {response_message}")
+            # response_message = await proactive_chat(request.project_id, request.line_id, request.user_input, request.intent, is_button_click=False)
+            # logger.info(f"Response message 123: {response_message}")
 
             return ChatResponse(message=response_message)
         except Exception as e:

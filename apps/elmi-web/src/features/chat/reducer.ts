@@ -132,7 +132,81 @@ export function initializeThread(projectId: string, lineId: string, mode: string
   
 
 // Updated sendMessage thunk
-export function sendMessage(projectId: string, lineId: string, mode: string, message: string): AppThunk {
+// export function sendMessage(projectId: string, lineId: string, mode: string, message: string): AppThunk {
+//     return async (dispatch, getState) => {
+//         const state = getState();
+//         const token = state.auth.token;
+
+//         let thread: ChatThread | undefined = selectThreadByLineId(state, lineId);
+
+//         if (!thread) {
+//             // If this is an initial state, make a thread object.
+//             thread = {
+//                 id: nanoid(),
+//                 line_id: lineId
+//             };
+//             dispatch(chatSlice.actions._upsertChatData({ threads: [thread], messages: [], overwrite: false }));
+//         }
+
+//         // Create a new message object
+//         const messageInfo: ThreadMessage = {
+//             id: nanoid(),
+//             thread_id: thread.id,
+//             role: 'user',
+//             message,
+//             mode
+//         };
+
+//         // Immediately add the user's message to the state
+//         dispatch(chatSlice.actions._upsertChatData({ threads: [], messages: [messageInfo], overwrite: false }));
+
+//         // Logging for debugging
+//         console.log("User message:", messageInfo);
+
+//         if (token != null && projectId != null && lineId != null) {
+//             try {
+//                 // // Send the message to the server and get a response
+//                 const responseMessage = await Http.sendMessage(projectId, thread.id, messageInfo.message, messageInfo.role, messageInfo.mode, token);
+
+//                 // Create a new message object for the response
+//                 const serverMessage: ThreadMessage = {
+//                     id: nanoid(),
+//                     thread_id: thread.id,
+//                     role: 'assistant',
+//                     message: responseMessage.message,
+//                     mode: responseMessage.mode
+//                 };
+
+//                 console.log("Server response message:", serverMessage);
+
+//                 // Add the server's response to the state
+//                 dispatch(chatSlice.actions._upsertChatData({ threads: [], messages: [serverMessage], overwrite: false }));
+//             } catch (ex) {
+//                 console.log(ex);
+//             }
+//         }
+//     };
+// }
+
+
+
+export function fetchMeaning(projectId: string, lineId: string): AppThunk {
+    return sendMessage(projectId, lineId, "Meaning", "user", "default", true);
+}
+
+export function fetchGlossing(projectId: string, lineId: string): AppThunk {
+    return sendMessage(projectId, lineId, "Glossing", "user", "default", true);
+}
+
+export function fetchEmoting(projectId: string, lineId: string): AppThunk {
+    return sendMessage(projectId, lineId, "Emoting", "user", "default", true);
+}
+
+export function fetchTiming(projectId: string, lineId: string): AppThunk {
+    return sendMessage(projectId, lineId, "Timing", "user", "default", true);
+}
+
+export function sendMessage(projectId: string, lineId: string, message: string, role: string, mode: string, isButtonClick: boolean = false): AppThunk {
     return async (dispatch, getState) => {
         const state = getState();
         const token = state.auth.token;
@@ -140,7 +214,6 @@ export function sendMessage(projectId: string, lineId: string, mode: string, mes
         let thread: ChatThread | undefined = selectThreadByLineId(state, lineId);
 
         if (!thread) {
-            // If this is an initial state, make a thread object.
             thread = {
                 id: nanoid(),
                 line_id: lineId
@@ -148,38 +221,32 @@ export function sendMessage(projectId: string, lineId: string, mode: string, mes
             dispatch(chatSlice.actions._upsertChatData({ threads: [thread], messages: [], overwrite: false }));
         }
 
-        // Create a new message object
         const messageInfo: ThreadMessage = {
             id: nanoid(),
             thread_id: thread.id,
-            role: 'user',
+            role,
             message,
             mode
         };
 
-        // Immediately add the user's message to the state
         dispatch(chatSlice.actions._upsertChatData({ threads: [], messages: [messageInfo], overwrite: false }));
 
-        // Logging for debugging
-        console.log("User message:", messageInfo);
+        console.log("Sending message:", messageInfo);
 
         if (token != null && projectId != null && lineId != null) {
             try {
-                // // Send the message to the server and get a response
-                const responseMessage = await Http.sendMessage(projectId, thread.id, messageInfo.message, messageInfo.role, messageInfo.mode, token);
+                const response = await Http.sendMessage(projectId, thread.id, message, role, mode, token, isButtonClick);
 
-                // Create a new message object for the response
                 const serverMessage: ThreadMessage = {
                     id: nanoid(),
                     thread_id: thread.id,
                     role: 'assistant',
-                    message: responseMessage.message,
-                    mode: responseMessage.mode
+                    message: response.message,
+                    mode: mode
                 };
 
                 console.log("Server response message:", serverMessage);
 
-                // Add the server's response to the state
                 dispatch(chatSlice.actions._upsertChatData({ threads: [], messages: [serverMessage], overwrite: false }));
             } catch (ex) {
                 console.log(ex);
@@ -187,6 +254,7 @@ export function sendMessage(projectId: string, lineId: string, mode: string, mes
         }
     };
 }
+
 
 
 export const {initialize: initializeChatState, setActiveThreadLineId} = chatSlice.actions

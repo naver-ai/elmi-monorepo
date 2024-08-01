@@ -84,10 +84,19 @@ export class Http{
     }
 
   // Send a chat message
-  static async sendMessage(projectId: string, threadId: string, message: string, role: string, mode: string, token: string) {
+  // static async sendMessage(projectId: string, threadId: string, message: string, role: string, mode: string, token: string) {
+  //   const url = this.getTemplateEndpoint(this.ENDPOINT_APP_PROJECTS_ID_CHAT_MESSAGE, { project_id: projectId });
+  //   console.log(`Sending message to URL: ${url} with data: ${JSON.stringify({ thread_id: threadId, message, role, mode })}`);
+  //   const response = await this.axios.post(url, { thread_id: threadId, message, role, mode }, { headers: this.getSignedInHeaders(token) });
+  //   return response.data;
+  // }
+
+  static async sendMessage(projectId: string, threadId: string, message: string, role: string, mode: string, token: string, isButtonClick: boolean = false) {
     const url = this.getTemplateEndpoint(this.ENDPOINT_APP_PROJECTS_ID_CHAT_MESSAGE, { project_id: projectId });
-    console.log(`Sending message to URL: ${url} with data: ${JSON.stringify({ thread_id: threadId, message, role, mode })}`);
-    const response = await this.axios.post(url, { thread_id: threadId, message, role, mode }, { headers: this.getSignedInHeaders(token) });
+    const payload = { thread_id: threadId, message, role, mode, is_button_click: isButtonClick };
+    console.log(`Sending message to URL: ${url} with data: ${JSON.stringify(payload)}`);
+    const response = await this.axios.post(url, payload, { headers: this.getSignedInHeaders(token) });
     return response.data;
-  }
+}
+  
 }

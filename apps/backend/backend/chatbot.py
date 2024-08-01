@@ -155,6 +155,10 @@ def create_system_template(intent: ChatIntent, result: BaseModel) -> str:
         Given the {line_inspection_results} above, you will create some thought-provoking questions for users and start a discussion with the user about the meaning of the lyrics. 
         Your role is to help users to come up with their idea.
         When you suggest something, make sure to ask if the user wants other things.
+
+
+        Output format:
+        Do not include JSON or unnecessary data in your response. Respond with clear, empathetic, and thought-provoking questions.
         '''
         return system_template.format(line_inspection_results=result.model_dump_json(include={"challenges", "description"}))
     
@@ -196,6 +200,10 @@ def create_system_template(intent: ChatIntent, result: BaseModel) -> str:
         Given the {line_glossing_results} above, you will create some thought-provoking questions for users and start a discussion with the user about the gloss. 
         Your role is to help users to come up with their idea.
         When you suggest something, make sure to ask if the user wants other things.
+
+
+        Output format:
+        Do not include JSON or unnecessary data in your response. Respond with clear, empathetic, and thought-provoking questions.
         '''
         return system_template.format(line_glossing_results=result.model_dump_json(include={"gloss", "gloss_description"}))
 
@@ -237,6 +245,10 @@ def create_system_template(intent: ChatIntent, result: BaseModel) -> str:
         Given the {line_emoting_results} above, you will create some thought-provoking questions for users and start a discussion with the user about performing the gloss. 
         Your role is to help users to come up with their idea.
         When you suggest something, make sure to ask if the user wants other things.
+
+
+        Output format:
+        Do not include JSON or unnecessary data in your response. Respond with clear, empathetic, and thought-provoking questions.
         '''
         return system_template.format(line_emoting_results=result.model_dump_json(include={"mood", "facial_expression", "body_gesture", "emotion_description"}))
     
@@ -279,6 +291,9 @@ def create_system_template(intent: ChatIntent, result: BaseModel) -> str:
         Given the {line_timing_results} above, you will create some thought-provoking questions for users and start a discussion with the user about adjusting the gloss. 
         Your role is to help users to come up with their idea.
         When you suggest something, make sure to ask if the user wants other things.
+
+        Output format:
+        Do not include JSON or unnecessary data in your response. Respond with clear, empathetic, and thought-provoking questions.
         '''
         return system_template.format(line_timing_results=result.model_dump_json(include={"gloss_alts"}))
     
@@ -385,14 +400,8 @@ async def proactive_chat(project_id: str, line_id: str, user_input: str, intent:
             # Save the initial assistant message
             await save_thread_message(session, project_id, thread_id, 'assistant', initial_response.content, 'initial')
 
-            if is_button_click:
-                # For button clicks, return hidden user message + AI message
-                # print(f"Hidden User Message: {user_input}\nAI Message: {initial_response.content}")
-                return f"Hidden User Message: {user_input}\nAI Message: {initial_response.content}"
-            else:
-                # For normal open-ended questions, return only the AI message
-                # print(f"AI Message: {initial_response.content}")
-                return initial_response.content
+
+            return initial_response.content
 
         except Exception as ex:
             print(ex)
