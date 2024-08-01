@@ -50,12 +50,13 @@ export const ThreadView = (props: {
                 dispatch(sendMessage(projectId, props.lineId, "default", values.message));
             }
         }
-    }, [dispatch, props.lineId, thread, projectId, projectId])
+    }, [dispatch, props.lineId, thread, projectId])
 
     return <Card title={"Line"}>
         <div>
             {
-                messages.map((m, i) => <div key={i}>{m.message}</div>) //TODO redesign callouts
+                // messages.map((m, i) => <div key={i}>{m.message}</div>) //TODO redesign callouts
+                messages.map((m, i) => <div key={i}>{m.role}: {m.message}</div>)
             }
         </div>
         <Form className="flex items-stretch gap-x-1" onFinish={handleSubmit(submitMessage)}>

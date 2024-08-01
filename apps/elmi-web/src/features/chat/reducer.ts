@@ -161,13 +161,12 @@ export function sendMessage(projectId: string, lineId: string, mode: string, mes
         dispatch(chatSlice.actions._upsertChatData({ threads: [], messages: [messageInfo], overwrite: false }));
 
         // Logging for debugging
-        console.log("Sending message:", messageInfo);
+        console.log("User message:", messageInfo);
 
         if (token != null && projectId != null && lineId != null) {
             try {
                 // // Send the message to the server and get a response
                 const responseMessage = await Http.sendMessage(projectId, thread.id, messageInfo.message, messageInfo.role, messageInfo.mode, token);
-
 
                 // Create a new message object for the response
                 const serverMessage: ThreadMessage = {
@@ -175,8 +174,10 @@ export function sendMessage(projectId: string, lineId: string, mode: string, mes
                     thread_id: thread.id,
                     role: 'assistant',
                     message: responseMessage.message,
-                    mode: messageInfo.mode
+                    mode: responseMessage.mode
                 };
+
+                console.log("Server response message:", serverMessage);
 
                 // Add the server's response to the state
                 dispatch(chatSlice.actions._upsertChatData({ threads: [], messages: [serverMessage], overwrite: false }));

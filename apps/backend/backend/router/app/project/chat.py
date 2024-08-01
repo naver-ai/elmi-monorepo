@@ -43,7 +43,7 @@ class ThreadCreate(BaseModel):
 async def create_thread(data: ThreadCreate, 
                         user: Annotated[User, Depends(get_signed_in_user)],
                         db: Annotated[AsyncSession, Depends(with_db_session)]):
-    logger.info(f"Received thread data: {data}")
+    logger.info(f"Received thread db: {db}")
 
     # Ensure the user is authorized to create a thread for the given project and line
     stmt = select(Project).where(Project.id == data.project_id, Project.user_id == user.id)
@@ -92,10 +92,23 @@ async def create_message(data: MessageCreate,
             user_input=data.message
         )
     response = await chat_with_bot(chat_request, user, db)
-    logger.info(f"Chatbot response: {response.message}")
+    # logger.info(f"Chatbot response: {response.message}")
 
 
-    return new_message
+    # return new_message
+
+    response_message = ThreadMessage(
+            thread_id=data.thread_id,
+            role='assistant',
+            message=response.message,
+            mode=data.mode,
+            project_id=project.id
+        )
+    db.add(response_message)
+    await db.commit()
+    await db.refresh(response_message)
+
+    return response_message if response_message else new_message
 
 
 # New chat endpoint to interact with the chatbot
@@ -116,7 +129,7 @@ async def chat_with_bot(request: ChatRequest, user: Annotated[User, Depends(get_
     async with db:
         try:
             response_message = await proactive_chat(request.project_id, request.line_id, request.user_input, request.intent, is_button_click=False)
-            logger.info(f"Response message: {response_message}")
+            logger.info(f"Response message 123: {response_message}")
 
             return ChatResponse(message=response_message)
         except Exception as e:
