@@ -4,6 +4,7 @@ import { useCallback } from "react";
 import { selectLineAnnotationByLineId, setDetailLineId } from "../reducer";
 import { LeftDoubleArrowIcon } from "../../../components/svg-icons";
 import { LineAnnotation } from "../../../model-types";
+import Markdown from 'react-markdown'
 
 export const LyricDetailPanel = () => {
 
@@ -31,7 +32,7 @@ export const LyricDetailPanel = () => {
                     {
                         annotation != null ? <div className="detail-panel-content-wrapper">
                             <div className="flex flex-wrap gap-2">{annotation.mood.map((mood, i) => <div key={i} className="text-black">#{mood}</div>)}</div>
-                            <p className="mt-3 font-regular italic">{annotation.emotion_description}</p>
+                            <p className="mt-3 font-regular italic"><Markdown>{annotation.emotion_description}</Markdown></p>
                             </div> : null
                     }
                     
@@ -41,9 +42,9 @@ export const LyricDetailPanel = () => {
                     {
                         annotation != null ? <div className="detail-panel-content-wrapper">
                             <h5>Gestures</h5>
-                            <p className="font-regular italic">{annotation.body_gesture}</p>
+                            <p className="font-regular italic"><Markdown>{annotation.body_gesture}</Markdown></p>
                             <h5>Facial Expressions</h5>
-                            <p className="font-regular italic">{annotation.facial_expression}</p>
+                            <p className="font-regular italic"><Markdown>{annotation.facial_expression}</Markdown></p>
                             </div> : null
                     }
                 </div>
