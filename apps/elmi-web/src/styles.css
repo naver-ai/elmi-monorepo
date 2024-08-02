@@ -39,7 +39,7 @@ body{
 }
 
 .lyric-panel-layout{
-    @apply container lg:w-[50vw] lg:max-w-[600px] mx-auto;
+    @apply w-[50vw] max-w-[640px] mx-auto;
 }
 
 .panel-title{
