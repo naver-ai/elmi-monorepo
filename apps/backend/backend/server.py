@@ -10,6 +10,7 @@ from fastapi.responses import FileResponse, HTMLResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 from backend.database.engine import create_db_and_tables, engine
 from backend.router.app import router as app_router
+from backend.router.app.project.chat import router as chat_router  # Corrected the import path
 from re import compile
 
 @asynccontextmanager
@@ -27,6 +28,11 @@ app = FastAPI(lifespan=server_lifespan)
 app.include_router(
     app_router,
     prefix="/api/v1/app"
+)
+
+app.include_router(
+    chat_router,
+    prefix="/api/v1/chat"
 )
 
 @app.head("/api/v1/ping")

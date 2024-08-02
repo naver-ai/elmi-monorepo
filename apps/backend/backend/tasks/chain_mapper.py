@@ -48,7 +48,11 @@ class ChainMapper(ABC, Generic[InputType, OutputType]):
 
     @classmethod
     def __input_parser(cls, input: InputType, config: RunnableConfig)->dict:
-        config["metadata"].update(input.__dict__)
+        try:
+            config["metadata"].update(input.__dict__)
+        except:
+            config["metadata"]["input"] = input
+
         return {
             "input": cls._input_to_str(input, config)
         }
