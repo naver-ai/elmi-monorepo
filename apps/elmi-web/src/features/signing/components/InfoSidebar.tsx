@@ -34,7 +34,7 @@ export const InfoSidebar = () => {
 
     const selectedLineId = useSelector(state => state.editor.detailLineId)
 
-    return <div className={`line-detail-panel relative border-r-[1px] bg-[#fafafa] w-[350px] max-w-[30vw] block h-screen`}>
+    return <div className={`line-detail-panel relative border-r-[1px] bg-[#fafafa] w-[350px] max-w-[30vw] h-screen flex flex-col`}>
         <HeaderContent />
         <div className="p-3 overflow-y-auto flex-1">
             {

@@ -1,6 +1,6 @@
 import { Button, Input, InputRef, Skeleton, Progress, Tooltip } from "antd"
 import { useDispatch, useSelector } from "../../../redux/hooks"
-import { lineSelectors, selectLineInspectionByLineId, setDetailLineId, toggleDetailLineId } from "../reducer"
+import { lineSelectors, selectLineInspectionByLineId, setDetailLineId, setShowScrollToLineButton, toggleDetailLineId } from "../reducer"
 import { FocusEventHandler, MouseEventHandler, useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { MediaPlayer } from "../../media-player"
 import { MediaPlayerStatus } from "../../media-player/types"
@@ -11,6 +11,8 @@ import { initializeThread, selectThreadIdByLineId, setActiveThreadLineId } from 
 import { useAudioSegmentPositionPercentage } from "../hooks"
 import { Http } from "../../../net/http"
 import { ReferenceVideoView } from "./ReferenceVideoView"
+import { useInView } from "react-intersection-observer";
+import { ShortcutManager } from "../../../services/shortcut"
 
 const LineReferenceVideoView = () => {
 
@@ -139,6 +141,8 @@ export const LyricLineView = (props: {lineId: string}) => {
 
     const showChatButton = isSelected === true && threadId == null && isThreadActive == false
 
+    const {ref, inView} = useInView()
+
     const onClickInspectionIndicator = useCallback<MouseEventHandler<HTMLElement>>((ev) => {
         ev.stopPropagation()
         if(line?.id != null){
@@ -162,20 +166,36 @@ export const LyricLineView = (props: {lineId: string}) => {
 
     useEffect(()=>{
         if(isPositionHitting === true && isInLineLoopMode == false && scrollAnchorRef.current != null){
-            const viewBounding = scrollAnchorRef.current.getBoundingClientRect()
             console.log(scrollAnchorRef.current.nodeName)
             scrollAnchorRef.current?.scrollIntoView({
                 behavior: 'smooth',
                 block: 'start'
             })
         }
+
     },[isPositionHitting, isInLineLoopMode])
+
+    useEffect(()=>{
+        if(isInLineLoopMode && isSelected){
+            dispatch(setShowScrollToLineButton(!inView))
+        }
+    },[isSelected, isInLineLoopMode, inView, props.lineId])
 
     useEffect(()=>{
         const timelineClickEventSubscription = MediaPlayer.getTimelineClickEventObservable().subscribe({
             next: ({ positionMillis, lyricCoord }) => {
                 if(lyricCoord?.lineId == props.lineId){
-                    console.log("Clicked.")
+                    scrollAnchorRef.current?.scrollIntoView({
+                        behavior: 'smooth',
+                        block: 'start'
+                    })
+                }
+            }
+        })
+
+        const shortcutEventSubscription = ShortcutManager.instance.onFocusRequestedEvent.subscribe({
+            next: ({type, id}) => {
+                if(type == 'line' && id == props.lineId){
                     scrollAnchorRef.current?.scrollIntoView({
                         behavior: 'smooth',
                         block: 'start'
@@ -185,11 +205,12 @@ export const LyricLineView = (props: {lineId: string}) => {
         })
 
         return () => {
+            shortcutEventSubscription.unsubscribe()
             timelineClickEventSubscription.unsubscribe()
         }
     }, [props.lineId])
 
-    return <div  className={`transition-all relative mb-3 last:mb-0 p-1.5 rounded-xl hover:bg-orange-400/20 ${isSelected ? 'point-gradient-bg-light':''} ${isInLineLoopMode == true && isAudioPlaying && isPositionHitting ? "outline animate-music-indicate" : ""} ${isInLineLoopMode == false && isAudioPlaying && isPositionHitting ? 'bg-orange-400/20 outline animate-music-indicate':''}`}>
+    return <div ref={ref} className={`transition-all relative mb-3 last:mb-0 p-1.5 rounded-xl hover:bg-orange-400/20 ${isSelected ? 'point-gradient-bg-light':''} ${isInLineLoopMode == true && isAudioPlaying && isPositionHitting ? "outline animate-music-indicate" : ""} ${isInLineLoopMode == false && isAudioPlaying && isPositionHitting ? 'bg-orange-400/20 outline animate-music-indicate':''}`}>
         <div ref={scrollAnchorRef} className="scroll-anchor absolute top-[-30px] bottom-[-30px] left-0 w-5 h-5 pointer-events-none"/>
         {
             line == null ? <Skeleton title={false} active/> : <>

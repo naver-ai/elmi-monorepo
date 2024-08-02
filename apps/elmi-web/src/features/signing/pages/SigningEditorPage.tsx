@@ -34,11 +34,9 @@ export const SigningEditorPage = () => {
     }, [projectId]) 
 
     return <SignedInScreenFrame withHeader={false}>
-        <div className="h-full flex flex-row w-[100vw]">
+        <div className="h-full flex flex-row w-[100vw] relative">
             <InfoSidebar/>
-            <div id="lyric-view-wrapper" className="overflow-y-auto flex-1 flex">
-                <LyricsView/>
-            </div>
+            <LyricsView className="flex-1"/>
             <ChatThreadSidePanel/>
             
         </div>
