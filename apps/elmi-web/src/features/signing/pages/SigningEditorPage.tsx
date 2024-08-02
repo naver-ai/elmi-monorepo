@@ -13,26 +13,7 @@ import { fetchChatData, initializeChatState } from "../../chat/reducer"
 import { ChatThreadSidePanel } from "../components/ChatThreadSidePanel"
 import { ReferenceVideoView } from "../components/ReferenceVideoView"
 import { Http } from "../../../net/http"
-
-const HeaderLeftContent = () => {
-
-    const songInfo = useSelector(state => state.editor.song)
-
-    const nav = useNavigate()
-
-    const onToListClick = useCallback(()=>{
-        nav("/app/projects")
-    }, [])
-
-    return <div className="flex flex-row items-center h-full">
-    <Button className="aspect-square h-full rounded-none p-0 items-center justify-center flex text-slate-500 border-r-[1px] border-r-slate-200" type="text" onClick={onToListClick}><ArrowLeftStartOnRectangleIcon className="w-5 h-5"/></Button>
-    {
-        songInfo != null ? <div>
-        <span className="ml-3 font-bold text-lg">{songInfo?.title}</span> - {songInfo?.artist}
-    </div> : null
-    }
-</div>
-}
+import { InfoSidebar } from "../components/InfoSidebar"
 
 export const SigningEditorPage = () => {
 
@@ -40,8 +21,6 @@ export const SigningEditorPage = () => {
     const nav = useNavigate()
 
     const projectId = useProjectIdInRoute()!
-
-    const isDetailPanelOpen = useSelector(state => state.editor.detailLineId != null)
 
     useEffect(()=>{
         dispatch(fetchProjectDetail(projectId))
@@ -54,14 +33,13 @@ export const SigningEditorPage = () => {
         }
     }, [projectId]) 
 
-    return <SignedInScreenFrame headerContent={<HeaderLeftContent/>}>
+    return <SignedInScreenFrame withHeader={false}>
         <div className="h-full flex flex-row w-[100vw]">
-            <LyricDetailPanel/>
-            <Layout.Content className="overflow-y-scroll flex">
-                <div className={`transition-all relative ${isDetailPanelOpen ? `flex-[0.2]` : 'flex-1'}`}/>
+            <InfoSidebar/>
+            <div id="lyric-view-wrapper" className="overflow-y-auto flex-1 flex">
                 <LyricsView/>
-                <ChatThreadSidePanel/>
-            </Layout.Content>
+            </div>
+            <ChatThreadSidePanel/>
             
         </div>
     </SignedInScreenFrame>

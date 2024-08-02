@@ -10,6 +10,7 @@ import { Progress, Skeleton } from "antd"
 import { formatDuration } from "../../../utils/time"
 import { useAudioSegmentPositionPercentage } from "../hooks"
 import { PartialDarkThemeProvider } from "../../../styles"
+import { useResizeDetector } from "react-resize-detector"
 
 export const VerseView = (props: {verseId: string}) => {
 
@@ -90,8 +91,10 @@ export const LyricsView = (props: {
 
     }, [prevDetailLineId, detailLineId])
 
+    const {width : lyricPanelWidth, ref} = useResizeDetector()
 
-    return <div className={`lyric-panel-layout`}>
+
+    return <div className={`lyric-panel-layout`}  ref={ref}>
         {
             isLoadingSong !== true ? <div id="scroller" className={`px-2 animate-fadein mt-10 ${props.lyricsContainerClassName}`} style={{paddingBottom: (globalMediaPlayerHeight || 24) + 32}}>
             {
@@ -100,7 +103,7 @@ export const LyricsView = (props: {
             </div> : <div className="px-2 py-10"><Skeleton active /></div>
         }        
         {
-            isLoadingSong !== true ? <GlobalMediaPlayer className="animate-slidein lyric-panel-layout block absolute bottom-0 z-10"/> : null
+            isLoadingSong !== true ? <div className="animate-slidein block absolute bottom-0 z-10" style={{width: lyricPanelWidth}}><GlobalMediaPlayer/></div> : null
         }        
     </div>
 }
