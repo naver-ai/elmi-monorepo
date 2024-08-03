@@ -1,3 +1,5 @@
+import { string } from "yup"
+
 export enum SignLanguageType{
     ASL="ASL",
     PSE="PSE"
@@ -87,10 +89,25 @@ export interface ChatThread{
     line_id: string
 }
 
+export enum MessageRole {
+    User="user",
+    Assistant="assistant"
+}
+
+
+export enum ChatIntent {
+    Meaning="meaning",
+    Glossing="glossing",
+    Emoting="emoting",
+    Timing="timing",
+    Other="other"
+}
+
 export interface ThreadMessage {
     id: string
     thread_id: string
-    role: string
+    role: MessageRole
     message: string
-    mode: string
+    intent?: ChatIntent | undefined
+    message_metadata?: {[key:string]: any} | undefined
 }

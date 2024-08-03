@@ -99,6 +99,7 @@ class Line(SQLModel, LineInfo, table=True):
     verse: Verse = Relationship(back_populates='lines')
     inspection: Optional["LineInspection"] = Relationship(back_populates="line", sa_relationship_kwargs={'lazy': 'selectin'})
     annotation: Optional["LineAnnotation"] = Relationship(back_populates="line", sa_relationship_kwargs={'lazy': 'selectin'})
+    thread: Optional['Thread'] = Relationship(back_populates="line", sa_relationship_kwargs={'lazy': 'selectin'})
 
 
 class LineIdMixin(BaseModel):
@@ -251,11 +252,27 @@ class LineAnnotation(SQLModel, IdTimestampMixin, LineIdMixin, ProjectIdMixin, ta
 class Thread(SQLModel, IdTimestampMixin, ProjectIdMixin, LineIdMixin, table=True):
     messages: list["ThreadMessage"] = Relationship(back_populates="thread", sa_relationship_kwargs={'lazy': 'selectin'})
     project: Project = Relationship(back_populates="threads") 
+    line: Optional[Line] = Relationship(back_populates="thread", sa_relationship_kwargs={'lazy': 'selectin'})
+
+class MessageRole(StrEnum):
+    User="user"
+    Assistant="assistant"
+
+
+class ChatIntent(StrEnum):
+    Meaning=auto()
+    Glossing=auto()
+    Emoting=auto()
+    Timing=auto()
+    Other=auto()
 
 class ThreadMessage(SQLModel, IdTimestampMixin, ProjectIdMixin, table=True):
+    model_config = ConfigDict(use_enum_values=True)
+
     thread_id: str = Field(foreign_key="thread.id")
-    role: str = Field(nullable=False)  # user or assistant
+    role: MessageRole = Field(nullable=False)  # user or assistant
     message: str = Field(nullable=False)
-    mode: str = Field(nullable=False)
+    intent: ChatIntent | None = Field(nullable=True, default=None)
     thread: Thread = Relationship(back_populates="messages")
     project: Project = Relationship(back_populates="messages")
+    message_metadata: dict = Field(sa_column=Column(JSON, name="metadata"), default={})

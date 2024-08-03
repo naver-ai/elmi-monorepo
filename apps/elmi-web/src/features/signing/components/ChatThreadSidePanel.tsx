@@ -9,7 +9,7 @@ export const ChatThreadSidePanel = (props: {
     const activeLineId = useSelector(state => state.chat.activeLineId)
 
     return <div className={`relative transition-all ${props.className}`}>
-        <div className="w-[300px] max-w-[25vw] p-3">
+        <div className="min-w-[400px] max-w-[30vw] p-3">
             {
                 activeLineId != null ? <ThreadView lineId={activeLineId}/> : null
             }

@@ -1,10 +1,10 @@
-from typing import Annotated
+from typing import Annotated, Self
 from backend.database.engine import with_db_session
-from backend.database.models import Project, Thread, ThreadMessage, User
-from backend.router.app.common import get_signed_in_user
-from backend.chatbot import ChatIntent, classify_user_intent, proactive_chat
+from backend.database.models import ChatIntent, MessageRole, Project, Thread, ThreadMessage, User
+from backend.router.app.common import get_project, get_signed_in_user, get_thread
+from backend.tasks.chat.chatbot import generate_chat_response
 from fastapi import APIRouter, HTTPException, status, Depends
-from pydantic import BaseModel
+from pydantic import BaseModel, field_validator, model_validator
 from sqlmodel.ext.asyncio.session import AsyncSession
 from sqlmodel import select
 import logging
@@ -33,115 +33,90 @@ async def get_chat_data(project_id: str,
         raise HTTPException(status_code=404, detail="NoSuchProject")
     
 
-
 class ThreadCreate(BaseModel):
-    project_id: str
     line_id: str
-    mode: str
 
-@router.post("/thread", response_model=Thread)
-async def create_thread(data: ThreadCreate, 
-                        user: Annotated[User, Depends(get_signed_in_user)],
+class ThreadStartResult(BaseModel):
+    thread: Thread
+    initial_assistant_message: ThreadMessage
+
+@router.post("/threads/start", response_model=ThreadStartResult)
+async def start_thread(args: ThreadCreate,
+                        project: Annotated[Project, Depends(get_project)],
                         db: Annotated[AsyncSession, Depends(with_db_session)]):
-    logger.info(f"Received thread db: {db}")
 
-    # Ensure the user is authorized to create a thread for the given project and line
-    stmt = select(Project).where(Project.id == data.project_id, Project.user_id == user.id)
-    project = (await db.exec(stmt)).first()
-    if not project:
-        raise HTTPException(status_code=404, detail="NoSuchProject")
+    thread = Thread(line_id=args.line_id, project_id=project.id)
 
-    new_thread = Thread(line_id=data.line_id, project_id=data.project_id, mode=data.mode)
-    db.add(new_thread)
+    print(f"Create new thread - {thread.id}")
+
+    db.add(thread)
     await db.commit()
-    await db.refresh(new_thread)
-    return new_thread
+    await db.refresh(thread)
 
+    print("Generate initial assistant message...")
 
-class MessageCreate(BaseModel):
-    thread_id: str
-    role: str
-    message: str
-    mode: str
-    is_button_click: bool = False  # Add this field
-
-@router.post("/message", response_model=ThreadMessage)
-async def create_message(data: MessageCreate, 
-                         user: Annotated[User, Depends(get_signed_in_user)],
-                         db: Annotated[AsyncSession, Depends(with_db_session)]):
-    logger.info(f"Received message data: {data}")
-
-    thread = await db.get(Thread, data.thread_id)
-    if not thread:
-        raise HTTPException(status_code=404, detail="NoSuchThread")
-    
-    stmt = select(Project).where(Project.id == thread.project_id, Project.user_id == user.id)
-    project = (await db.exec(stmt)).first()
-    if not project:
-        raise HTTPException(status_code=404, detail="NoSuchProject")
-
-    
-    new_message = ThreadMessage(thread_id=data.thread_id, role=data.role, message=data.message, mode=data.mode, project_id=project.id)
-    if data.role == 'user':
-        db.add(new_message)
-        await db.commit()
-        await db.refresh(new_message)
-
-    # Forward the user input to chat_with_bot
-    if data.role == 'user':
-        chat_request = ChatRequest(
-            project_id=project.id,
-            line_id=thread.line_id,
-            user_input=data.message,
-            is_button_click=data.is_button_click
-        )
-    response = await chat_with_bot(chat_request, user, db)
-    # logger.info(f"Chatbot response: {response.message}")
-
-
-    # return new_message
+    intent, assistant_message = await generate_chat_response(db, thread, None, None)
 
     response_message = ThreadMessage(
-            thread_id=data.thread_id,
-            role='assistant',
-            message=response.message,
-            mode=data.mode,
-            project_id=project.id
+            thread_id=thread.id,
+            role=MessageRole.Assistant,
+            message=assistant_message,
+            intent=intent,
+            project_id=thread.project_id
         )
     db.add(response_message)
     await db.commit()
-    await db.refresh(response_message)
 
-    return response_message if response_message else new_message
+    return ThreadStartResult(thread=thread, initial_assistant_message=response_message)
 
 
-# New chat endpoint to interact with the chatbot
-class ChatRequest(BaseModel):
-    project_id: str
-    line_id: str
-    user_input: str
+##########################################################################################################
+
+class MessageCreate(BaseModel):
+    message: str | None = None
     intent: ChatIntent | None = None
-    is_button_click: bool = False
 
-class ChatResponse(BaseModel):
-    message: str
+    @field_validator('message')
+    @classmethod
+    def handle_empty_string(cls, msg: str | None)  -> str | None:
+        if msg is not None and len(msg) == 0:
+            return None
+        else:
+            return msg
 
+    @model_validator(mode = 'after')
+    def check_message_intent(self) -> Self:
+        if self.intent is None and self.message is None:
+            raise ValueError("Either message or intent must be provided.")
+        else:
+            return self
 
-@router.post("/chat", response_model=ChatResponse)
-async def chat_with_bot(request: ChatRequest, user: Annotated[User, Depends(get_signed_in_user)], db: Annotated[AsyncSession, Depends(with_db_session)]):
-    logger.info(f"Chat request received: project_id={request.project_id}, line_id={request.line_id}, user_input={request.user_input}")
+class UserMessageResponse(BaseModel):
+    user_input: ThreadMessage
+    assistant_output: ThreadMessage
 
-    async with db:
-        try:
-            # Handle the logic for button clicks by setting the intent directly
-            if request.is_button_click:
-                request.intent = ChatIntent(request.user_input)
-                
-            response_message = await proactive_chat(request.project_id, request.line_id, request.user_input, request.intent, is_button_click=request.is_button_click)
-            logger.info(f"Response message: {response_message}")
-            # response_message = await proactive_chat(request.project_id, request.line_id, request.user_input, request.intent, is_button_click=False)
-            # logger.info(f"Response message 123: {response_message}")
+@router.post("/threads/{thread_id}/messages/new", response_model=UserMessageResponse)
+async def send_user_message(args: MessageCreate, 
+                         thread: Annotated[Thread, Depends(get_thread)],
+                         db: Annotated[AsyncSession, Depends(with_db_session)]):
+    logger.info(f"Received message data: {args}")
 
-            return ChatResponse(message=response_message)
-        except Exception as e:
-            raise HTTPException(status_code=500, detail=str(e))
+    new_user_message = ThreadMessage(thread_id=thread.id, role=MessageRole.User, message=args.message, project_id=thread.project_id)
+    db.add(new_user_message)
+    
+    intent, assistant_response = await generate_chat_response(db, thread, args.message, args.intent)
+
+    response_message = ThreadMessage(
+            thread_id=thread.id,
+            role=MessageRole.Assistant,
+            message=assistant_response,
+            intent=intent,
+            project_id=thread.project_id
+        )
+    
+    db.add(response_message)
+    await db.commit()
+    await db.refresh(response_message)
+    await db.refresh(new_user_message)
+
+    return UserMessageResponse(user_input=new_user_message, assistant_output=response_message)

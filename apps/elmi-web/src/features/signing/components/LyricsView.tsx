@@ -70,9 +70,6 @@ export const LyricsView = (props: {
 }) => {
     const verseIds = useSelector(verseSelectors.selectIds)
 
-
-    const isLoadingProject = useSelector(state => state.editor.isProjectLoading)
-
     const isLoadingSong = useSelector(state => state.mediaPlayer.status == MediaPlayerStatus.LoadingMedia)
 
 

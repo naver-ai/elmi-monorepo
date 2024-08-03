@@ -7,7 +7,7 @@ import { MediaPlayerStatus } from "../../media-player/types"
 import { ChatBubbleLeftIcon, PauseIcon, PlayIcon, HandRaisedIcon, ArrowRightIcon } from "@heroicons/react/20/solid"
 import { useThrottleCallback } from "@react-hook/throttle"
 import { PartialDarkThemeProvider } from "../../../styles"
-import { initializeThread, selectThreadIdByLineId, setActiveThreadLineId } from "../../chat/reducer"
+import { startNewThread, selectThreadIdByLineId, setActiveThreadLineId } from "../../chat/reducer"
 import { useAudioSegmentPositionPercentage } from "../hooks"
 import { Http } from "../../../net/http"
 import { ReferenceVideoView } from "./ReferenceVideoView"
@@ -145,11 +145,12 @@ export const LyricLineView = (props: {lineId: string}) => {
 
     const onClickInspectionIndicator = useCallback<MouseEventHandler<HTMLElement>>((ev) => {
         ev.stopPropagation()
-        if(line?.id != null){
-            dispatch(setDetailLineId(line?.id))
+        const lineId = line?.id
+        if(lineId != null){
+            dispatch(setDetailLineId(lineId))
             dispatch(MediaPlayer.pauseMedia())
-            dispatch(setActiveThreadLineId(line?.id))
-            dispatch(initializeThread(line?.id, ""))
+            dispatch(setActiveThreadLineId(lineId))
+            dispatch(startNewThread(lineId))
         }
     }, [line?.id])
 

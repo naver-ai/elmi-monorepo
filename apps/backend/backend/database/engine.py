@@ -23,7 +23,7 @@ async def create_db_and_tables(engine: AsyncEngine):
         await conn.run_sync(SQLModel.metadata.create_all)
 
 
-engine = create_database_engine(path.join(getcwd(), "../../database/database.db"), verbose=True)
+engine = create_database_engine(path.join(getcwd(), "../../database/database.db"), verbose=False)
 
 db_sessionmaker = make_async_session_maker(engine)
 
