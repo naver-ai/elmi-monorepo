@@ -104,7 +104,7 @@
     "test_chat": {
       "executor": "@nxlv/python:run-commands",
       "options": {
-        "command": "poetry run python backend/chatbot.py",
+        "command": "poetry run python /Users/suhyeon423/Documents/GitHub/elmi-monorepo/apps/backend/backend/tasks/chat/chatbot.py",
         "cwd": "apps/backend"
       }
     }
