@@ -107,7 +107,17 @@
         "command": "poetry run python /Users/suhyeon423/Documents/GitHub/elmi-monorepo/apps/backend/backend/tasks/chat/chatbot.py",
         "cwd": "apps/backend"
       }
+    },
+
+    "test_midjourney": {
+      "executor": "@nxlv/python:run-commands",
+      "options": {
+        "command": "poetry run python backend/test_midjourney.py",
+        "cwd": "apps/backend"
+      }
     }
+
+
   },
   "tags": []
 }
