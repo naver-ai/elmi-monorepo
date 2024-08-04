@@ -27,8 +27,9 @@ client = ChatOpenAI(
     temperature=1,
     max_tokens=2048,
     top_p=1,
-    frequency_penalty=0,
-    presence_penalty=0
+    model_kwargs=dict(
+                                    frequency_penalty=0, 
+                                    presence_penalty=0)
 )
 
 class IntentClassification(BaseModel):

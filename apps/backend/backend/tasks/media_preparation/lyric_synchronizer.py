@@ -118,8 +118,9 @@ Yield a json object formatted as follows:
                                 model_name="gpt-4o", 
                                 temperature=0, 
                                 max_tokens=256,
-                                frequency_penalty=0, 
-                                presence_penalty=0
+                                model_kwargs=dict(
+                                    frequency_penalty=0, 
+                                    presence_penalty=0)
                                 )
 
     chain = prompt | model | PydanticOutputParser(pydantic_object=BestMatchOutput)

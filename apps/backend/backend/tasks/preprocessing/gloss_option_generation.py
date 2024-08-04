@@ -1,6 +1,3 @@
-from langchain_core.prompts.chat import ChatPromptTemplate
-from langchain_openai import ChatOpenAI
-from langchain.output_parsers import PydanticOutputParser
 from langchain_core.runnables import RunnableConfig
 
 from backend.tasks.preprocessing.common import GlossOptionGenerationResult, TranslatedLyricsPipelineBase
