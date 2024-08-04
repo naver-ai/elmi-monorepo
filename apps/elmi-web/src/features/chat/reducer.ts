@@ -10,7 +10,15 @@ import { AppState, AppThunk } from '../../redux/store';
 import { Http } from '../../net/http';
 
 // Create entity adapters for chat threads and messages
-const chatThreadEntityAdapter = createEntityAdapter<ChatThread>();
+const chatThreadEntityAdapter = createEntityAdapter<ChatThread>({
+    sortComparer: (a, b) => {
+        if(a.verse_ordering != b.verse_ordering){
+            return a.verse_ordering - b.verse_ordering
+        }else{
+            return a.line_number - b.line_number
+        }
+    }
+});
 const chatMessageEntityAdapter = createEntityAdapter<ThreadMessage>();
 
 // Initialize state for chat threads and messages
@@ -89,6 +97,7 @@ const chatSlice = createSlice({
         },
 
         _setThreadProcessingFlag: (state, action: PayloadAction<{threadId: string, flag: boolean}>) => {
+            console.log(state.threadMessageProcessingStatusDict, action.payload.threadId, action.payload.flag)
             state.threadMessageProcessingStatusDict[action.payload.threadId] = action.payload.flag
         },
 
@@ -136,7 +145,6 @@ export const selectMessagesByThreadId = createSelector(
         (state: AppState, threadId: string | undefined) => threadId,
     ],
     (messages, threadId) => {
-        console.log(messages, threadId);
         return threadId != null
             ? messages.filter((m) => m.thread_id == threadId)
             : [];
@@ -159,8 +167,9 @@ export function fetchChatData(projectId: string): AppThunk {
                         headers: Http.getSignedInHeaders(token),
                     }
                 );
+                console.log(resp.data)
 
-                console.log(resp.data);
+                dispatch(chatSlice.actions._upsertChatData({...resp.data, overwrite: true}))
             } catch (ex) {
                 console.log(ex);
             } finally {
@@ -211,16 +220,16 @@ export function startNewThread(lineId: string): AppThunk {
     };
 }
 
-export function sendMessage(lineId: string, message: string | undefined, intent?: ChatIntent
+export function sendMessage(threadId: string, message: string | undefined, intent?: ChatIntent
 ): AppThunk {
     return async (dispatch, getState) => {
         const state = getState();
         const token = state.auth.token;
         const projectId = state.editor.projectId
 
-        if (token != null && projectId != null && lineId != null) {
+        if (token != null && projectId != null && threadId != null) {
 
-            let thread: ChatThread | undefined = selectThreadByLineId(state, lineId);
+            let thread: ChatThread | undefined = threadSelectors.selectById(state, threadId);
             if(thread){
                 const dummyMessageId = nanoid()
                 const dummyMessageInfo: ThreadMessage = {

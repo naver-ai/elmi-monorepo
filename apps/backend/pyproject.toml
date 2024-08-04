@@ -27,7 +27,7 @@ readme = 'README.md'
   questionary = "^2.0.1"
   fastapi = "^0.111.0"
   uvicorn = {extras = ["standart"], version = "^0.30.1"}
-  sqlmodel = "^0.0.19"
+  sqlmodel = "0.0.21"
   nanoid = "^2.0.0"
   aiosqlite = "^0.20.0"
   greenlet = "^3.0.3"

@@ -87,6 +87,8 @@ export interface LineAnnotation{
 export interface ChatThread{
     id: string
     line_id: string
+    verse_ordering: number
+    line_number: number
 }
 
 export enum MessageRole {

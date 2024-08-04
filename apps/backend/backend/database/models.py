@@ -2,7 +2,7 @@ from datetime import datetime
 from enum import StrEnum, auto
 from os import path
 from typing import Literal, Optional, Union
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, computed_field
 from sqlalchemy import DateTime, func
 from sqlmodel import Relationship, SQLModel, Field, UniqueConstraint, Column, JSON
 from nanoid import generate
@@ -181,10 +181,10 @@ class Project(SQLModel, IdTimestampMixin, UserIdMixin, SongIdMixin, table=True):
 
     last_processing_id: str | None = Field(nullable=True, default=None)
 
-    inspections: list["LineInspection"] = Relationship(back_populates="project", sa_relationship_kwargs={'lazy': 'selectin'})
-    annotations: list["LineAnnotation"] = Relationship(back_populates="project", sa_relationship_kwargs={'lazy': 'selectin'})
+    inspections: list["LineInspection"] = Relationship(back_populates="project", sa_relationship_kwargs={'lazy': 'selectin'},  cascade_delete=True)
+    annotations: list["LineAnnotation"] = Relationship(back_populates="project", sa_relationship_kwargs={'lazy': 'selectin'},  cascade_delete=True)
 
-    threads: list["Thread"] = Relationship(back_populates="project", sa_relationship_kwargs={'lazy': 'selectin'})
+    threads: list["Thread"] = Relationship(back_populates="project", sa_relationship_kwargs={'lazy': 'selectin'},  cascade_delete=True)
     messages: list["ThreadMessage"] = Relationship(back_populates="project", sa_relationship_kwargs={'lazy': 'selectin'})
     
 
@@ -250,9 +250,19 @@ class LineAnnotation(SQLModel, IdTimestampMixin, LineIdMixin, ProjectIdMixin, ta
 
 # New models for Chat :)
 class Thread(SQLModel, IdTimestampMixin, ProjectIdMixin, LineIdMixin, table=True):
-    messages: list["ThreadMessage"] = Relationship(back_populates="thread", sa_relationship_kwargs={'lazy': 'selectin'})
+    messages: list["ThreadMessage"] = Relationship(back_populates="thread", sa_relationship_kwargs={'lazy': 'selectin'},  cascade_delete=True)
     project: Project = Relationship(back_populates="threads") 
     line: Optional[Line] = Relationship(back_populates="thread", sa_relationship_kwargs={'lazy': 'selectin'})
+
+    @computed_field
+    @property
+    def verse_ordering(self)->int:
+        return self.line.verse.verse_ordering
+    
+    @computed_field
+    @property
+    def line_ordering(self)->int:
+        return self.line.line_number 
 
 class MessageRole(StrEnum):
     User="user"

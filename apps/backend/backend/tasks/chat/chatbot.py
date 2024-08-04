@@ -338,7 +338,8 @@ async def generate_chat_response(db: AsyncSession, thread: Thread, user_input: s
                 print(f"Classified intent: {intent}")
             elif line_inspection is not None:
                 intent = ChatIntent.Meaning
-                
+            else:
+                intent = ChatIntent.Other    
 
         if intent == ChatIntent.Meaning:
             system_instruction = create_system_instruction(intent, song.title, song.artist, line_annotation.line.lyric, line_inspection)

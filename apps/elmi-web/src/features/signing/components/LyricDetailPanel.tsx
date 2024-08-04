@@ -25,7 +25,7 @@ export const LyricDetailPanel = (props: {lineId: string}) => {
         {
             annotation != null ? <div className="detail-panel-content-wrapper">
                 <div className="flex flex-wrap gap-2">{annotation.mood.map((mood, i) => <div key={i} className="text-black">#{mood}</div>)}</div>
-                <p className="mt-3 font-regular italic"><Markdown>{annotation.emotion_description}</Markdown></p>
+                <Markdown className={"mt-3 font-regular italic"}>{annotation.emotion_description}</Markdown>
             </div> : null
         }
 
@@ -35,9 +35,9 @@ export const LyricDetailPanel = (props: {lineId: string}) => {
         {
             annotation != null ? <div className="detail-panel-content-wrapper">
                 <h5>Gestures</h5>
-                <p className="font-regular italic"><Markdown>{annotation.body_gesture}</Markdown></p>
+                <Markdown className="font-regular italic">{annotation.body_gesture}</Markdown>
                 <h5>Facial Expressions</h5>
-                <p className="font-regular italic"><Markdown>{annotation.facial_expression}</Markdown></p>
+                <Markdown className="font-regular italic">{annotation.facial_expression}</Markdown>
             </div> : null
         }
         <div className="border-t-[1px] pt-3 text-right">

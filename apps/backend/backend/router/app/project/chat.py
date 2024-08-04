@@ -25,8 +25,11 @@ async def get_chat_data(project_id: str,
                         db: Annotated[AsyncSession, Depends(with_db_session)]):
     project = await db.get(Project, project_id)
     if project is not None and project.user_id == user.id:
+
+        threads = sorted(project.threads, key=lambda t: (t.line.line_number, t.line.verse.verse_ordering))
+
         return ChatData(
-            threads=project.threads,
+            threads=threads,
             messages=project.messages
         )
     else:
