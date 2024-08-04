@@ -104,7 +104,6 @@ export const lineSelectors = lineEntityAdapter.getSelectors((state: AppState) =>
 export const lineAnnotationSelectors = lineAnnotationEntityAdapter.getSelectors((state: AppState) => state.editor.lineAnnotationEntityState)
 export const lineInspectionSelectors = lineInspectionEntityAdapter.getSelectors((state: AppState) => state.editor.lineInspectionEntityState)
 
-
 export const selectLinesByVerseId = createSelector([lineSelectors.selectAll, (state: AppState, verseId: string) => verseId], (lines, verseId) => {
     return lines.filter(line => line.verse_id == verseId)
 })

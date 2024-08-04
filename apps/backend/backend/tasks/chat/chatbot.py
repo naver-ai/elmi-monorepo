@@ -395,6 +395,8 @@ async def generate_chat_response(db: AsyncSession, thread: Thread, user_input: s
                 print(f"Classified intent: {intent}")
             elif line_inspection is not None:
                 intent = ChatIntent.Meaning
+            else:
+                intent = ChatIntent.Other
         else:
                 intent = ChatIntent.Other 
         

@@ -7,6 +7,7 @@ import { ArrowLeftStartOnRectangleIcon } from '@heroicons/react/20/solid'
 import { Button } from "antd"
 import { useNavigate } from "react-router-dom"
 import { SongInfoPanel } from "./SongInfoPanel";
+import { GrandientBorderline } from "../../../components/decorations";
 
 const HeaderContent = () => {
 
@@ -26,7 +27,7 @@ const HeaderContent = () => {
             </div> : null
         }
         <div className="flex-1" />
-        <div className="point-gradient-bg h-[2px] absolute bottom-0 left-0 right-0 block" />
+        <GrandientBorderline/>
     </div>
 }
 

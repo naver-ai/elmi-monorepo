@@ -8,14 +8,23 @@ import {
 import { ChatIntent, ChatThread, MessageRole, ThreadMessage } from '../../model-types';
 import { AppState, AppThunk } from '../../redux/store';
 import { Http } from '../../net/http';
+import { lineSelectors, selectLinesByVerseId, verseSelectors } from '../signing/reducer';
+
+export interface ChatThreadPlaceholder {
+    isPlaceholder: boolean
+    id: string
+    line_id: string
+    verse_ordering: number
+    line_number: number
+}
 
 // Create entity adapters for chat threads and messages
-const chatThreadEntityAdapter = createEntityAdapter<ChatThread>({
+const chatThreadEntityAdapter = createEntityAdapter<ChatThread | ChatThreadPlaceholder>({
     sortComparer: (a, b) => {
         if(a.verse_ordering != b.verse_ordering){
             return a.verse_ordering - b.verse_ordering
         }else{
-            return a.line_number - b.line_number
+            return b.line_number - a.line_number
         }
     }
 });
@@ -66,7 +75,7 @@ const chatSlice = createSlice({
         _upsertChatData: (
             state,
             action: PayloadAction<{
-                threads: Array<ChatThread>;
+                threads: Array<ChatThread | ChatThreadPlaceholder>;
                 messages: Array<ThreadMessage>;
                 overwrite: boolean;
             }>
@@ -90,6 +99,11 @@ const chatSlice = createSlice({
                     action.payload.messages
                 );
             }
+        },
+
+
+        _removeChatThread: (state, action: PayloadAction<string>) => {
+            chatThreadEntityAdapter.removeOne(state.chatThreadEntityState, action.payload)
         },
 
         _removeChatMessage: (state, action: PayloadAction<string>) => {
@@ -188,6 +202,20 @@ export function startNewThread(lineId: string): AppThunk {
 
         if (token != null && projectId != null) {
             dispatch(chatSlice.actions.setThreadInitializingLineId(lineId));
+            const line = lineSelectors.selectById(state, lineId)
+            const verse = verseSelectors.selectById(state, line.verse_id)
+
+            // Insert dummy thread  
+            const dummyThreadId = nanoid()
+            dispatch(chatSlice.actions._upsertChatData({threads: [{
+                id: dummyThreadId,
+                line_id: lineId,
+                line_number: line.line_number,
+                verse_ordering: verse.verse_ordering,
+                isPlaceholder: true
+            }], messages: [], overwrite: false}))
+
+
             try {
                 const resp = await Http.axios.post(
                     Http.getTemplateEndpoint(
@@ -203,6 +231,9 @@ export function startNewThread(lineId: string): AppThunk {
                 );
 
                 const { thread, initial_assistant_message } = resp.data;
+
+                // remove dummy
+                dispatch(chatSlice.actions._removeChatThread(dummyThreadId))
 
                 dispatch(
                     chatSlice.actions._upsertChatData({
