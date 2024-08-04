@@ -2,7 +2,7 @@ import requests
 
 
 # Replace with your actual API token
-api_token = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6NDc0MjgsImVtYWlsIjoiaGNpLm5hdmVyQGdtYWlsLmNvbSIsInVzZXJuYW1lIjoiaGNpLm5hdmVyQGdtYWlsLmNvbSIsImlhdCI6MTcxODMzMjQ0MH0.QdkBZkx2WjNZgpSAk1nXkwP6AixKtdSFjHUpP-SIrFM'
+api_token = 'ENTER TOKEN'
 url = 'https://api.vyro.ai/v1/imagine/api/generations'
 
 # Define your prompt
