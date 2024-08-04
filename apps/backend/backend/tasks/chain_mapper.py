@@ -35,10 +35,8 @@ class ChainMapper(ABC, Generic[InputType, OutputType]):
                                 model_name="gpt-4o", 
                                 temperature=1, 
                                 max_tokens=2048,
-                                model_kwargs=dict(
-                                    frequency_penalty=0, 
-                                    presence_penalty=0
-                                ))
+                                frequency_penalty=0, 
+                                presence_penalty=0)
         
 
         # Initialize the chain

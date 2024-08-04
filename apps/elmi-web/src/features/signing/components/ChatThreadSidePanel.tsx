@@ -1,17 +1,23 @@
 import { Button, Card, Input } from "antd"
-import { useSelector } from "../../../redux/hooks"
+import { useDispatch, useSelector } from "../../../redux/hooks"
 import { ThreadView } from "../../chat/components/ThreadView"
+import { fetchChatData, threadSelectors } from "../../chat/reducer"
+import { useEffect } from "react"
 
 export const ChatThreadSidePanel = (props: {
     className?: string
 }) => {
 
-    const activeLineId = useSelector(state => state.chat.activeLineId)
+    const dispatch = useDispatch()
 
-    return <div className={`relative transition-all ${props.className}`}>
+    const threadIds = useSelector(threadSelectors.selectIds)
+
+    const activeLineId = useSelector(state => state.editor.detailLineId)
+
+    return <div className={`relative overflow-y-auto ${props.className}`}>
         <div className="min-w-[400px] max-w-[30vw] p-3">
             {
-                activeLineId != null ? <ThreadView lineId={activeLineId}/> : null
+                threadIds.map(threadId => <ThreadView key={threadId} threadId={threadId}/>)
             }
         </div>
     </div>

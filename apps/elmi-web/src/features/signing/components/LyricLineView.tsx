@@ -156,12 +156,16 @@ export const LyricLineView = (props: {lineId: string}) => {
 
     const onClickChatThreadButton = useCallback<MouseEventHandler<HTMLElement>>((ev) => {
         ev.stopPropagation()
-        if(line?.id != null){
-            dispatch(setDetailLineId(line?.id))
+        const lineId = line?.id
+        if(lineId != null){
+            dispatch(setDetailLineId(lineId))
             dispatch(MediaPlayer.pauseMedia())
-            dispatch(setActiveThreadLineId(line?.id))
+            dispatch(setActiveThreadLineId(lineId))
+            if(threadId == null){
+                dispatch(startNewThread(lineId))
+            }
         }
-    }, [line?.id])
+    }, [line?.id, threadId])
 
     const scrollAnchorRef = useRef<HTMLDivElement>(null)
 
