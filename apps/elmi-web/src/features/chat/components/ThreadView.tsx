@@ -6,9 +6,9 @@ import { selectMessagesByThreadId, selectThreadByLineId, sendMessage, startNewTh
 import * as yup from 'yup'
 import { useForm } from "react-hook-form"
 import { yupResolver } from "@hookform/resolvers/yup"
-import { memo, useCallback, useEffect, useMemo, useRef } from "react"
+import { memo, ReactNode, useCallback, useEffect, useMemo, useRef } from "react"
 import { ChatIntent, MessageRole } from "../../../model-types"
-import { ClockIcon, HeartIcon, PaperAirplaneIcon, QuestionMarkCircleIcon } from "@heroicons/react/20/solid"
+import { ClockIcon, EllipsisHorizontalIcon, HeartIcon, PaperAirplaneIcon, QuestionMarkCircleIcon } from "@heroicons/react/20/solid"
 import Markdown from 'react-markdown'
 import { LoadingIndicator } from "../../../components/LoadingIndicator"
 import { HookFormInput } from "../../../components/form-items"
@@ -22,9 +22,10 @@ const CARD_STYLE: CardProps["styles"] = {body: {padding: 0, position: 'relative'
 
 const ChatMessageCallout = memo((props: {
     role: MessageRole,
-    message: string,
+    message: string | ReactNode,
     ellipsisRows?: number,
-    inSimpleMode?: boolean
+    inSimpleMode?: boolean,
+    calloutClassName?: string
 }) => {
 
     const ellipsisConfig = useMemo(()=>(props.ellipsisRows != null ? {rows: props.ellipsisRows, expandable: false } : undefined), [props.ellipsisRows])
@@ -36,10 +37,12 @@ const ChatMessageCallout = memo((props: {
             props.role == MessageRole.Assistant ? avatar : null
         }
         <div className={`flex-1 flex ${props.role == MessageRole.Assistant ? 'justify-start':'justify-end'}`}>
-            <div className={`px-4 py-2 rounded-xl ${props.inSimpleMode === true ? `px-2 py-1 ${props.role == MessageRole.Assistant ? 'bg-opacity-60' : 'bg-white/50'}` : ""} ${props.role == MessageRole.Assistant ? 'bg-slate-700 mr-10 rounded-tl-none':'bg-slate-200 ml-10 rounded-tr-none'}`}>
-                <Typography.Paragraph ellipsis={ellipsisConfig} className={`!m-0 p-0 text-base font-light leading-7 ${props.role == MessageRole.Assistant ? ' text-white' : 'text-black'}`}>
-                    <Markdown unwrapDisallowed disallowedElements={DISALLOWED_TAGS}>{props.message}</Markdown>
-                </Typography.Paragraph>
+            <div className={`px-4 py-2 rounded-xl ${props.inSimpleMode === true ? `px-2 py-1 ${props.role == MessageRole.Assistant ? 'bg-opacity-60' : 'bg-white/50'}` : ""} ${props.role == MessageRole.Assistant ? 'bg-slate-700 mr-10 rounded-tl-none':'bg-slate-200 ml-10 rounded-tr-none'} ${props.calloutClassName}`}>
+                {
+                    typeof props.message == 'string' ? <Typography.Paragraph ellipsis={ellipsisConfig} className={`!m-0 p-0 text-base font-light leading-7 ${props.role == MessageRole.Assistant ? ' text-white' : 'text-black'}`}>
+                        <Markdown unwrapDisallowed disallowedElements={DISALLOWED_TAGS}>{props.message}</Markdown>
+                    </Typography.Paragraph> : props.message
+                }
                 </div>
         </div>
     </div>
@@ -60,6 +63,8 @@ const INTENT_LIST = [
         intent: ChatIntent.Timing
     }
 ]
+
+const NUM_MESSAGES_IN_SIMPLE_MODE = 3
 
 const schema = yup.object({
     message: yup.string().trim().required()
@@ -131,7 +136,7 @@ export const ThreadView = (props: {
     return <Card title={<span className={`text-lg ${highlighted ? 'font-bold' : 'font-[400]'}`} ref={cardRef}>
             <span>Chat on </span><span className="italic">"{line?.lyric}"</span>
             </span>} styles={CARD_STYLE} 
-            className={`rounded-xl mt-6 first:mt-0 transition-all border-none ${highlighted ? 'shadow-lg bg-white':'shadow-none bg-slate-800/10 cursor-pointer hover:bg-slate-600/20'}`}
+            className={`rounded-xl mt-6 first:mt-0 transition-shadow border-none ${highlighted ? 'shadow-lg bg-white':'shadow-none bg-slate-800/10 cursor-pointer hover:bg-slate-600/20'}`}
             onClick={onCardClick}
             >
         {
@@ -142,12 +147,15 @@ export const ThreadView = (props: {
                         // messages.map((m, i) => <div key={i}>{m.message}</div>) //TODO redesign callouts
                         messages.map((m, i) => <ChatMessageCallout key={m.id} role={m.role} message={m.message}/>)
                     }
+                    {
+                        isProcessingMessage && <ChatMessageCallout role={MessageRole.Assistant} message={<EllipsisHorizontalIcon className="w-8 animate-pulse text-white"/>} calloutClassName="px-3 py-0 animate-pulse"/>
+                    }
                 </div> : <div className="p-6 pt-2">
                         {
-                            messages.length -3 > 0 ? <Divider className="!my-0 !mb-6" plain dashed orientationMargin={0}><span className="text-gray-500">{messages.length - 3} more messages</span></Divider> : null 
+                            messages.length - NUM_MESSAGES_IN_SIMPLE_MODE > 0 ? <Divider className="!my-0 !mb-6" plain dashed orientationMargin={0}><span className="text-gray-500">{messages.length - NUM_MESSAGES_IN_SIMPLE_MODE} more messages</span></Divider> : null 
                         }
                         {
-                            messages.slice(-3).map((message, i) => <ChatMessageCallout key={message.id} ellipsisRows={2} message={message.message} 
+                            messages.slice(-NUM_MESSAGES_IN_SIMPLE_MODE).map((message, i) => <ChatMessageCallout key={message.id} ellipsisRows={2} message={message.message} 
                                                                                 role={message.role}  inSimpleMode/>)
                         }
                     </div>}
