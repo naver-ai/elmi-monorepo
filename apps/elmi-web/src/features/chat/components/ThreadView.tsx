@@ -1,4 +1,4 @@
-import { Button, Card, Form, Input, Spin, Typography, CardProps } from "antd"
+import { Button, Card, Form, Input, Spin, Typography, CardProps, Divider } from "antd"
 import type {InputRef} from 'antd'
 import { useDispatch, useSelector } from "../../../redux/hooks"
 import { lineSelectors, setDetailLineId } from "../../signing/reducer"
@@ -17,16 +17,17 @@ import { EllipsisConfig } from "antd/es/typography/Base"
 import { GrandientBorderline } from "../../../components/decorations"
 
 const DISALLOWED_TAGS = ['p']
-const ELLIPSIS_CONFIG: EllipsisConfig = {rows: 2, expandable: false }
 
 const CARD_STYLE: CardProps["styles"] = {body: {padding: 0, position: 'relative'}, header: {borderBottom: 'none'}}
 
 const ChatMessageCallout = memo((props: {
     role: MessageRole,
     message: string,
-    ellipsis?: boolean,
+    ellipsisRows?: number,
     inSimpleMode?: boolean
 }) => {
+
+    const ellipsisConfig = useMemo(()=>(props.ellipsisRows != null ? {rows: props.ellipsisRows, expandable: false } : undefined), [props.ellipsisRows])
 
     const avatar = <div className="rounded-full aspect-square w-6 flex items-center justify-center translate-y-[-50%] text-white text-sm bg-red-400">{props.role == MessageRole.Assistant ? 'E' : "Me"}</div>
 
@@ -35,8 +36,8 @@ const ChatMessageCallout = memo((props: {
             props.role == MessageRole.Assistant ? avatar : null
         }
         <div className={`flex-1 flex ${props.role == MessageRole.Assistant ? 'justify-start':'justify-end'}`}>
-            <div className={`px-4 py-2 rounded-xl ${props.inSimpleMode === true ? "px-2 py-1 bg-opacity-60" : ""} ${props.role == MessageRole.Assistant ? 'bg-slate-700 mr-10 rounded-tl-none':'bg-slate-200 ml-10 rounded-tr-none'}`}>
-                <Typography.Paragraph ellipsis={props.ellipsis === true ? ELLIPSIS_CONFIG : false} className={`!m-0 p-0 text-base font-light leading-7 ${props.role == MessageRole.Assistant ? ' text-white' : 'text-black'}`}>
+            <div className={`px-4 py-2 rounded-xl ${props.inSimpleMode === true ? `px-2 py-1 ${props.role == MessageRole.Assistant ? 'bg-opacity-60' : 'bg-white/50'}` : ""} ${props.role == MessageRole.Assistant ? 'bg-slate-700 mr-10 rounded-tl-none':'bg-slate-200 ml-10 rounded-tr-none'}`}>
+                <Typography.Paragraph ellipsis={ellipsisConfig} className={`!m-0 p-0 text-base font-light leading-7 ${props.role == MessageRole.Assistant ? ' text-white' : 'text-black'}`}>
                     <Markdown unwrapDisallowed disallowedElements={DISALLOWED_TAGS}>{props.message}</Markdown>
                 </Typography.Paragraph>
                 </div>
@@ -141,13 +142,15 @@ export const ThreadView = (props: {
                         // messages.map((m, i) => <div key={i}>{m.message}</div>) //TODO redesign callouts
                         messages.map((m, i) => <ChatMessageCallout key={m.id} role={m.role} message={m.message}/>)
                     }
-                </div> : <div className="p-6">
+                </div> : <div className="p-6 pt-2">
                         {
-                            messages[messages.length - 1]? <ChatMessageCallout ellipsis message={messages[messages.length - 1].message} 
-                                                                                role={messages[messages.length - 1].role}  inSimpleMode/> : null
+                            messages.length -3 > 0 ? <Divider className="!my-0 !mb-6" plain dashed orientationMargin={0}><span className="text-gray-500">{messages.length - 3} more messages</span></Divider> : null 
+                        }
+                        {
+                            messages.slice(-3).map((message, i) => <ChatMessageCallout key={message.id} ellipsisRows={2} message={message.message} 
+                                                                                role={message.role}  inSimpleMode/>)
                         }
                     </div>}
-
                 {
                     highlighted === true ? <div className="p-4 bg-slate-100 rounded-b-xl">
                     <div className="mb-3 flex gap-x-1">

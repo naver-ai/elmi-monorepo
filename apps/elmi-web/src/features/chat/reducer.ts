@@ -22,9 +22,9 @@ export interface ChatThreadPlaceholder {
 const chatThreadEntityAdapter = createEntityAdapter<ChatThread | ChatThreadPlaceholder>({
     sortComparer: (a, b) => {
         if(a.verse_ordering != b.verse_ordering){
-            return a.verse_ordering - b.verse_ordering
+            return Math.max(-1, Math.min(1, a.verse_ordering - b.verse_ordering))
         }else{
-            return b.line_number - a.line_number
+            return Math.max(-1, Math.min(1, a.line_number - b.line_number))
         }
     }
 });

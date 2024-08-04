@@ -39,7 +39,7 @@ body{
 }
 
 .lyric-panel-layout{
-    @apply w-[50vw] max-w-[640px] mx-auto;
+    @apply max-w-[640px] mx-auto;
 }
 
 .panel-title{
@@ -49,7 +49,6 @@ body{
 .point-gradient-bg{
     @apply bg-gradient-to-r from-amber-500 to-pink-500
 }
-
 
 .point-gradient-bg-light{
     @apply bg-gradient-to-br to-[#ff9f7a] from-[#ec4848]

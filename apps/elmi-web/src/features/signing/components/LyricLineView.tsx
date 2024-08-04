@@ -7,7 +7,7 @@ import { MediaPlayerStatus } from "../../media-player/types"
 import { ChatBubbleLeftIcon, PauseIcon, PlayIcon, HandRaisedIcon, ArrowRightIcon } from "@heroicons/react/20/solid"
 import { useThrottleCallback } from "@react-hook/throttle"
 import { PartialDarkThemeProvider } from "../../../styles"
-import { startNewThread, selectThreadIdByLineId, setActiveThreadLineId } from "../../chat/reducer"
+import { startNewThread, selectThreadIdByLineId, setActiveThreadLineId, selectMessagesByThreadId } from "../../chat/reducer"
 import { useAudioSegmentPositionPercentage } from "../hooks"
 import { Http } from "../../../net/http"
 import { ReferenceVideoView } from "./ReferenceVideoView"
@@ -86,6 +86,12 @@ const LyricLineControlPanel = (props: {lineId: string}) => {
     </div>
 }
 
+const LyricLineChatStatusIndicator = (props: {threadId: string}) => {
+    const numMessages = useSelector(state => selectMessagesByThreadId(state, props.threadId).length)
+    
+    return <div className="flex items-center gap-x-1 px-1 text-slate-500 font-semibold text-sm"><ChatBubbleLeftIcon className="w-4 h-4"/><span>{numMessages}</span></div>
+}
+
 export const LyricLineView = (props: {lineId: string}) => {
     const line = useSelector(state => lineSelectors.selectById(state, props.lineId))
 
@@ -134,10 +140,10 @@ export const LyricLineView = (props: {lineId: string}) => {
     const isInLineLoopMode = useSelector(state => state.mediaPlayer.linePlayInfo != null)
     const isPositionHitting = useSelector(state => state.mediaPlayer.hitLyricTokenInfo?.lineId == props.lineId)
 
-    const inspection = useSelector(state => selectLineInspectionByLineId(state, line?.id))
+    const inspection = useSelector(state => selectLineInspectionByLineId(state, props.lineId))
 
-    const threadId = useSelector(state => selectThreadIdByLineId(state, line?.id))
-    const isThreadActive = useSelector(state => state.chat.activeLineId == line?.id)
+    const threadId = useSelector(state => selectThreadIdByLineId(state, props.lineId))
+    const isThreadActive = useSelector(state => state.chat.activeLineId == props.lineId)
 
     const showChatButton = isSelected === true && threadId == null && isThreadActive == false
 
@@ -234,11 +240,11 @@ export const LyricLineView = (props: {lineId: string}) => {
                     </div>
                     {
                         isSelected === true ? <LyricLineControlPanel lineId={props.lineId}/> : (
-                            inspection != null ? <PartialDarkThemeProvider>
+                            inspection != null && threadId == null ? <PartialDarkThemeProvider>
                                 <Tooltip title={<><span>{inspection.description}</span><br/><span className="font-bold">Click to chat with me about this!</span></>}>
                                     <Button tabIndex={-1} size="small" className="rounded-full aspect-square p-0 bg-rose-400 hover:!bg-rose-300 border-none" 
                                     onClick={onClickInspectionIndicator}><HandRaisedIcon className="w-4 h-4 text-white"/></Button></Tooltip>
-                                </PartialDarkThemeProvider> : null
+                                </PartialDarkThemeProvider> : threadId != null ? <LyricLineChatStatusIndicator threadId={threadId}/> : null
                         )
                     }
                 </div>
@@ -250,7 +256,7 @@ export const LyricLineView = (props: {lineId: string}) => {
                         <PartialDarkThemeProvider>
                             {
                                 inspection != null ? <Button type="text" tabIndex={-1} size="small" icon={<HandRaisedIcon className="w-4 h-4 animate-bounce-emphasized"/>} onClick={onClickInspectionIndicator}><span>Elmi has thoughts on this line</span><ArrowRightIcon className="w-4 h-4"/></Button> : 
-                                <Button type="text" tabIndex={-1} size="small" icon={<ChatBubbleLeftIcon className="w-4 h-4"/>} onClick={onClickChatThreadButton}>Chat<ArrowRightIcon className="w-4 h-4"/></Button>
+                                <Button type="text" tabIndex={-1} size="small" icon={<ChatBubbleLeftIcon className="w-4 h-4"/>} onClick={onClickChatThreadButton}>Start Chat<ArrowRightIcon className="w-4 h-4"/></Button>
                             }
                             
                         </PartialDarkThemeProvider>
