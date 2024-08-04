@@ -92,7 +92,6 @@ async def classify_user_intent(user_input: str)->ChatIntent:
     
 
 # Create a formatted system template string with inference results.
-# def create_system_instruction(intent: ChatIntent, title: str, artist: str, lyric_line: str, result: BaseModel) -> str:
 def create_system_instruction(intent: ChatIntent, title: str, artist: str, lyric_line: str, result: BaseModel, user_name: str, sign_language: str) -> str:
     if intent == ChatIntent.Meaning:
         system_template = '''
@@ -143,6 +142,8 @@ def create_system_instruction(intent: ChatIntent, title: str, artist: str, lyric
 
         Output format:
         Do not include JSON or unnecessary data in your response. Respond with clear, empathetic, and thought-provoking questions.
+        Do not ask more than 2 questions at a time.
+        Keep your responses concise and engaging.
         '''
         return jinja2_formatter(template=system_template, 
                                 line_inspection_results=result.model_dump_json(include={"challenges", "description"}),
@@ -202,8 +203,10 @@ def create_system_instruction(intent: ChatIntent, title: str, artist: str, lyric
 
         Output format:
         Do not include JSON or unnecessary data in your response. Respond with clear, empathetic, and thought-provoking questions.
-        '''
-        # return system_template.format(line_glossing_results=result.model_dump_json(include={"gloss", "gloss_description"}))
+        Do not ask more than 2 questions at a time.
+        Keep your responses concise and engaging.
+         '''
+        
         return jinja2_formatter(template=system_template,
                                line_glossing_results=result.model_dump_json(include={"gloss", "gloss_description"}),
                                title=title,
@@ -262,8 +265,10 @@ def create_system_instruction(intent: ChatIntent, title: str, artist: str, lyric
 
         Output format:
         Do not include JSON or unnecessary data in your response. Respond with clear, empathetic, and thought-provoking questions.
+        Do not ask more than 2 questions at a time.
+        Keep your responses concise and engaging.
         '''
-        #return system_template.format(line_emoting_results=result.model_dump_json(include={"mood", "facial_expression", "body_gesture", "emotion_description"}))
+       
         return jinja2_formatter(template=system_template,
                                line_emoting_results=result.model_dump_json(include={"mood", "facial_expression", "body_gesture", "emotion_description"}),
                                title=title,
@@ -320,8 +325,10 @@ def create_system_instruction(intent: ChatIntent, title: str, artist: str, lyric
 
         Output format:
         Do not include JSON or unnecessary data in your response. Respond with clear, empathetic, and thought-provoking questions.
+        Do not ask more than 2 questions at a time.
+        Keep your responses concise and engaging.
         '''
-        # return system_template.format(line_timing_results=result.model_dump_json(include={"gloss_alts"}))
+       
         return jinja2_formatter(template=system_template,  
                                  line_timing_results=result.model_dump_json(include={"gloss_alts"}),
                                  title=title,
@@ -368,6 +375,10 @@ def create_system_instruction(intent: ChatIntent, title: str, artist: str, lyric
         - Redirecting Off-Topic Chats: ELMI gently guides the conversation back to lyrics interpretation topics, suggesting social interaction with friends for other discussions.
         - Support and Encouragement: EMLI offers continuous support, using her identity to add fun and uniqueness to her encouragement.
         - Your role is to help users with their queries by providing thoughtful responses and guiding them through their thought processes.
+        
+        Output format:
+        Do not ask more than 2 questions at a time.
+        Keep your responses concise and engaging.
         '''
     return jinja2_formatter(template=system_template, 
                             title=title,
