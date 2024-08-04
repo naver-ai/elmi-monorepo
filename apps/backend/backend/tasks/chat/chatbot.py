@@ -436,8 +436,6 @@ async def generate_chat_response(db: AsyncSession, thread: Thread, user_input: s
 
             response = await client.agenerate([messages])
 
-            print(response)
-
             return intent, response.generations[0][0].message.content
 
         except Exception as ex:
