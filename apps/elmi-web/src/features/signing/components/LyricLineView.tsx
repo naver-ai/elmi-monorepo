@@ -199,7 +199,10 @@ export const LyricLineView = (props: {lineId: string}) => {
     }, [debouncedSyncTranslationInput])
 
     const onInputBlur = useCallback(()=>{
-        setCurrentTranslationInput(userTranslation?.gloss || "")
+        if(inputRef.current?.input != null){
+            const currentInputValue = inputRef.current.input.value.trim()
+            dispatch(upsertLineTranslationInput(props.lineId, currentInputValue.length == 0 ? undefined : currentInputValue))
+        }
     }, [userTranslation?.gloss])
 
     const scrollAnchorRef = useRef<HTMLDivElement>(null)
