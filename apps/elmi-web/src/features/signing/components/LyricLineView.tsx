@@ -4,7 +4,8 @@ import { lineInspectionSelectors, lineSelectors, lineTranslationSelectors, setDe
 import { ChangeEventHandler, FocusEventHandler, MouseEventHandler, useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { MediaPlayer } from "../../media-player"
 import { MediaPlayerStatus } from "../../media-player/types"
-import { ChatBubbleLeftIcon, PauseIcon, PlayIcon, HandRaisedIcon, ArrowRightIcon, CheckBadgeIcon, CheckCircleIcon } from "@heroicons/react/20/solid"
+import { ChatBubbleLeftIcon, PauseIcon, PlayIcon, HandRaisedIcon, ArrowRightIcon, CheckBadgeIcon, CheckCircleIcon,  } from "@heroicons/react/20/solid"
+import {LightBulbIcon} from '@heroicons/react/24/solid'
 import { useThrottleCallback } from "@react-hook/throttle"
 import { PartialDarkThemeProvider } from "../../../styles"
 import { startNewThread, selectThreadIdByLineId, setActiveThreadLineId, selectMessagesByThreadId } from "../../chat/reducer"
@@ -273,8 +274,8 @@ export const LyricLineView = (props: {lineId: string}) => {
                         isSelected === true ? <LyricLineControlPanel lineId={props.lineId}/> : (
                             inspection != null && threadId == null ? <PartialDarkThemeProvider>
                                 <Tooltip title={<><span>{inspection.description}</span><br/><span className="font-bold">Click to chat with me about this!</span></>}>
-                                    <Button tabIndex={-1} size="small" className="rounded-full aspect-square p-0 bg-rose-400 hover:!bg-rose-300 border-none" 
-                                    onClick={onClickInspectionIndicator}><HandRaisedIcon className="w-4 h-4 text-white"/></Button></Tooltip>
+                                    <Button tabIndex={-1} size="small" className="rounded-full aspect-square p-0 bg-lime-500 hover:!bg-lime-400 border-none" 
+                                    onClick={onClickInspectionIndicator}><LightBulbIcon className="w-3.5 h-3.5 text-white"/></Button></Tooltip>
                                 </PartialDarkThemeProvider> : threadId != null ? <LyricLineChatStatusIndicator threadId={threadId}/> : null
                         )
                     }
@@ -293,7 +294,7 @@ export const LyricLineView = (props: {lineId: string}) => {
                     showChatButton && <div className="flex justify-end itms-center mt-2">
                         <PartialDarkThemeProvider>
                             {
-                                inspection != null ? <Button type="text" tabIndex={-1} size="small" icon={<HandRaisedIcon className="w-4 h-4 animate-bounce-emphasized"/>} onClick={onClickInspectionIndicator}><span>Elmi has thoughts on this line</span><ArrowRightIcon className="w-4 h-4"/></Button> : 
+                                inspection != null ? <Button type="text" tabIndex={-1} size="small" icon={<LightBulbIcon className="w-4 h-4 animate-bounce-emphasized"/>} onClick={onClickInspectionIndicator}><span>Elmi has thoughts on this line</span><ArrowRightIcon className="w-4 h-4"/></Button> : 
                                 <Button type="text" tabIndex={-1} size="small" icon={<ChatBubbleLeftIcon className="w-4 h-4"/>} onClick={onClickChatThreadButton}>Start Chat<ArrowRightIcon className="w-4 h-4"/></Button>
                             }
                             
