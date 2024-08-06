@@ -1,14 +1,14 @@
 import { Button, Divider, Space } from "antd"
 import { useDispatch, useSelector } from "../../../redux/hooks"
 import { Fragment, useCallback } from "react";
-import { selectLineAnnotationByLineId, setDetailLineId } from "../reducer";
+import { lineAnnotationSelectors, setDetailLineId } from "../reducer";
 import { LeftDoubleArrowIcon } from "../../../components/svg-icons";
 import { LineAnnotation } from "../../../model-types";
 import Markdown from 'react-markdown'
 
 export const LyricDetailPanel = (props: {lineId: string}) => {
 
-    const annotation: LineAnnotation | undefined = useSelector(state => selectLineAnnotationByLineId(state, props.lineId))
+    const annotation: LineAnnotation | undefined = useSelector(state => lineAnnotationSelectors.selectById(state, props.lineId))
 
 
     const dispatch = useDispatch()

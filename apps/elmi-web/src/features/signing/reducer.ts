@@ -1,5 +1,5 @@
 import { createEntityAdapter, createSelector, createSlice } from "@reduxjs/toolkit"
-import { LineAnnotation, LineInspection, LyricLine, ProjectInfo, Song, Verse } from "../../model-types"
+import { LineAnnotation, LineInspection, LineTranslation, LyricLine, ProjectInfo, Song, Verse } from "../../model-types"
 import { PayloadAction } from '@reduxjs/toolkit'
 import { AppState, AppThunk } from "../../redux/store"
 import { Http } from "../../net/http"
@@ -9,13 +9,15 @@ import { MediaPlayer } from "../media-player"
 
 const verseEntityAdapter = createEntityAdapter<Verse>()
 const lineEntityAdapter = createEntityAdapter<LyricLine>()
-const lineAnnotationEntityAdapter = createEntityAdapter<LineAnnotation>()
-const lineInspectionEntityAdapter = createEntityAdapter<LineInspection>()
+const lineAnnotationEntityAdapter = createEntityAdapter({selectId: (m: LineAnnotation) => m.line_id})
+const lineInspectionEntityAdapter = createEntityAdapter({selectId: (m: LineInspection) => m.line_id})
+const lineTranslationEntityAdapter = createEntityAdapter({selectId: (m: LineTranslation) => m.line_id})
 
 const initial_verse_entity_state = verseEntityAdapter.getInitialState()
 const initial_line_entity_state = lineEntityAdapter.getInitialState()
 const initial_line_annotation_entity_state = lineAnnotationEntityAdapter.getInitialState()
 const initial_line_inspection_entity_state = lineInspectionEntityAdapter.getInitialState()
+const initial_line_translation_entity_state = lineTranslationEntityAdapter.getInitialState()
 
 export interface SigningEditorState {
     projectId?: string
@@ -25,10 +27,13 @@ export interface SigningEditorState {
     verseEntityState: typeof initial_verse_entity_state,
     lineEntityState: typeof initial_line_entity_state,
     lineAnnotationEntityState: typeof initial_line_annotation_entity_state,
-    lineInspectionEntityState: typeof initial_line_inspection_entity_state
+    lineInspectionEntityState: typeof initial_line_inspection_entity_state,
+    lineTranslationEntityState: typeof initial_line_translation_entity_state,
     detailLineId?: string | undefined,
     globelMediaPlayerHeight?: number | undefined
-    showScrollToLineButton: boolean
+    showScrollToLineButton: boolean,
+
+    lineTranslationSynchronizationFlags: {[key: string] : boolean | undefined}
 }
 
 const INITIAL_STATE: SigningEditorState = {
@@ -39,10 +44,13 @@ const INITIAL_STATE: SigningEditorState = {
     lineEntityState: initial_line_entity_state,
     lineAnnotationEntityState: initial_line_annotation_entity_state,
     lineInspectionEntityState: initial_line_inspection_entity_state,
+    lineTranslationEntityState: initial_line_translation_entity_state,
     detailLineId: undefined,
     isLineAnnotionLoading: false,
     globelMediaPlayerHeight: undefined,
-    showScrollToLineButton: false
+    showScrollToLineButton: false,
+
+    lineTranslationSynchronizationFlags: {}
 }
 
 interface ProjectDetail{
@@ -53,6 +61,7 @@ interface ProjectDetail{
     lines: Array<LyricLine>
     annotations: Array<LineAnnotation>
     inspections: Array<LineInspection>
+    translations: Array<LineTranslation>
 }
 
 const signingEditorSlice = createSlice({
@@ -70,6 +79,7 @@ const signingEditorSlice = createSlice({
 
             lineAnnotationEntityAdapter.setAll(state.lineAnnotationEntityState, action.payload.annotations)
             lineInspectionEntityAdapter.setAll(state.lineInspectionEntityState, action.payload.inspections)
+            lineTranslationEntityAdapter.setAll(state.lineTranslationEntityState, action.payload.translations)
         },
         setProjectLoadingFlag: (state, action: PayloadAction<boolean>) => {
             state.isProjectLoading = action.payload
@@ -95,6 +105,14 @@ const signingEditorSlice = createSlice({
 
         setShowScrollToLineButton: (state, action: PayloadAction<boolean>) => {
             state.showScrollToLineButton = action.payload
+        },
+
+        upsertTranslation: (state, action: PayloadAction<LineTranslation>) => {
+            lineTranslationEntityAdapter.upsertOne(state.lineTranslationEntityState, action.payload)
+        },
+
+        setLineTranslationSynchronizationFlag: (state, action: PayloadAction<{lineId: string, flag: boolean}>) => {
+            state.lineTranslationSynchronizationFlags[action.payload.lineId] = action.payload.flag
         }
     }
 })
@@ -103,6 +121,8 @@ export const verseSelectors = verseEntityAdapter.getSelectors((state: AppState) 
 export const lineSelectors = lineEntityAdapter.getSelectors((state: AppState) => state.editor.lineEntityState)
 export const lineAnnotationSelectors = lineAnnotationEntityAdapter.getSelectors((state: AppState) => state.editor.lineAnnotationEntityState)
 export const lineInspectionSelectors = lineInspectionEntityAdapter.getSelectors((state: AppState) => state.editor.lineInspectionEntityState)
+export const lineTranslationSelectors = lineTranslationEntityAdapter.getSelectors((state: AppState) => state.editor.lineTranslationEntityState)
+
 
 export const selectLinesByVerseId = createSelector([lineSelectors.selectAll, (state: AppState, verseId: string) => verseId], (lines, verseId) => {
     return lines.filter(line => line.verse_id == verseId)
@@ -110,10 +130,6 @@ export const selectLinesByVerseId = createSelector([lineSelectors.selectAll, (st
 
 export const selectLineIdsByVerseId = createSelector([(state: AppState, verseId: string) => selectLinesByVerseId(state, verseId)], (lines) => {
     return lines.map(line => line.id)
-})
-
-export const selectLineAnnotationByLineId = createSelector([lineAnnotationSelectors.selectAll, (state: AppState, lineId: string) => lineId], (annotations, lineId) => {
-    return annotations.find(annt => annt.line_id == lineId)
 })
 
 export const selectLineInspectionByLineId = createSelector([lineInspectionSelectors.selectAll, (state: AppState, lineId: string) => lineId], (inspections, lineId) => {
@@ -137,6 +153,28 @@ export function fetchProjectDetail(projectId: string): AppThunk {
                 console.log(ex)
             }finally{
                 dispatch(signingEditorSlice.actions.setProjectLoadingFlag(false))
+            }
+        }
+    }
+}
+
+export function upsertLineTranslationInput(lineId: string, gloss: string | undefined): AppThunk {
+    return async (dispatch, getState) => {
+        const state = getState()
+        if(state.auth.token && state.editor.projectId){
+            dispatch(signingEditorSlice.actions.setLineTranslationSynchronizationFlag({lineId, flag: true}))
+
+            try {
+                const resp = await Http.axios.put(Http.getTemplateEndpoint(Http.ENDPOINT_APP_PROJECTS_ID_LINES_ID_TRANSLATION, {project_id: state.editor.projectId, line_id: lineId}), 
+                {gloss}, {headers: Http.getSignedInHeaders(state.auth.token)})
+
+                const updatedTranslation: LineTranslation = resp.data
+
+                dispatch(signingEditorSlice.actions.upsertTranslation(updatedTranslation))                
+            }catch(ex){
+                console.log(ex)
+            }finally{ 
+                dispatch(signingEditorSlice.actions.setLineTranslationSynchronizationFlag({lineId, flag: false}))
             }
         }
     }

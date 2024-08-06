@@ -7,8 +7,8 @@ from pydantic import BaseModel, ConfigDict
 from sqlmodel.ext.asyncio.session import AsyncSession
 from langchain_core.prompts.string import jinja2_formatter
 
-from backend.database.crud.project import fetch_line_annotation_by_line, fetch_line_inspection_by_line
-from backend.database.models import ChatIntent, LineAnnotation, LineInspection, MessageRole, Thread
+from backend.database.crud.project import fetch_line_annotation_by_line, fetch_line_inspection_by_line, fetch_line_translation_by_line
+from backend.database.models import ChatIntent, LineAnnotation, LineInspection, LineTranslation, MessageRole, Thread
 from backend.utils.env_helper import get_env_variable, EnvironmentVariables
 from langchain_openai import ChatOpenAI
 from langchain_core.prompts import PromptTemplate, ChatPromptTemplate
@@ -395,6 +395,7 @@ async def generate_chat_response(db: AsyncSession, thread: Thread, user_input: s
         # Log input parameters
         line_inspection: LineInspection = await fetch_line_inspection_by_line(db, thread.project_id, thread.line_id)
         line_annotation: LineAnnotation = await fetch_line_annotation_by_line(db, thread.project_id, thread.line_id)
+        line_translation: LineTranslation = await fetch_line_translation_by_line(db, thread.project_id, thread.line_id)
 
         song = thread.project.song
         user = thread.project.user

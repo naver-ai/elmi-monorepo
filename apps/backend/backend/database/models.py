@@ -2,7 +2,7 @@ from datetime import datetime
 from enum import StrEnum, auto
 from os import path
 from typing import Literal, Optional, Union
-from pydantic import BaseModel, ConfigDict, computed_field
+from pydantic import BaseModel, ConfigDict, computed_field, field_validator
 from sqlalchemy import DateTime, func
 from sqlmodel import Relationship, SQLModel, Field, UniqueConstraint, Column, JSON
 from nanoid import generate
@@ -100,7 +100,7 @@ class Line(SQLModel, LineInfo, table=True):
     inspection: Optional["LineInspection"] = Relationship(back_populates="line", sa_relationship_kwargs={'lazy': 'selectin'})
     annotation: Optional["LineAnnotation"] = Relationship(back_populates="line", sa_relationship_kwargs={'lazy': 'selectin'})
     thread: Optional['Thread'] = Relationship(back_populates="line", sa_relationship_kwargs={'lazy': 'selectin'})
-
+    translations: list["LineTranslation"] = Relationship(back_populates="line", sa_relationship_kwargs={'lazy': 'selectin'})
 
 class LineIdMixin(BaseModel):
     line_id: str = Field(foreign_key=f"{Line.__tablename__}.id")
@@ -183,6 +183,7 @@ class Project(SQLModel, IdTimestampMixin, UserIdMixin, SongIdMixin, table=True):
 
     inspections: list["LineInspection"] = Relationship(back_populates="project", sa_relationship_kwargs={'lazy': 'selectin'},  cascade_delete=True)
     annotations: list["LineAnnotation"] = Relationship(back_populates="project", sa_relationship_kwargs={'lazy': 'selectin'},  cascade_delete=True)
+    translations: list["LineTranslation"] = Relationship(back_populates="project", sa_relationship_kwargs={'lazy': 'selectin'},  cascade_delete=True)
 
     threads: list["Thread"] = Relationship(back_populates="project", sa_relationship_kwargs={'lazy': 'selectin'},  cascade_delete=True)
     messages: list["ThreadMessage"] = Relationship(back_populates="project", sa_relationship_kwargs={'lazy': 'selectin'})
@@ -246,6 +247,27 @@ class LineAnnotation(SQLModel, IdTimestampMixin, LineIdMixin, ProjectIdMixin, ta
 
     line: Optional["Line"] = Relationship(back_populates="annotation", sa_relationship_kwargs={'lazy': 'selectin'})
     project: Optional["Project"] = Relationship(back_populates="annotations", sa_relationship_kwargs={'lazy': 'selectin'})
+
+
+class LineTranslationInfo(IdTimestampMixin, LineIdMixin, ProjectIdMixin):
+    gloss: str | None = Field(nullable=True, default=None)
+    memo: str | None = Field(nullable=True, default=None)
+
+    @field_validator('gloss', 'memo', mode="before")
+    @classmethod
+    def handle_empty_strings(cls, value)->str | None:
+        print("validate", value)
+        if isinstance(value, str) and value.strip() == '':
+            return None
+        else:
+            return value
+
+# Stores final translation of line
+class LineTranslation(SQLModel, LineTranslationInfo, table=True):
+
+    line: Optional["Line"] = Relationship(back_populates="translations", sa_relationship_kwargs={'lazy': 'selectin'})
+    project: Optional["Project"] = Relationship(back_populates="translations", sa_relationship_kwargs={'lazy': 'selectin'})
+
 
 
 # New models for Chat :)

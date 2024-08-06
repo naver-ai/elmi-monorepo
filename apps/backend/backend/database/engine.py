@@ -30,29 +30,3 @@ db_sessionmaker = make_async_session_maker(engine)
 async def with_db_session() -> AsyncSession:
     async with db_sessionmaker() as session:
         yield session
-
-
-if False:
-    # Function to insert the first inference result into the database
-    async def insert_inference1_result(session: AsyncSession, line_id: str, challenges: list, description: str):
-        inference_result = Inference1Result(
-            line_id=line_id,
-            challenges=challenges,
-            description=description
-        )
-        session.add(inference_result)
-        await session.commit()
-
-    async def insert_combined_result(session: AsyncSession, line_id: str, gloss: str, gloss_description: str, mood: str, facial_expression: str, body_gesture: str, emotion_description: str, gloss_options_with_description: list[GlossDescription]):
-        combined_result = Inference234Result(
-            line_id=line_id,
-            gloss=gloss,
-            gloss_description=gloss_description,
-            mood=mood,
-            facial_expression=facial_expression,
-            body_gesture=body_gesture,
-            emotion_description=emotion_description,
-            gloss_options_with_description=gloss_options_with_description
-        )
-        session.add(combined_result)
-        await session.commit()

@@ -1,10 +1,10 @@
-import { Button, Input, InputRef, Skeleton, Progress, Tooltip } from "antd"
+import { Button, Input, InputRef, Skeleton, Progress, Tooltip, Spin } from "antd"
 import { useDispatch, useSelector } from "../../../redux/hooks"
-import { lineSelectors, selectLineInspectionByLineId, setDetailLineId, setShowScrollToLineButton, toggleDetailLineId } from "../reducer"
-import { FocusEventHandler, MouseEventHandler, useCallback, useEffect, useMemo, useRef, useState } from "react"
+import { lineInspectionSelectors, lineSelectors, lineTranslationSelectors, setDetailLineId, setShowScrollToLineButton, toggleDetailLineId, upsertLineTranslationInput } from "../reducer"
+import { ChangeEventHandler, FocusEventHandler, MouseEventHandler, useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { MediaPlayer } from "../../media-player"
 import { MediaPlayerStatus } from "../../media-player/types"
-import { ChatBubbleLeftIcon, PauseIcon, PlayIcon, HandRaisedIcon, ArrowRightIcon } from "@heroicons/react/20/solid"
+import { ChatBubbleLeftIcon, PauseIcon, PlayIcon, HandRaisedIcon, ArrowRightIcon, CheckBadgeIcon, CheckCircleIcon } from "@heroicons/react/20/solid"
 import { useThrottleCallback } from "@react-hook/throttle"
 import { PartialDarkThemeProvider } from "../../../styles"
 import { startNewThread, selectThreadIdByLineId, setActiveThreadLineId, selectMessagesByThreadId } from "../../chat/reducer"
@@ -13,6 +13,7 @@ import { Http } from "../../../net/http"
 import { ReferenceVideoView } from "./ReferenceVideoView"
 import { useInView } from "react-intersection-observer";
 import { ShortcutManager } from "../../../services/shortcut"
+import { useDebouncedCallback } from "use-debounce"
 
 const LineReferenceVideoView = () => {
 
@@ -140,7 +141,7 @@ export const LyricLineView = (props: {lineId: string}) => {
     const isInLineLoopMode = useSelector(state => state.mediaPlayer.linePlayInfo != null)
     const isPositionHitting = useSelector(state => state.mediaPlayer.hitLyricTokenInfo?.lineId == props.lineId)
 
-    const inspection = useSelector(state => selectLineInspectionByLineId(state, props.lineId))
+    const inspection = useSelector(state => lineInspectionSelectors.selectById(state, props.lineId))
 
     const threadId = useSelector(state => selectThreadIdByLineId(state, props.lineId))
     const isThreadActive = useSelector(state => state.chat.activeLineId == props.lineId)
@@ -173,7 +174,36 @@ export const LyricLineView = (props: {lineId: string}) => {
         }
     }, [line?.id, threadId])
 
+    const userTranslation = useSelector(state => lineTranslationSelectors.selectById(state, props.lineId))
+    const [currentTranslationInput, setCurrentTranslationInput] = useState<string>("")
+    const isTranslationUploading = useSelector(state => state.editor.lineTranslationSynchronizationFlags[props.lineId] === true)
+    
+    const debouncedSyncTranslationInput = useDebouncedCallback(()=>{
+        if(inputRef.current?.input != null){
+            const currentInputValue = inputRef.current.input.value.trim()
+            dispatch(upsertLineTranslationInput(props.lineId, currentInputValue.length == 0 ? undefined : currentInputValue))
+        }
+    }, 700)
+
+    const isTranslationInputDirty = useMemo(()=>{
+        const cleanedInput = currentTranslationInput?.trim() || undefined
+        const cleanedGloss = userTranslation?.gloss?.trim() || undefined
+        return cleanedGloss != cleanedInput && cleanedInput != undefined
+
+    }, [userTranslation?.gloss, currentTranslationInput])
+
+    const onInputChange = useCallback<ChangeEventHandler<HTMLInputElement>>((ev)=>{
+        setCurrentTranslationInput(ev.target.value)
+        debouncedSyncTranslationInput()
+    }, [debouncedSyncTranslationInput])
+
+    const onInputBlur = useCallback(()=>{
+        setCurrentTranslationInput(userTranslation?.gloss || "")
+    }, [userTranslation?.gloss])
+
     const scrollAnchorRef = useRef<HTMLDivElement>(null)
+
+    
 
     useEffect(()=>{
         if(isPositionHitting === true && isInLineLoopMode == false && scrollAnchorRef.current != null){
@@ -216,6 +246,7 @@ export const LyricLineView = (props: {lineId: string}) => {
         })
 
         return () => {
+            debouncedSyncTranslationInput.cancel()
             shortcutEventSubscription.unsubscribe()
             timelineClickEventSubscription.unsubscribe()
         }
@@ -250,7 +281,14 @@ export const LyricLineView = (props: {lineId: string}) => {
                 </div>
                 <Input ref={inputRef} className="interactive rounded-md" 
                     onClickCapture={onClickInput}
-                    onFocusCapture={onFocusInput}/>
+                    onFocusCapture={onFocusInput}
+                    onChange={onInputChange}
+                    onBlur={onInputBlur}
+                    defaultValue={userTranslation?.gloss}
+                    value={currentTranslationInput}
+                    rootClassName="!pr-1 !pl-2"
+                    suffix={userTranslation?.gloss != null ? <Tooltip title={isTranslationUploading ? "Saving..." : (isTranslationInputDirty ? "" :"Your gloss is saved.")}>{isTranslationUploading ? <Spin size="small"/> : (isTranslationInputDirty ? null : <CheckCircleIcon className="w-4 h-4 text-lime-400"/>)}</Tooltip> : null}
+                    />
                 {
                     showChatButton && <div className="flex justify-end itms-center mt-2">
                         <PartialDarkThemeProvider>
