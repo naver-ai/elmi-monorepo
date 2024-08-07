@@ -1,12 +1,13 @@
 import { useDispatch, useSelector } from "../../../redux/hooks"
-import { useCallback, useEffect, useMemo } from "react"
-import { fetchProjectInfos, projectsEntitySelectors } from "../reducer"
+import { useCallback, useEffect, useMemo, useState } from "react"
+import { fetchProjectInfos, fetchSongs, projectsEntitySelectors } from "../reducer"
 import { SignedInScreenFrame } from "../../../components/SignedInScreenFrame"
 import { Card, Image, Space, Spin } from "antd"
 import { useNavigate } from "react-router-dom"
 import { useNetworkImageSource } from "../hooks"
 import { Http } from "../../../net/http"
 import { PlusIcon } from "@heroicons/react/24/solid"
+import { ProjectCreationModal } from "../components/ProjectCreationModal"
 
 const CARD_CLASSNAME = "transition hover:shadow-lg hover:scale-105 cursor-pointer"
 
@@ -42,8 +43,10 @@ const ProjectCard = (props: {id: string}) => {
     </Card>
 }
 
-const NewProjectButton = () => {
-    return <Card bordered={false} size="default" className={CARD_CLASSNAME} cover={<div className="aspect-square bg-slate-100 rounded-t-lg !flex justify-center items-center"><PlusIcon className="w-10 h-10 text-gray-400"/></div>}>
+const NewProjectButton = (props: {
+    onClick: ()=>void
+}) => {
+    return <Card onClick={props.onClick} bordered={false} size="default" className={CARD_CLASSNAME} cover={<div className="aspect-square bg-slate-100 rounded-t-lg !flex justify-center items-center"><PlusIcon className="w-10 h-10 text-gray-400"/></div>}>
         <Card.Meta title={<span className="text-center">Add new project</span>}/>
     </Card>
 }
@@ -52,9 +55,20 @@ export const ProjectsPage = () => {
 
     const dispatch = useDispatch()
 
+    const [isProjectCreationModalOpen, setIsProjectCreationModalOpen] = useState<boolean>(false)
+
     const projectIds = useSelector(projectsEntitySelectors.selectIds)
 
     const isLoadingProjects = useSelector(state => state.projects.loadingProjects)
+
+    const onModalClose = useCallback(()=>{
+        setIsProjectCreationModalOpen(false)
+    }, [])
+
+    const onNewProjectButtonClick = useCallback(()=>{
+        dispatch(fetchSongs())
+        setIsProjectCreationModalOpen(true)
+    }, [])
 
     useEffect(()=>{
         dispatch(fetchProjectInfos())
@@ -66,8 +80,9 @@ export const ProjectsPage = () => {
             {
                 projectIds.map(id => <ProjectCard key={id} id={id}/>)
             }
-            <NewProjectButton/>
+            <NewProjectButton onClick={onNewProjectButtonClick}/>
         </div>
         }
+        <ProjectCreationModal isOpen={isProjectCreationModalOpen} onClose={onModalClose}/>
     </SignedInScreenFrame>
 }

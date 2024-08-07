@@ -5,6 +5,68 @@ export enum SignLanguageType{
     PSE="PSE"
 }
 
+export enum MainAudience {
+    Deaf = "Deaf",
+    Hearing = "Hearing"
+}
+
+export enum AgeGroup {
+    Children = "Children",
+    Adult = "Adult"
+}
+
+export enum LanguageProficiency {
+    Novice = "Novice",
+    Moderate = "Moderate",
+    Expert = "Expert"
+}
+
+export enum SigningSpeed {
+    Slow = "Slow",
+    Moderate = "Moderate",
+    Fast = "Fast"
+}
+
+export enum EmotionalLevel {
+    Calm = "Calm",
+    Moderate = "Moderate",
+    Excited = "Excited"
+}
+
+export enum BodyLanguage {
+    NotUsed = "NotUsed",
+    Moderate = "Moderate",
+    Rich = "Rich"
+}
+
+export enum ClassifierLevel {
+    NotUsed = "NotUsed",
+    Moderate = "Moderate",
+    Rich = "Rich"
+}
+
+export interface ProjectConfiguration {
+    main_audience: MainAudience; // Default: MainAudience.Deaf
+    age_group: AgeGroup; // Default: AgeGroup.Adult
+    main_language: SignLanguageType; // Default: SignLanguageType.ASL
+    language_proficiency: LanguageProficiency; // Default: LanguageProficiency.Moderate
+    signing_speed: SigningSpeed; // Default: SigningSpeed.Moderate
+    emotional_level: EmotionalLevel; // Default: EmotionalLevel.Moderate
+    body_language: BodyLanguage; // Default: BodyLanguage.Moderate
+    classifier_level: ClassifierLevel; // Default: ClassifierLevel.Moderate
+}
+
+// Default values can be assigned when creating an instance of ProjectConfiguration
+export const DEFAULT_PROJECT_CONFIG: ProjectConfiguration = {
+    main_audience: MainAudience.Deaf,
+    age_group: AgeGroup.Adult,
+    main_language: SignLanguageType.ASL,
+    language_proficiency: LanguageProficiency.Moderate,
+    signing_speed: SigningSpeed.Moderate,
+    emotional_level: EmotionalLevel.Moderate,
+    body_language: BodyLanguage.Moderate,
+    classifier_level: ClassifierLevel.Moderate
+};
 export interface User {
     id: string
     callable_name: string

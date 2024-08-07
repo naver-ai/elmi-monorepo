@@ -1,5 +1,6 @@
 from typing import Annotated, Optional
 from nanoid import generate
+from pydantic import BaseModel
 from pydub import AudioSegment
 from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.responses import FileResponse
@@ -8,7 +9,7 @@ from sqlmodel.ext.asyncio.session import AsyncSession
 
 from backend.config import ElmiConfig
 from backend.database.engine import with_db_session
-from backend.database.models import MEDIA_IDENTIFIER_REFERENCE, Line, MediaType, Song, TrimmedMedia
+from backend.database.models import MEDIA_IDENTIFIER_REFERENCE, Line, MediaType, Song, TrimmedMedia, User
 from backend.errors import ErrorType
 from backend.router.app.common import get_signed_in_user
 from os import path
@@ -16,6 +17,16 @@ import numpy as np
 import ffmpeg
 
 router = APIRouter()
+
+class SongInfoSummary(BaseModel):
+    id: str
+    title: str
+    artist: str
+
+@router.get("/songs", response_model=list[SongInfoSummary])
+async def get_songs(user: Annotated[User, Depends(get_signed_in_user)], db: Annotated[AsyncSession, Depends(with_db_session)]):
+    songs: list[Song] = (await db.exec(select(Song))).all()
+    return songs
 
 @router.get("/songs/{song_id}/cover_image", dependencies=[Depends(get_signed_in_user)], response_class=FileResponse)
 def get_cover_image(song_id: str):

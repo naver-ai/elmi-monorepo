@@ -1,12 +1,13 @@
 from datetime import datetime
 from typing import Annotated, Optional
+from backend.tasks.preprocessing import preprocess_song
 from fastapi import APIRouter, status, Depends
 from pydantic import BaseModel, Field
 from sqlmodel import select, desc
 from sqlmodel.ext.asyncio.session import AsyncSession
 
 from backend.database.engine import with_db_session
-from backend.database.models import Line, LineAnnotation, LineInfo, LineInspection, LineTranslation, Project, Song, SongInfo, User, Verse, VerseInfo
+from backend.database.models import Line, LineAnnotation, LineInfo, LineInspection, LineTranslation, Project, ProjectConfiguration, Song, SongInfo, User, Verse, VerseInfo
 from backend.router.app.common import get_signed_in_user
 from backend.database.crud.project import fetch_line_annotations_by_project, fetch_line_inspections_by_project, fetch_line_translation_by_line, fetch_line_translations_by_project
 from backend.router.app.project.chat import router as chatRouter
@@ -41,6 +42,34 @@ class ProjectDetails(BaseModel):
     translations: list[LineTranslation]
     annotations: list[LineAnnotation]
     inspections: list[LineInspection]
+
+class ProjectCreationArgs(ProjectConfiguration):
+    song_id: str
+
+
+@router.post("/new", response_model=ProjectDetails)
+async def create_project(
+    args: ProjectCreationArgs,
+    user: Annotated[User, Depends(get_signed_in_user)], 
+                       db: Annotated[AsyncSession, Depends(with_db_session)]):
+    
+    new_project = Project(song_id=args.song_id, user_id=user.id, user_settings=ProjectConfiguration.model_validate(args.model_dump(exclude={"song_id"})))
+    db.add(new_project)
+    await db.commit()
+    await db.refresh(new_project)
+    await preprocess_song(new_project.id, db, force=False)
+
+    return ProjectDetails(
+                id=new_project.id,
+                last_accessed_at=new_project.last_accessed_at,
+                song=new_project.song,
+                verses=new_project.song.verses,
+                lines=[line for verse in new_project.song.verses for line in verse.lines],
+                translations=[],
+                annotations=new_project.annotations,
+                inspections=new_project.inspections
+            )
+
 
 
 @router.get("/{project_id}", response_model=ProjectDetails)
