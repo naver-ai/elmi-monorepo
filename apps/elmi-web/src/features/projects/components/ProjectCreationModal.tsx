@@ -47,10 +47,12 @@ export const ProjectCreationModal = (props: {
     const creatingProject = useSelector(state => state.projects.creatingProject)
     const songs = useSelector(songEntitySelectors.selectAll)
 
+    const userSignLanguage = useSelector(state => state.auth.user?.sign_language)
+    
     const { control, handleSubmit, setValue } = useForm({
         resolver: yupResolver(projectConfigurationSchema),
         reValidateMode: 'onChange',
-        defaultValues: {songId: undefined, ...DEFAULT_PROJECT_CONFIG}
+        defaultValues: {songId: undefined, ...DEFAULT_PROJECT_CONFIG, main_language: userSignLanguage}
     })
 
     const songSelectOptions: Array<DefaultOptionType> = useMemo(()=>{
@@ -97,7 +99,7 @@ export const ProjectCreationModal = (props: {
                     </FormItem>
 
                     {
-                        Object.keys(CONFIG_OPTS).map(config_key => <FormItem key={config_key} control={control} name={config_key as any} 
+                        Object.keys(CONFIG_OPTS).map(config_key => <FormItem key={config_key} control={control} name={config_key as any} labelAlign="left" labelCol={{span:8}}
                             label={<span className="font-semibold">{changeCase.sentenceCase(config_key)}</span>}>
                         <Segmented options={CONFIG_OPTS[config_key]}/>
                     </FormItem>)
