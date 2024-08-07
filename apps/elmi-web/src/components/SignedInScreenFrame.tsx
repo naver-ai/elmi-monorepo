@@ -1,7 +1,7 @@
 import { Button, Dropdown, Layout, MenuProps } from "antd"
 import { useDispatch, useSelector } from "../redux/hooks"
 import { useMemo } from "react"
-import { initializeAuth } from "../features/auth/reducer"
+import { signOut } from "../features/auth/reducer"
 
 const UserProfile = () => {
 
@@ -19,7 +19,7 @@ const UserProfile = () => {
             onClick: (ev) => {
                 switch (ev.key) {
                     case "logout":
-                        dispatch(initializeAuth())
+                        dispatch(signOut())
                         break;
                 }
             }

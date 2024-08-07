@@ -7,6 +7,9 @@ import { Http } from '../../net/http';
 import { jwtDecode } from 'jwt-decode';
 import { ElmiError } from '../../error';
 import { AxiosError } from 'axios';
+import { initializeEditorState } from '../signing/reducer';
+import { initializeChatState } from '../chat/reducer';
+import { initializeProjectList } from '../projects/reducer';
 
 export interface AuthState {
   isAuthorizing: boolean;
@@ -112,6 +115,15 @@ export function loginWithPasscode(code: string, onSignedIn?: ()=>void): AppThunk
         dispatch(authSlice.actions._authorizingFlagOff());
     }
   };
+}
+
+export function signOut(): AppThunk {
+  return (dispatch, getState) => {
+    dispatch(initializeChatState())
+    dispatch(initializeEditorState())
+    dispatch(initializeProjectList())
+    dispatch(authSlice.actions._initialize())
+  }
 }
 
 const reducer = persistReducer(

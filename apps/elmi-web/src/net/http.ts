@@ -17,6 +17,8 @@ export class Http{
 
     static ENDPOINT_APP_PROJECTS =`${this.ENDPOINT_APP}/projects`
 
+    static ENDPOINT_APP_PROJECTS_NEW =`${this.ENDPOINT_APP_PROJECTS}/new`
+
     static ENDPOINT_APP_PROJECTS_ID = `${this.ENDPOINT_APP_PROJECTS}/{project_id}`
     static ENDPOINT_APP_PROJECTS_ID_LINES_ID = `${this.ENDPOINT_APP_PROJECTS_ID}/lines/{line_id}`
     static ENDPOINT_APP_PROJECTS_ID_LINES_ID_TRANSLATION = `${this.ENDPOINT_APP_PROJECTS_ID_LINES_ID}/translation`
