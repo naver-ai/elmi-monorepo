@@ -50,7 +50,7 @@ async def start_thread(args: ThreadCreate,
 
     thread = Thread(line_id=args.line_id, project_id=project.id)
 
-    print(f"Create new thread - {thread.id}")
+    print(f"Create new thread - {thread.id}, Project Id: {project.id}")
 
     db.add(thread)
     await db.commit()

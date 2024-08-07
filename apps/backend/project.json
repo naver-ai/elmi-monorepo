@@ -77,6 +77,14 @@
       }
     },
 
+    "admin": {
+      "executor": "@nxlv/python:run-commands",
+      "options": {
+        "command": "poetry run python backend/admin_console.py",
+        "cwd": "apps/backend"
+      }
+    },
+
     "test_media_download": {
       "executor": "@nxlv/python:run-commands",
       "options": {
