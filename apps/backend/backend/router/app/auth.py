@@ -1,6 +1,6 @@
-from typing import Annotated
+from typing import Annotated, Optional
 from fastapi import APIRouter, Depends, HTTPException, status
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from sqlmodel import select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
@@ -48,3 +48,30 @@ async def login_with_code(credential: LoginCodeCredential, db: Annotated[AsyncSe
 @router.get("/verify", dependencies=[Depends(get_signed_in_user)])
 async def verify():
     return status.HTTP_200_OK
+
+class ProfileArgs(BaseModel):
+
+    callable_name: Optional[str] = Field(default=None, exclude_default=True)
+    sign_language: Optional[SignLanguageType] = Field(default=None, exclude_default=True)
+
+    def name_is_set(self) -> bool:
+        return 'callable_name' in self.model_fields_set
+
+    def language_is_set(self) -> bool:
+        return 'sign_language' in self.model_fields_set
+
+@router.put("/profile", dependencies=[Depends(get_signed_in_user)], response_model=User)
+async def update_profile(args: ProfileArgs, 
+                         user: Annotated[User, Depends(get_signed_in_user)],
+                         db: Annotated[AsyncSession, Depends(with_db_session)]):
+    if args.name_is_set():
+        user.callable_name = args.callable_name
+    
+    if args.language_is_set():
+        user.sign_language = args.sign_language
+    
+    db.add(user)
+    await db.commit()
+    await db.refresh(user)
+    
+    return user

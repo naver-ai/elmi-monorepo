@@ -60,7 +60,10 @@ const authSlice = createSlice({
   },
 });
 
-export function loginWithPasscode(code: string, onSignedIn?: ()=>void): AppThunk {
+export function loginWithPasscode(
+  code: string,
+  onSignedIn?: () => void
+): AppThunk {
   return async (dispatch, getState) => {
     dispatch(authSlice.actions._authorizingFlagOn());
 
@@ -96,11 +99,11 @@ export function loginWithPasscode(code: string, onSignedIn?: ()=>void): AppThunk
         })
       );
 
-      console.log(decoded)
+      console.log(decoded);
 
-      requestAnimationFrame(()=>{
-        onSignedIn?.()
-      })
+      requestAnimationFrame(() => {
+        onSignedIn?.();
+      });
     } catch (ex) {
       console.log(ex);
       let error = ElmiError.Unknown;
@@ -113,29 +116,62 @@ export function loginWithPasscode(code: string, onSignedIn?: ()=>void): AppThunk
       }
       dispatch(authSlice.actions._setError(error));
     } finally {
-        dispatch(authSlice.actions._authorizingFlagOff());
+      dispatch(authSlice.actions._authorizingFlagOff());
     }
   };
 }
 
 export function signOut(): AppThunk {
   return (dispatch, getState) => {
-    dispatch(initializeChatState())
-    dispatch(initializeEditorState())
-    dispatch(initializeProjectList())
-    dispatch(authSlice.actions._initialize())
-  }
+    dispatch(initializeChatState());
+    dispatch(initializeEditorState());
+    dispatch(initializeProjectList());
+    dispatch(authSlice.actions._initialize());
+  };
+}
+
+export function updateProfile(
+  callableName: string | undefined,
+  signLanguage: string | undefined
+): AppThunk {
+  return async (dispatch, getState) => {
+    const state = getState();
+
+    if (state.auth.token) {
+      try {
+        const params: any = {};
+        if (callableName != null) {
+          params['callable_name'] = callableName;
+        }
+
+        if (signLanguage != null) {
+          params['sign_language'] = signLanguage;
+        }
+
+        const resp = Http.axios.put(Http.ENDPOINT_APP_AUTH_PROFILE, params, {
+          headers: Http.getSignedInHeaders(state.auth.token),
+        });
+
+        const user = (await resp).data;
+        dispatch(
+          authSlice.actions._setUserInfo({ token: state.auth.token, user })
+        );
+      } catch (ex) {
+      } finally {
+      }
+    }
+  };
 }
 
 const reducer = persistReducer(
   {
     key: 'root',
-    whitelist: ["token", "user"],
+    whitelist: ['token', 'user'],
     storage,
   },
   authSlice.reducer
 );
 
-export const {_initialize: initializeAuth} = authSlice.actions
+export const { _initialize: initializeAuth } = authSlice.actions;
 
 export default reducer;

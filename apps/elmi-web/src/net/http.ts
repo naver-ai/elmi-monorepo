@@ -15,6 +15,9 @@ export class Http{
 
     static ENDPOINT_APP_AUTH_VERIFY =`${this.ENDPOINT_APP_AUTH}/verify`
 
+
+    static ENDPOINT_APP_AUTH_PROFILE =`${this.ENDPOINT_APP_AUTH}/profile`
+
     static ENDPOINT_APP_PROJECTS =`${this.ENDPOINT_APP}/projects`
 
     static ENDPOINT_APP_PROJECTS_NEW =`${this.ENDPOINT_APP_PROJECTS}/new`
