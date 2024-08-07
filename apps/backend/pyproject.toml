@@ -49,6 +49,7 @@ readme = 'README.md'
   stringcase = "^1.2.0"
   retry = "^0.9.2"
   ffmpeg-python = "^0.2.0"
+  gunicorn = "^22.0.0"
 
   [tool.poetry.group.dev.dependencies]
   autopep8 = "2.0.2"

@@ -69,6 +69,13 @@
         "cwd": "apps/backend"
       }
     },
+    "run-prod": {
+      "executor": "@nxlv/python:run-commands",
+      "options": {
+        "command": "poetry run gunicorn --config backend/gunicorn.config.py backend.server:app",
+        "cwd": "apps/backend"
+      }
+    },
 
     "test_media_download": {
       "executor": "@nxlv/python:run-commands",
