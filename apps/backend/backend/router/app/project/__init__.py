@@ -23,7 +23,7 @@ class ProjectInfo(BaseModel):
     song_description: str | None
     last_accessed_at: int | None
 
-@router.get("/", response_model=list[ProjectInfo])
+@router.get("/all", response_model=list[ProjectInfo])
 async def get_projects(user: Annotated[User, Depends(get_signed_in_user)], 
                        db: Annotated[AsyncSession, Depends(with_db_session)]):
     query = select(Project, Song).where(Project.user_id == user.id, Project.song_id == Song.id).order_by(desc(Project.last_accessed_at))

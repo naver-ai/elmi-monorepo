@@ -20,6 +20,8 @@ export class Http{
 
     static ENDPOINT_APP_PROJECTS =`${this.ENDPOINT_APP}/projects`
 
+    static ENDPOINT_APP_PROJECTS_ALL =`${this.ENDPOINT_APP_PROJECTS}/all`
+    
     static ENDPOINT_APP_PROJECTS_NEW =`${this.ENDPOINT_APP_PROJECTS}/new`
 
     static ENDPOINT_APP_PROJECTS_ID = `${this.ENDPOINT_APP_PROJECTS}/{project_id}`
@@ -73,6 +75,7 @@ export class Http{
                 baseURL: `http://${import.meta.env.VITE_BACKEND_HOSTNAME}:${import.meta.env.VITE_BACKEND_PORT}/api/v1`
               })
         }
+        console.log(this._axiosInstance.defaults.baseURL)
         return this._axiosInstance!
     }
 
