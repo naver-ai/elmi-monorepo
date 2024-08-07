@@ -97,7 +97,7 @@ export const ProjectCreationModal = (props: {
                     </FormItem>
 
                     {
-                        Object.keys(CONFIG_OPTS).map(config_key => <FormItem key={config_key} control={control} name={config_key as any} 
+                        Object.keys(CONFIG_OPTS).map(config_key => <FormItem key={config_key} control={control} name={config_key as any} labelAlign="left" labelCol={{span:8}}
                             label={<span className="font-semibold">{changeCase.sentenceCase(config_key)}</span>}>
                         <Segmented options={CONFIG_OPTS[config_key]}/>
                     </FormItem>)

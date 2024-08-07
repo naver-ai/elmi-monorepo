@@ -69,8 +69,8 @@ export const DEFAULT_PROJECT_CONFIG: ProjectConfiguration = {
 };
 export interface User {
     id: string
-    callable_name: string
-    sign_language: SignLanguageType
+    callable_name?: string | undefined
+    sign_language?: SignLanguageType | undefined
 }
 
 export interface ProjectInfo {

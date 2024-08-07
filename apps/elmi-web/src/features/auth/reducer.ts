@@ -75,11 +75,12 @@ export function loginWithPasscode(code: string, onSignedIn?: ()=>void): AppThunk
         }
       );
 
-      const { jwt, sign_language } = tokenResponse.data;
+      const { jwt } = tokenResponse.data;
 
       const decoded = jwtDecode<{
         sub: string;
-        callable_name: string;
+        callable_name?: string;
+        sign_language?: string;
         iat: number;
         exp: number;
       }>(jwt);
@@ -88,14 +89,14 @@ export function loginWithPasscode(code: string, onSignedIn?: ()=>void): AppThunk
         authSlice.actions._setUserInfo({
           user: {
             id: decoded.sub,
-            sign_language,
+            sign_language: decoded.sign_language as any,
             callable_name: decoded.callable_name,
           },
           token: jwt,
         })
       );
 
-      console.log(decoded, sign_language)
+      console.log(decoded)
 
       requestAnimationFrame(()=>{
         onSignedIn?.()

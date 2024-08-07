@@ -22,7 +22,7 @@ async def create_test_db_entities():
                 
             async with db.begin_nested():
                 print("Create test user...")
-                user = User(alias="test", callable_name="Sue Yoo", sign_language=SignLanguageType.ASL, passcode="12345")
+                user = User(alias="test", callable_name="Sue", sign_language=SignLanguageType.ASL, passcode="12345")
                 project1 = Project(song=song1, 
                                   user=user
                     )

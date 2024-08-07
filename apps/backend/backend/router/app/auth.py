@@ -22,7 +22,6 @@ class LoginCodeCredential(BaseModel):
 
 class AuthenticationResult(BaseModel):
     jwt: str
-    sign_language: SignLanguageType
 
 @router.post("/login", response_model=AuthenticationResult)
 async def login_with_code(credential: LoginCodeCredential, db: Annotated[AsyncSession, Depends(with_db_session)]):
@@ -35,12 +34,12 @@ async def login_with_code(credential: LoginCodeCredential, db: Annotated[AsyncSe
             parcel = {
                 "sub": user.id,
                 "callable_name": user.callable_name,
+                "sign_language": user.sign_language,
                 "iat": issued_at,
                 "exp": issued_at + (365 * 24 * 3600)
             }
             
-            return AuthenticationResult(jwt=jwt.encode(parcel, get_env_variable(EnvironmentVariables.APP_AUTH_SECRET), algorithm='HS256'), 
-                                        sign_language=user.sign_language)
+            return AuthenticationResult(jwt=jwt.encode(parcel, get_env_variable(EnvironmentVariables.APP_AUTH_SECRET), algorithm='HS256'))
     except ValueError as ex:
         print(ex)
         raise HTTPException(status_code=400, detail=ErrorType.NoSuchUser)

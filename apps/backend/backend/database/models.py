@@ -107,8 +107,8 @@ class LineIdMixin(BaseModel):
 
 class SharableUserInfo(IdTimestampMixin):
     
-    callable_name: Optional[str] = Field(nullable=True)
-    sign_language: SignLanguageType = Field(default=SignLanguageType.ASL, nullable=False)
+    callable_name: Optional[str] = Field(nullable=True, default=None)
+    sign_language: Optional[SignLanguageType] = Field(default=None, nullable=True)
 
 
 class User(SQLModel, SharableUserInfo, table=True):

@@ -414,7 +414,7 @@ async def generate_chat_response(db: AsyncSession, thread: Thread, user_input: s
                 intent = ChatIntent.Other 
         
         user_name = user.callable_name or user.alias
-        sign_language = user.sign_language        
+        sign_language = thread.project.user_settings.main_language or user.sign_language        
          
         if intent == ChatIntent.Meaning:
             system_instruction = create_system_instruction(intent, song.title, song.artist, line_annotation.line.lyric, line_inspection, user_name, sign_language)
