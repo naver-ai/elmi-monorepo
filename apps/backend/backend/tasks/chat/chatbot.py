@@ -44,10 +44,10 @@ class IntentClassifier(ChainMapper[str, IntentClassification]):
     You are a helpful assistant that classifies user queries into one of the following categories:
 
     1. Meaning: Questions about understanding or interpreting the lyrics.
-    2. Glossing: Questions about how to sign specific words or phrases. ASL translation. 
+    2. Glossing: Questions about how to sign specific words or phrases. {{sign_language}} translation. 
     If there's already user created gloss, Questions about how to improve their gloss.
     3. Emoting: Questions about expressing emotions through facial expressions and body language.
-    4. Timing: Questions about the timing or rhythm of the gloss, including changing and adjusting the gloss (shorter or longer).
+    4. Timing: Questions about the timing of the gloss, including changing and adjusting the gloss (shorter or longer).
 
     Classify the user query into one of these categories:
     - Meaning
@@ -58,7 +58,7 @@ class IntentClassifier(ChainMapper[str, IntentClassification]):
                          
     Here are some examples of user queries for each category:
     - Meaning: "What is the deeper meaning of this line?"
-    - Glossing: "How do I sign this specific line in ASL?" "Give me feedback on my gloss."
+    - Glossing: "How do I sign this specific line in {{sign_language}}?" "Give me feedback on my gloss."
     - Emoting: "How can I convey the emotion in this line?"
     - Timing: "Can you show me how to modify the gloss?" "How can I make a longer/shorter gloss?"
 
@@ -134,13 +134,13 @@ def create_system_instruction(intent: ChatIntent, title: str, artist: str, lyric
 
         Support and Encouragement:
         - EMLI offers continuous support, using her identity to add fun and uniqueness to her encouragement.
-        For additional assistance, she reminds participants to reach out to the study team.
+
 
         Your role:
-        {% if line_inspection_results is not none -%} Given the note on the line above, {%- else %} Considering the lyric line, {%- endif %} you will create some thought-provoking questions for users and start a discussion with the user about the meaning of the lyrics. 
+        {% if line_inspection_results is not none -%} Given the note on the line above, {%- else %} Considering the lyric line, 
+        {%- endif %} you will create some thought-provoking questions for users and start a discussion with the user about the meaning of the lyrics. 
         Your role is to help users to come up with their idea.
         When you suggest something, make sure to ask if the user wants other things.
-
 
         Output format:
         Do not include JSON or unnecessary data in your response. Respond with clear, empathetic, and thought-provoking questions.
@@ -208,7 +208,9 @@ def create_system_instruction(intent: ChatIntent, title: str, artist: str, lyric
 
 
             Output format:
-            Do not include JSON or unnecessary data in your response. Respond with clear, empathetic, and thought-provoking questions.
+            Do not include JSON or unnecessary data in your response. 
+            Do not talk about emoting or timing as a first response.
+            Respond with clear, empathetic, and thought-provoking questions.
             First start by recapping the {{line_translation_results}}.
             Do not ask more than 2 questions at a time.
             Keep your responses concise and engaging.
@@ -236,12 +238,10 @@ def create_system_instruction(intent: ChatIntent, title: str, artist: str, lyric
             - The conversation is about the lyric line, "{{lyric_line}}"
             - You are assisting {{user_name}} with translating the lyrics to {{sign_language}} gloss.
 
-            You start by prompting questions to users.
-
             You are answering to questions such as:
-            "How do you sign this specific line in ASL?"
-            "What is the ASL translation for the line?"
-            "Can you show me the ASL signs for this line?"
+            "How do you sign this specific line in {{sign_language}}?"
+            "What is the {{sign_language}} translation for the line?"
+            "Can you show me the {{sign_language}} signs for this line?"
 
 
             You are using the outputs from the previous note on the line about glossing:
@@ -271,7 +271,10 @@ def create_system_instruction(intent: ChatIntent, title: str, artist: str, lyric
 
 
             Output format:
-            Do not include JSON or unnecessary data in your response. Respond with clear, empathetic, and thought-provoking questions.
+            Do not include JSON or unnecessary data in your response. 
+            Respond with clear, empathetic, and thought-provoking questions.
+            Do not talk about emoting or timing as a first response. 
+            Make sure to end with the suggested gloss.
             Do not ask more than 2 questions at a time.
             Keep your responses concise and engaging.
             '''
@@ -299,8 +302,6 @@ def create_system_instruction(intent: ChatIntent, title: str, artist: str, lyric
             - You are currently talking about the song "{{title}}" by "{{artist}}."
             - The conversation is about the lyric line, "{{lyric_line}}"
             - You are assisting {{user_name}} with performing {{sign_language}} gloss.
-
-            You start by mentioning {{user_translation}}
 
             You are answering to questions such as:
             "How can convey the emotion in this line?"
@@ -417,8 +418,6 @@ def create_system_instruction(intent: ChatIntent, title: str, artist: str, lyric
             You are not giving all the possible answers, instead, listen to what the users are thinking and ask them to reflect on little things a bit more (What does the user want?)
             The user decides whether or not they care to engage in further chat.
 
-            You start by mentioning {{user_translation}}.
-
             - You are currently talking about the song "{{title}}" by "{{artist}}."
             - The conversation is about the lyric line, "{{lyric_line}}"
             - You are assisting {{user_name}} with adjusting the {{sign_language}} gloss.
@@ -453,12 +452,10 @@ def create_system_instruction(intent: ChatIntent, title: str, artist: str, lyric
             When you suggest something, make sure to ask if the user wants other things.
 
             Output format:
-            Do not include JSON or unnecessary data in your response. Respond with clear, empathetic, and thought-provoking questions.
+            Do not include JSON or unnecessary data in your response. 
+            Respond with clear, empathetic, and thought-provoking questions.
             Do not ask more than 2 questions at a time.
-            "gloss_short_ver": string // An alternative of the gloss translation for the line of lyrics, shorter than the reference glosses.
-            "gloss_description_short_ver": string // The description on the short version of gloss. Do NOT mention it is shorter or longer version. Explain the gloss as if it is stand-alone.
-            "gloss_long_ver": string // An alternative of the gloss translation for the line of lyrics, longer than the reference glosses.
-            "gloss_description_long_ver": string // The description on the long version of gloss. Do NOT mention it is shorter or longer version. Explain the gloss as if it is stand-alone. 
+            Do not mention expected time (sec).
             Keep your responses concise and engaging.
             '''
         
@@ -517,8 +514,10 @@ def create_system_instruction(intent: ChatIntent, title: str, artist: str, lyric
             When you suggest something, make sure to ask if the user wants other things.
 
             Output format:
-            Do not include JSON or unnecessary data in your response. Respond with clear, empathetic, and thought-provoking questions.
+            Do not include JSON or unnecessary data in your response. 
+            Respond with clear, empathetic, and thought-provoking questions.
             Do not ask more than 2 questions at a time.
+            Do not mention expected time (sec).
             Keep your responses concise and engaging.
             '''
         
@@ -550,7 +549,7 @@ def create_system_instruction(intent: ChatIntent, title: str, artist: str, lyric
 
         Thus, you will need to adapt your responses to the user's query and provide the necessary guidance to below categories:
         1. Meaning: Questions about understanding or interpreting the lyrics.
-        2. Glossing: Questions about how to sign specific words or phrases. ASL translation.
+        2. Glossing: Questions about how to sign specific words or phrases. {{sign_language}} translation.
         3. Emoting: Questions about expressing emotions through facial expressions and body language.
         4. Timing: Questions about the timing or rhythm of the gloss, including changing and adjusting the gloss (shorter or longer).
 
@@ -601,13 +600,16 @@ async def generate_chat_response(db: AsyncSession, thread: Thread, user_input: s
                 print(f"Classified intent: {intent}")
             elif line_inspection is not None:
                 intent = ChatIntent.Meaning
-            else:
+        else:
                 intent = ChatIntent.Other
         
         user_name = user.callable_name or user.alias
         sign_language = thread.project.user_settings["main_language"] or user.sign_language
         user_translation = line_translation.gloss if line_translation else None
         print(f"User's gloss: {user_translation}. Sign language: {sign_language}") 
+
+        # Initialize system_instruction with a default value
+        system_instruction = ""
 
          
         if intent == ChatIntent.Meaning:
