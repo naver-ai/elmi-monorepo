@@ -604,7 +604,7 @@ async def generate_chat_response(db: AsyncSession, thread: Thread, user_input: s
                 intent = ChatIntent.Other
         
         user_name = user.callable_name or user.alias
-        sign_language = thread.project.user_settings["main_language"] or user.sign_language
+        sign_language = thread.project.safe_user_settings.main_language or user.sign_language
         user_translation = line_translation.gloss if line_translation else None
         print(f"User's gloss: {user_translation}. Sign language: {sign_language}") 
 

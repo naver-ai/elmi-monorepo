@@ -30,7 +30,7 @@ async def preprocess_song(project_id: str, db: AsyncSession, force: bool = True)
 
                 processing_id = generate(size=8)
 
-                user_settings = ProjectConfiguration(**project.user_settings)
+                user_settings = project.safe_user_settings
 
                 #lines = [line for verse in project.song.verses for line in verse.lines]
 

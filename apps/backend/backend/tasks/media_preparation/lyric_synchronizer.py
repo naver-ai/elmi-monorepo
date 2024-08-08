@@ -203,7 +203,12 @@ class LyricSynchronizer:
 
             if max(highest_similarity, highest_similarity_with_stitched_subtitles) > 40:
                 if highest_similarity >= highest_similarity_with_stitched_subtitles:
-                    cand_highest_similarity = candidates[similarities.index(highest_similarity)]
+                    if similarities[0] == similarities[1] == highest_similarity:
+                        print("There might be skipped repeatedness in the subtitles.")
+                        cand_highest_similarity = candidates[1]
+                    else:         
+                        cand_highest_similarity = candidates[similarities.index(highest_similarity)]
+                    
                     subt_idx = merged.index(cand_highest_similarity)
                     merged[subt_idx].original_lyric_ids.append(line_i)
                     last_subtitle_idx_paired = subt_idx
@@ -250,18 +255,24 @@ class LyricSynchronizer:
                         last_subtitle_idx_paired = cand1_index
                 else:
                     print("Did not find the lyrics line match. Make a new bridge subtitle...")
-                    merged.insert(last_subtitle_idx_paired+1, SyncedLyricSegment(
+                    print("Before:", merged[last_subtitle_idx_paired])
+                    print("After:", merged[last_subtitle_idx_paired + 1])
+                    segment = SyncedLyricSegment(
                         start=merged[last_subtitle_idx_paired].end,
-                        end=merged[last_subtitle_idx_paired + 1].start if last_subtitle_idx_paired < len(merged) - 1 else song_duration_sec,
+                        end=merged[last_subtitle_idx_paired + 1].start if (last_subtitle_idx_paired < len(merged) - 1 and line_i < len(lyrics.lines) - 1) else song_duration_sec,
                         text=lyric_line.text,
                         original_lyric_ids=[line_i]
-                    ))
+                    )
+                    print("new bridge segment: ", segment)
+                    merged.insert(last_subtitle_idx_paired+1, segment)
                     last_subtitle_idx_paired += 1
 
 
         for seg in merged:
             if len(seg.original_lyric_ids)>0:
-                seg.text = " ".join([lyrics.lines[lyric_line_id].text for lyric_line_id in seg.original_lyric_ids]) 
+                seg.text = " ".join([lyrics.lines[lyric_line_id].text for lyric_line_id in seg.original_lyric_ids])
+
+        merged = [seg for seg in merged if len(seg.original_lyric_ids) > 0]
 
 
         print(json.dumps([l.model_dump() for l in merged], indent=4))
@@ -276,12 +287,12 @@ class LyricSynchronizer:
         segments = []        
         
         for lyric_segment in synced_lyrics:
+
+            print(f"Sync word-level lyrics - {lyric_segment.text}, audio range: {lyric_segment.start} - {lyric_segment.end}")
             audio_segment = audio[lyric_segment.start * 1000 : lyric_segment.end * 1000]
             buffer = BytesIO()
             buffer.name="audio.mp3"
             audio_segment.export(buffer, format="mp3")
-
-            print(f"Try dictating segment - {lyric_segment.text}, audio range: {lyric_segment.start} - {lyric_segment.end}")
 
             retryLeft = 10
             maximum_similarity: float = -100

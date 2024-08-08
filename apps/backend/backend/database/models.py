@@ -45,7 +45,14 @@ class Song(SQLModel, SongInfo, table=True):
     projects: list['Project'] = Relationship(back_populates="song", sa_relationship_kwargs={'lazy': 'selectin'})
     verses: list['Verse'] = Relationship(back_populates="song", sa_relationship_kwargs={'lazy': 'selectin'})
     trimmed_media: list['TrimmedMedia'] = Relationship(back_populates="song", sa_relationship_kwargs={'lazy': 'selectin'})
-    
+    whitelist: list['SongWhitelistItem'] = Relationship(back_populates="song", sa_relationship_kwargs={'lazy': 'selectin'}, cascade_delete=True)
+
+    def is_whitelisted_to_user(self, user_id: str)->bool:
+        whitelist = self.whitelist
+        if len(whitelist) == 0:
+            return True
+        else:
+            return next((w for w in whitelist if w.user_id == user_id), None) is not None
 
     def get_audio_file_path(self)->str:
         return path.join(ElmiConfig.get_song_dir(self.id), self.audio_filename)
@@ -70,6 +77,7 @@ class Song(SQLModel, SongInfo, table=True):
 
 class SongIdMixin(BaseModel):
     song_id: str = Field(foreign_key=f"{Song.__tablename__}.id")
+
 
 class TimestampRangeMixin(BaseModel):
     start_millis: Optional[int] = Field(ge=0, default=None)
@@ -119,6 +127,12 @@ class User(SQLModel, SharableUserInfo, table=True):
 
 class UserIdMixin(BaseModel):
     user_id: str = Field(foreign_key=f"{User.__tablename__}.id")
+
+
+class SongWhitelistItem(SQLModel, IdTimestampMixin, SongIdMixin, UserIdMixin, table=True):
+    active: bool = Field(default=True)
+
+    song: Song = Relationship(back_populates='whitelist', sa_relationship_kwargs={'lazy': 'selectin'}) 
 
 class MainAudience(StrEnum):
     Deaf=auto()
@@ -187,6 +201,13 @@ class Project(SQLModel, IdTimestampMixin, UserIdMixin, SongIdMixin, table=True):
 
     threads: list["Thread"] = Relationship(back_populates="project", sa_relationship_kwargs={'lazy': 'selectin'},  cascade_delete=True)
     messages: list["ThreadMessage"] = Relationship(back_populates="project", sa_relationship_kwargs={'lazy': 'selectin'})
+
+    @property
+    def safe_user_settings(self) -> ProjectConfiguration:
+        if isinstance(self.user_settings, dict):
+            return ProjectConfiguration.model_validate(self.user_settings)
+        else:
+            return self.user_settings
     
 
 class ProjectIdMixin(BaseModel):

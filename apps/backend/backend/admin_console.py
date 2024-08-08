@@ -1,17 +1,22 @@
 import asyncio
 from enum import StrEnum
 from backend.database.engine import create_db_and_tables, engine
-from backend.database.models import User
+from backend.database.models import SongWhitelistItem, User
 from backend.database.test import create_test_db_entities
 import questionary
 from backend.database import db_sessionmaker
 from sqlmodel import select
 
+from backend.tasks.media_preparation import prepare_song
+
 
 class ConsoleMenu(StrEnum):
     CreateUser = "Create user"
     ListUser = "Show users"
+    AddSong = "Add song"
     Exit = "Exit"
+
+validate_non_null_str = lambda s: "Required." if s is None or len(s) == 0 else True
 
 async def _create_user():
     async with db_sessionmaker() as session:
@@ -36,6 +41,36 @@ async def _list_user():
         print(f"{len(l)} users in the database.")
         print(l)
 
+async def _add_song():
+
+    async with db_sessionmaker() as db:
+        async with db.begin():
+            title = await questionary.text(message="Enter song title:", validate=validate_non_null_str).ask_async()
+            artist = await questionary.text(message="Enter artist:", validate=validate_non_null_str).ask_async()
+            youtube_id = await questionary.text(message="Enter YouTube ID for reference video:", validate=validate_non_null_str).ask_async()
+
+            use_whitelist = await questionary.confirm("Make this song available to specific users?").ask_async()
+            whitelist_users: list[User] = []
+            if use_whitelist:
+                users = (await db.exec(select(User))).all()
+                selected_users: list[User] = []
+                while True:
+                    remaining_users = [u for u in users if u not in selected_users]
+                    options = [u.alias for u in remaining_users] + ["[Done]"]
+                    choice = await questionary.select("Select user to allow to sign this song:", options, show_selected=True).ask_async()
+                    choice_index = options.index(choice)
+                    if choice_index == len(options)-1:
+                        # Finish
+                        break
+                    else:
+                        selected_users.append(remaining_users[choice_index])
+                whitelist_users = selected_users
+            
+            song = await prepare_song(title, artist, youtube_id, db, force=True)
+            if len(whitelist_users) > 0:
+                db.add_all([SongWhitelistItem(user_id=u.id, song_id=song.id, active=True) for u in whitelist_users])
+            print("====Successfully created the song.")
+
 
 async def _run_console_loop():
 
@@ -49,6 +84,8 @@ async def _run_console_loop():
             await _create_user()
         if menu is ConsoleMenu.ListUser:
             await _list_user()
+        if menu is ConsoleMenu.AddSong:
+            await _add_song()
         elif menu is ConsoleMenu.Exit:
             print("Bye.")
             break

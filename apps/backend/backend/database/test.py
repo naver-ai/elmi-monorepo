@@ -18,7 +18,7 @@ async def create_test_db_entities():
 
             song1 = await prepare_song("Dynamite", "BTS", "gdZLi9oWNZg", db)
 
-            song2 = await prepare_song(title="Viva La Vida", artist="Coldplay", reference_youtube_id="dvgZkm1xWPE", db=db)
+            # song2 = await prepare_song(title="Viva La Vida", artist="Coldplay", reference_youtube_id="dvgZkm1xWPE", db=db)
                 
             async with db.begin_nested():
                 print("Create test user...")
@@ -26,11 +26,11 @@ async def create_test_db_entities():
                 project1 = Project(song=song1, 
                                   user=user
                     )
-                project2 = Project(song=song2, user=user)
+                # project2 = Project(song=song2, user=user)
                 
                 db.add(user)
                 db.add(project1)
-                db.add(project2)
+                # db.add(project2)
                 await db.commit()
 
     async with db_sessionmaker() as db:
