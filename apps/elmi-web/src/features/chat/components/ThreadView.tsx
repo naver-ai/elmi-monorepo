@@ -15,6 +15,8 @@ import { HookFormInput } from "../../../components/form-items"
 import { SignLanguageIcon } from "../../../components/svg-icons"
 import { EllipsisConfig } from "antd/es/typography/Base"
 import { GrandientBorderline } from "../../../components/decorations"
+import { ShortcutManager } from "../../../services/shortcut"
+import { filter } from "rxjs"
 
 const DISALLOWED_TAGS = ['p']
 
@@ -112,6 +114,7 @@ export const ThreadView = (props: {
 
     const inputRef = useRef<InputRef>(null)
 
+    const scrollAnchorRef = useRef<HTMLDivElement>(null)
 
     const cardRef = useRef<HTMLSpanElement>(null)
 
@@ -119,7 +122,7 @@ export const ThreadView = (props: {
         if(isProcessingMessage == false){
             requestAnimationFrame(()=>{
                 //inputRef.current?.nativeElement?.scrollIntoView({behavior: 'smooth', block: 'end'})
-                cardRef.current?.scrollIntoView({behavior: 'smooth', block: 'end'})
+                scrollAnchorRef.current?.scrollIntoView({behavior: 'smooth', block: 'end'})
                 inputRef.current?.focus({cursor: 'all'})
             })
         }
@@ -133,7 +136,27 @@ export const ThreadView = (props: {
 
     const intentButtonIconStyle = useMemo(()=>({icon: {opacity: isProcessingMessage ? 0.25 : 1, fill: isProcessingMessage ? 'rgb(217, 217, 217)' : undefined}}), [isProcessingMessage])
 
-    return <Card title={<span className={`text-lg ${highlighted ? 'font-bold' : 'font-[400]'}`} ref={cardRef}>
+    useEffect(()=>{
+        const shortcutEventSubscription = ShortcutManager.instance.onFocusRequestedEvent
+            .pipe(filter(args => args.type == 'thread'))
+            .subscribe({
+                next: ({type, id}) => {
+                    if(id == props.threadId){
+                        scrollAnchorRef.current?.scrollIntoView({
+                            behavior: 'smooth',
+                            block: 'start'
+                        })
+                    }
+                }
+            })
+
+        return ()=>{
+            shortcutEventSubscription.unsubscribe()
+        }
+    }, [props.threadId])
+
+    return <Card rootClassName="relative" title={<span className={`text-lg ${highlighted ? 'font-bold' : 'font-[400]'}`} ref={cardRef}>
+            <div ref={scrollAnchorRef} className="scroll-anchor absolute top-[-30px] bottom-[-30px] left-0 w-5 h-5 pointer-events-none"/>
             <span>Chat on </span><span className="italic">"{line?.lyric}"</span>
             </span>} styles={CARD_STYLE} 
             className={`rounded-xl mt-6 first:mt-0 transition-shadow border-none ${highlighted ? 'shadow-lg bg-white':'shadow-none bg-slate-800/10 cursor-pointer hover:bg-slate-600/20'}`}
@@ -161,10 +184,10 @@ export const ThreadView = (props: {
                     </div>}
                 {
                     highlighted === true ? <div className="p-4 bg-slate-100 rounded-b-xl">
-                    <div className="mb-3 flex gap-x-1">
+                    <div className="mb-3 flex items-baseline flex-wrap gap-1">
                             {
                                 INTENT_LIST.map(({icon: Icon, intent}) => {
-                                    return <Button tabIndex={-1} key={intent} disabled={isProcessingMessage} type="default" icon={<Icon className="w-4 h-4 fill-slate-800"/>} styles={intentButtonIconStyle} block onClick={() => handleButtonClick(intent)} size="small" className="capitalize">{intent}</Button>
+                                    return <Button tabIndex={-1} key={intent} disabled={isProcessingMessage} type="default" icon={<Icon className="w-4 h-4 fill-slate-800"/>} styles={intentButtonIconStyle} block onClick={() => handleButtonClick(intent)} size="small" className="capitalize flex-1 grow-0">{intent}</Button>
                                 })
                             }
                     </div>

@@ -135,6 +135,7 @@ const chatSlice = createSlice({
 export const threadSelectors = chatThreadEntityAdapter.getSelectors(
     (state: AppState) => state.chat.chatThreadEntityState
 );
+
 export const chatMessageSelectors = chatMessageEntityAdapter.getSelectors(
     (state: AppState) => state.chat.chatMessageEntityState
 );
@@ -194,7 +195,9 @@ export function fetchChatData(projectId: string): AppThunk {
 }
 
 // Thunk to initialize a chat thread
-export function startNewThread(lineId: string): AppThunk {
+export function startNewThread(lineId: string, handlers?: {
+    onThreadPlaceholderAdded?: (placeholder: ChatThreadPlaceholder)=>void,
+}): AppThunk {
     return async (dispatch, getState) => {
         const state = getState();
         const token = state.auth.token;
@@ -207,14 +210,18 @@ export function startNewThread(lineId: string): AppThunk {
 
             // Insert dummy thread  
             const dummyThreadId = nanoid()
-            dispatch(chatSlice.actions._upsertChatData({threads: [{
+
+            const dummyThread = {
                 id: dummyThreadId,
                 line_id: lineId,
                 line_number: line.line_number,
                 verse_ordering: verse.verse_ordering,
                 isPlaceholder: true
-            }], messages: [], overwrite: false}))
+            }
 
+            dispatch(chatSlice.actions._upsertChatData({threads: [dummyThread], messages: [], overwrite: false}))
+
+            handlers?.onThreadPlaceholderAdded?.(dummyThread)
 
             try {
                 const resp = await Http.axios.post(
@@ -242,6 +249,7 @@ export function startNewThread(lineId: string): AppThunk {
                         overwrite: false,
                     })
                 );
+                
             } catch (ex) {
                 console.log(ex);
             } finally {

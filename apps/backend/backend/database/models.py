@@ -304,7 +304,7 @@ class Thread(SQLModel, IdTimestampMixin, ProjectIdMixin, LineIdMixin, table=True
     
     @computed_field
     @property
-    def line_ordering(self)->int:
+    def line_number(self)->int:
         return self.line.line_number 
 
 class MessageRole(StrEnum):

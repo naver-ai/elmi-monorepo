@@ -2,7 +2,7 @@ import { Observable, Subject } from 'rxjs';
 
 export interface FocusRequestEventArgs{
     id: string
-    type: 'verse' | 'line'
+    type: 'verse' | 'line' | 'thread'
 }
 
 export class ShortcutManager {

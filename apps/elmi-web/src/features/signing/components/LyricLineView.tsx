@@ -8,13 +8,14 @@ import { ChatBubbleLeftIcon, PauseIcon, PlayIcon, HandRaisedIcon, ArrowRightIcon
 import {LightBulbIcon} from '@heroicons/react/24/solid'
 import { useThrottleCallback } from "@react-hook/throttle"
 import { PartialDarkThemeProvider } from "../../../styles"
-import { startNewThread, selectThreadIdByLineId, setActiveThreadLineId, selectMessagesByThreadId } from "../../chat/reducer"
+import { startNewThread, selectThreadIdByLineId, setActiveThreadLineId, selectMessagesByThreadId, ChatThreadPlaceholder } from "../../chat/reducer"
 import { useAudioSegmentPositionPercentage } from "../hooks"
 import { Http } from "../../../net/http"
 import { ReferenceVideoView } from "./ReferenceVideoView"
 import { useInView } from "react-intersection-observer";
 import { ShortcutManager } from "../../../services/shortcut"
 import { useDebouncedCallback } from "use-debounce"
+import { filter } from "rxjs"
 
 const LineReferenceVideoView = () => {
 
@@ -94,6 +95,14 @@ const LyricLineChatStatusIndicator = (props: {threadId: string}) => {
     return <div className="flex items-center gap-x-1 px-1 text-slate-500 font-semibold text-sm"><ChatBubbleLeftIcon className="w-4 h-4"/><span>{numMessages}</span></div>
 }
 
+const START_THREAD_HANDLERS = {
+    onThreadPlaceholderAdded: (placeholder: ChatThreadPlaceholder) => {
+        requestAnimationFrame(()=>{
+            ShortcutManager.instance.requestFocus({type: 'thread', id: placeholder.id})
+        })
+    }
+}
+
 export const LyricLineView = (props: {lineId: string}) => {
     const line = useSelector(state => lineSelectors.selectById(state, props.lineId))
 
@@ -158,7 +167,7 @@ export const LyricLineView = (props: {lineId: string}) => {
             dispatch(setDetailLineId(lineId))
             dispatch(MediaPlayer.pauseMedia())
             dispatch(setActiveThreadLineId(lineId))
-            dispatch(startNewThread(lineId))
+            dispatch(startNewThread(lineId, START_THREAD_HANDLERS))
         }
     }, [line?.id])
 
@@ -170,7 +179,7 @@ export const LyricLineView = (props: {lineId: string}) => {
             dispatch(MediaPlayer.pauseMedia())
             dispatch(setActiveThreadLineId(lineId))
             if(threadId == null){
-                dispatch(startNewThread(lineId))
+                dispatch(startNewThread(lineId, START_THREAD_HANDLERS))
             }
         }
     }, [line?.id, threadId])
@@ -238,16 +247,18 @@ export const LyricLineView = (props: {lineId: string}) => {
             }
         })
 
-        const shortcutEventSubscription = ShortcutManager.instance.onFocusRequestedEvent.subscribe({
-            next: ({type, id}) => {
-                if(type == 'line' && id == props.lineId){
-                    scrollAnchorRef.current?.scrollIntoView({
-                        behavior: 'smooth',
-                        block: 'start'
-                    })
+        const shortcutEventSubscription = ShortcutManager.instance.onFocusRequestedEvent
+            .pipe(filter(args => args.type == 'line'))
+            .subscribe({
+                next: ({type, id}) => {
+                    if(id == props.lineId){
+                        scrollAnchorRef.current?.scrollIntoView({
+                            behavior: 'smooth',
+                            block: 'start'
+                        })
+                    }
                 }
-            }
-        })
+            })
 
         return () => {
             debouncedSyncTranslationInput.cancel()
