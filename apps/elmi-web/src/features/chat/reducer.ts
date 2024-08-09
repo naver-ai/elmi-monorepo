@@ -8,8 +8,7 @@ import {
 import { ChatIntent, ChatThread, MessageRole, ThreadMessage } from '../../model-types';
 import { AppState, AppThunk } from '../../redux/store';
 import { Http } from '../../net/http';
-import { lineSelectors, selectLinesByVerseId, verseSelectors } from '../signing/reducer';
-
+import { lineSelectors, lineTranslationSelectors, selectLinesByVerseId, verseSelectors } from '../signing/reducer';
 export interface ChatThreadPlaceholder {
     isPlaceholder: boolean
     id: string
@@ -261,7 +260,13 @@ export function startNewThread(lineId: string, handlers?: {
 
 export function sendMessage(threadId: string, message: string | undefined, intent?: ChatIntent
 ): AppThunk {
+
+    if(message == null && intent == null){
+        throw Error("Either message or intent must be provided.")
+    }
+
     return async (dispatch, getState) => {
+        
         const state = getState();
         const token = state.auth.token;
         const projectId = state.editor.projectId
@@ -270,13 +275,33 @@ export function sendMessage(threadId: string, message: string | undefined, inten
 
             let thread: ChatThread | undefined = threadSelectors.selectById(state, threadId);
             if(thread){
+                console.log(thread)
                 const dummyMessageId = nanoid()
+                let safeMessage: string
+                if(message == null && intent != null){
+                    console.log("Try generating intent message")
+                    switch(intent){
+                        case ChatIntent.Glossing:
+                            const translation = lineTranslationSelectors.selectById(state, thread.line_id)
+                            if(translation?.gloss != null && translation.gloss.length > 0){
+                                safeMessage = `How do you think of my translation, \"${translation.gloss}\"?`
+                            }else{
+                                safeMessage = intent
+                            }
+                            break;
+                        default:
+                            safeMessage = intent
+                    }
+                }else {
+                    safeMessage = message!
+                }
+
                 const dummyMessageInfo: ThreadMessage = {
                     id: dummyMessageId,
                     thread_id: thread.id,
                     role: MessageRole.User,
                     intent,
-                    message: message || intent!,
+                    message: safeMessage,
                 };
 
             dispatch(chatSlice.actions._upsertChatData({
@@ -292,7 +317,7 @@ export function sendMessage(threadId: string, message: string | undefined, inten
                     project_id: projectId,
                     thread_id: thread.id
                 }), {
-                    message: message || intent!,
+                    message: safeMessage,
                     intent
                 }, 
                 {
