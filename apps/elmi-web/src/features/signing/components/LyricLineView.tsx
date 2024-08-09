@@ -185,7 +185,7 @@ export const LyricLineView = (props: {lineId: string}) => {
     }, [line?.id, threadId])
 
     const userTranslation = useSelector(state => lineTranslationSelectors.selectById(state, props.lineId))
-    const [currentTranslationInput, setCurrentTranslationInput] = useState<string>("")
+    const [currentTranslationInput, setCurrentTranslationInput] = useState<string>(userTranslation?.gloss || "")
     const isTranslationUploading = useSelector(state => state.editor.lineTranslationSynchronizationFlags[props.lineId] === true)
     
     const debouncedSyncTranslationInput = useDebouncedCallback(()=>{
@@ -220,7 +220,6 @@ export const LyricLineView = (props: {lineId: string}) => {
 
     useEffect(()=>{
         if(isPositionHitting === true && isInLineLoopMode == false && scrollAnchorRef.current != null){
-            console.log(scrollAnchorRef.current.nodeName)
             scrollAnchorRef.current?.scrollIntoView({
                 behavior: 'smooth',
                 block: 'start'

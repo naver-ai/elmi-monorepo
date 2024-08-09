@@ -11,14 +11,9 @@ export const SongInfoPanel = () => {
             <h4>About</h4>
         </Divider>
         <div className="detail-panel-content-wrapper">
-            <p className="font-regular italic px-2 leading-7">{songDescription}</p>
+            <p className="font-regular italic leading-7">{songDescription}</p>
+            <p className="mt-3 text-sm text-gray-400">Description & lyrics from <i>genius.com</i></p>
         </div>
-
-        <Divider orientation="left" plain><h4>Reference Video</h4></Divider>
-
-        <Divider orientation="left" plain><h4>Performance Videos</h4></Divider>
-
-        <Divider orientation="left" plain><h4>Signing Covers (ASL/PSE)</h4></Divider>
 
     </Fragment>
 }
