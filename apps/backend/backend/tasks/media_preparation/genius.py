@@ -34,6 +34,7 @@ class GeniusSongInfo(BaseModel):
 @staticmethod
 def clean_lyric_line(line: str) -> str:
     cleaned_line = line.strip()
+    cleaned_line = re.sub(r"^[^a-zA-Z0-9]+$", "", cleaned_line)
     cleaned_line = re.sub(r'\(.*?\)', "", cleaned_line)
     cleaned_line = re.sub(r'\s+([,?.!;:])', r'\1', cleaned_line)
     cleaned_line = re.sub(f'\s+', ' ', cleaned_line).strip()
@@ -119,10 +120,12 @@ class GeniusManager:
 
         async with httpx.AsyncClient() as client:
             response = await client.get(url=self.ENDPOINT_SEARCH, params=params, headers=headers, timeout=20000)
+            print(response.json())
             songs = [hit["result"] for hit in response.json()["response"]["hits"] if hit["type"] == "song"]
             if len(songs) > 0:
                 print(f"{len(songs)} songs")
                 for song in songs:
+                    print(f"Check {song['title']} / {song['artist_names']}")
                     if song["title"].strip().lower() == title.strip().lower():
                         if song["artist_names"].strip().lower() == artist.strip().lower():
 
@@ -131,7 +134,7 @@ class GeniusManager:
                             lyrics, desc = await extract_lyrics_and_description(song["path"])
 
                             return GeniusSongInfo(**song, lyrics=lyrics, description=desc)
-
+                
             return None
 
 genius = GeniusManager()

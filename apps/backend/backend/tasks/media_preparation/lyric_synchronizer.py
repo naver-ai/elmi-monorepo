@@ -136,7 +136,11 @@ class LyricSynchronizer:
 
     def retrieve_segment_timestamped_subtitles_from_youtube(self, youtube_id: str, expand_duration_millis: int = 1000) -> list[SyncedText]:
 
-        subtitles = [SyncedText(text=clean_lyric_line(seg["text"]), start=seg["start"], end=seg["start"] + seg["duration"]) for seg in YouTubeTranscriptApi.get_transcript(youtube_id)]
+        youtube_transcript = YouTubeTranscriptApi.get_transcript(youtube_id)
+
+        print("Original youtube transcript: ", youtube_transcript)
+
+        subtitles = [SyncedText(text=clean_lyric_line(seg["text"]), start=seg["start"], end=seg["start"] + seg["duration"]) for seg in youtube_transcript if clean_lyric_line(seg["text"]) != ""]
 
         return subtitles
 
