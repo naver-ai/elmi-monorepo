@@ -1,6 +1,6 @@
 import { Button, Input, InputRef, Skeleton, Progress, Tooltip, Spin, AutoComplete, AutoCompleteProps } from "antd"
 import { useDispatch, useSelector } from "../../../redux/hooks"
-import { getAltGlosses, lineAltGlossesSelectors, lineInspectionSelectors, lineSelectors, lineTranslationSelectors, sendInteractionLog, setDetailLineId, setShowScrollToLineButton, toggleDetailLineId, upsertLineTranslationInput } from "../reducer"
+import { getAltGlosses, lineAltGlossesSelectors, lineInspectionSelectors, lineSelectors, lineTranslationSelectors, removeLineAltGlosses, sendInteractionLog, setDetailLineId, setShowScrollToLineButton, toggleDetailLineId, upsertLineTranslationInput } from "../reducer"
 import { FocusEventHandler, MouseEventHandler, useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { MediaPlayer } from "../../media-player"
 import { MediaPlayerStatus } from "../../media-player/types"
@@ -218,7 +218,11 @@ export const LyricLineView = (props: {lineId: string}) => {
     const onInputChange = useCallback((value: string)=>{
         setCurrentTranslationInput(value)
         debouncedSyncTranslationInput()
-    }, [debouncedSyncTranslationInput])
+        if(altGlosses!= null && altGlosses.base_gloss.trim().toLowerCase() != value.trim().toLowerCase()){
+            console.log("Removed alt glosses")
+            dispatch(removeLineAltGlosses(props.lineId))
+        }
+    }, [debouncedSyncTranslationInput, altGlosses?.base_gloss, props.lineId])
 
     const onSelectAltGloss = useCallback((value: string) => {
         setCurrentTranslationInput(value)
@@ -348,7 +352,7 @@ export const LyricLineView = (props: {lineId: string}) => {
                     autoComplete="off"
                     rootClassName="!pr-1 !pl-2"
                     /></AutoComplete>
-                {isSelected && <PartialDarkThemeProvider><div className="flex items-center pt-2">
+                {isSelected && <PartialDarkThemeProvider><div className="flex items-center pt-2 h-10">
                     {isAltGlossLoading ? <LoadingIndicator size="small" title="Generating alt glosses..."/> : null }
                     <div className="flex-1"/>
                 {
