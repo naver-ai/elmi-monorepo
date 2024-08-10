@@ -14,7 +14,7 @@ from langchain_openai import ChatOpenAI
 from langchain_core.prompts import PromptTemplate, ChatPromptTemplate
 from langchain_core.chat_history import BaseChatMessageHistory, InMemoryChatMessageHistory
 from langchain_core.runnables.history import RunnableWithMessageHistory
-from langchain_core.messages import SystemMessage, HumanMessage, AIMessage
+from langchain_core.messages import SystemMessage, HumanMessage, AIMessage, BaseMessage
 
 
 # Retrieve API key from environment variable
@@ -94,7 +94,7 @@ async def classify_user_intent(user_input: str, retry_count: int = 5)->ChatInten
             print("Consumed all retry count. Just return 'Other'")
             return ChatIntent.Other
 
-    
+
 
 # Create a formatted system template string with inference results.
 def create_system_instruction(intent: ChatIntent, title: str, artist: str, lyric_line: str, result: BaseModel | None, user_name: str, sign_language: str, user_translation: str | None) -> str:
@@ -535,48 +535,46 @@ def create_system_instruction(intent: ChatIntent, title: str, artist: str, lyric
                                     )   
      
     elif intent == ChatIntent.Other:
-            system_template = '''
-        Your name is ELMI, a helpful chatbot that assists users with various queries for song signing.
+        print("Other intent prompt")
+        system_template = '''
+- Your name is ELMI, a helpful chatbot that assists users with various queries for song signing.
 
-        ELMI specializes in guiding users to have a critical thinking process about the lyrics.
-        ELMI you are an active listener.
-        You are not giving all the possible answers, instead, listen to what the users are thinking and ask them to reflect on little things a bit more (What does the user want?)
-        The user decides whether or not they care to engage in further chat.
+- ELMI specializes in guiding users to have a critical thinking process about the lyrics.
+- ELMI you are an active listener.
+- You are not giving all the possible answers, instead, listen to what the users are thinking and ask them to reflect on little things a bit more (What does the user want?)
+- The user decides whether or not they care to engage in further chat.
+- The user {{user_name}} can talk to you anytime in the middle of song signing process. So do not greet or say hello."
 
-        - You are currently talking about the song "{{title}}" by "{{artist}}."
-        - The conversation is about the lyric line, "{{lyric_line}}"
-        - You are assisting {{user_name}} using the {{sign_language}}.
+[Conversation Context]
+- You are currently talking about the song "{{title}}" by "{{artist}}."
+- You are assisting {{user_name}} using the {{sign_language}}.
+- The conversation is about the lyric line, "{{lyric_line}}"
 
-        You start by prompting questions to users.
+[Your task]
+- You start by prompting questions to users.
+- You are answering to questions that may not fit into predefined categories. Thus, you will need to adapt your responses to the user's query and provide the necessary guidance to below categories:
+    1. Meaning: Questions about understanding or interpreting the lyrics.
+    2. Glossing: Questions about how to sign specific words or phrases. {{sign_language}} translation.
+    3. Emoting: Questions about expressing emotions through facial expressions and body language.
+    4. Timing: Questions about the timing or rhythm of the gloss, including changing and adjusting the gloss (shorter or longer).
 
-        You are answering to questions that may not fit into predefined categories.
+[Key characteristics of ELMI]
+ - Clear Communication: ELMI offers simple, articulate instructions with engaging examples.
+ - Humor: ELMI infuses the sessions with light-hearted humour to enhance the enjoyment. Add some emojis.
+ - Empathy and Sensitivity: ELMI shows understanding and empathy, aligning with the participant's emotional state.
 
-        Thus, you will need to adapt your responses to the user's query and provide the necessary guidance to below categories:
-        1. Meaning: Questions about understanding or interpreting the lyrics.
-        2. Glossing: Questions about how to sign specific words or phrases. {{sign_language}} translation.
-        3. Emoting: Questions about expressing emotions through facial expressions and body language.
-        4. Timing: Questions about the timing or rhythm of the gloss, including changing and adjusting the gloss (shorter or longer).
+[Support and Encouragement]
+- EMLI offers continuous support, using her identity to add fun and uniqueness to her encouragement.
+- For additional assistance, she reminds participants to reach out to the study team.
 
-        Key characteristics of ELMI:
-        - Clear Communication: ELMI offers simple, articulate instructions with engaging examples.
-        - Humor: ELMI infuses the sessions with light-hearted humour to enhance the enjoyment. Add some emojis.
-        - Empathy and Sensitivity: ELMI shows understanding and empathy, aligning with the participant's emotional state.
-
-        Support and Encouragement:
-        - EMLI offers continuous support, using her identity to add fun and uniqueness to her encouragement.
-        For additional assistance, she reminds participants to reach out to the study team.
-
-        Your role:
-        Handling Conversations: (This is your main role)
-        - Redirecting Off-Topic Chats: ELMI gently guides the conversation back to lyrics interpretation topics, suggesting social interaction with friends for other discussions.
-        - Support and Encouragement: EMLI offers continuous support, using her identity to add fun and uniqueness to her encouragement.
-        - Your role is to help users with their queries by providing thoughtful responses and guiding them through their thought processes.
-        
-        Output format:
-        Do not ask more than 2 questions at a time.
-        Keep your responses concise and engaging.
+[Carrying on Conversations]
+- Redirecting Off-Topic Chats: ELMI gently guides the conversation back to lyrics interpretation topics, suggesting social interaction with friends for other discussions.
+- Support and Encouragement: EMLI offers continuous support, using her identity to add fun and uniqueness to her encouragement.
+- Your role is to help users with their queries by providing thoughtful responses and guiding them through their thought processes.      
+- Do not ask more than 2 questions at a time.
+- Keep your responses concise and engaging.
         '''
-    return jinja2_formatter(template=system_template, 
+        return jinja2_formatter(template=system_template, 
                             title=title,
                             artist=artist,
                             lyric_line=lyric_line,
@@ -584,64 +582,60 @@ def create_system_instruction(intent: ChatIntent, title: str, artist: str, lyric
                             sign_language=sign_language
                             )
 
-
 # Initiate a proactive chat session with a user based on a specific line ID.
 async def generate_chat_response(db: AsyncSession, thread: Thread, user_input: str | None, intent: ChatIntent | None)  -> tuple[ChatIntent, str]:
     
-        # Log input parameters
-        line_inspection: LineInspection = await fetch_line_inspection_by_line(db, thread.project_id, thread.line_id)
-        line_annotation: LineAnnotation = await fetch_line_annotation_by_line(db, thread.project_id, thread.line_id)
-        line_translation: LineTranslation = await fetch_line_translation_by_line(db, thread.project_id, thread.line_id)
+    # Log input parameters
+    line_inspection: LineInspection = await fetch_line_inspection_by_line(db, thread.project_id, thread.line_id)
+    line_annotation: LineAnnotation = await fetch_line_annotation_by_line(db, thread.project_id, thread.line_id)
+    line_translation: LineTranslation = await fetch_line_translation_by_line(db, thread.project_id, thread.line_id)
 
-        song = thread.project.song
-        user = thread.project.user
+    song = thread.project.song
+    user = thread.project.user
         
-        # Use the provided intent directly if it's a button click
-        if intent is None:
-            if user_input is not None:
-                classification_result = await classify_user_intent(user_input)
-                intent = classification_result
-                print(f"Classified intent: {intent}")
-            elif line_inspection is not None:
-                intent = ChatIntent.Meaning
-        else:
-                intent = ChatIntent.Other
+    # Use the provided intent directly if it's a button click
+    safe_intent = intent or ChatIntent.Other
+    if intent is None:
+        if user_input is not None:
+            classification_result = await classify_user_intent(user_input)
+            safe_intent = classification_result
+        elif line_inspection is not None:
+            safe_intent = ChatIntent.Meaning
+    else:
+        safe_intent = ChatIntent.Other
         
-        user_name = user.callable_name or user.alias
-        sign_language = thread.project.safe_user_settings.main_language or user.sign_language
-        user_translation = line_translation.gloss if line_translation else None
-        print(f"User's gloss: {user_translation}. Sign language: {sign_language}") 
+    user_name = user.callable_name or user.alias
+    sign_language = thread.project.safe_user_settings.main_language or user.sign_language
+    user_translation = line_translation.gloss if line_translation else None
+    print(f"User's gloss: {user_translation}. Sign language: {sign_language}, intent: {safe_intent}") 
 
-        # Initialize system_instruction with a default value
-        system_instruction = ""
+    # Initialize system_instruction with a default value
+    system_instruction = ""
 
-         
-        if intent == ChatIntent.Meaning:
-            system_instruction = create_system_instruction(intent, song.title, song.artist, line_annotation.line.lyric, line_inspection, user_name, sign_language, user_translation)
-        elif intent == ChatIntent.Glossing:
-            system_instruction = create_system_instruction(intent, song.title, song.artist, line_annotation.line.lyric, line_annotation, user_name, sign_language, user_translation)
-        elif intent == ChatIntent.Emoting:
-            system_instruction = create_system_instruction(intent, song.title, song.artist, line_annotation.line.lyric, line_annotation, user_name, sign_language, user_translation)
-        elif intent == ChatIntent.Timing:
-            system_instruction = create_system_instruction(intent,song.title, song.artist, line_annotation.line.lyric, line_annotation, user_name, sign_language, user_translation)
-        elif intent == ChatIntent.Other: 
-            system_instruction = create_system_instruction(intent, song.title, song.artist, line_annotation.line.lyric, line_annotation, user_name, sign_language, user_translation)
+    if safe_intent == ChatIntent.Meaning:
+        system_instruction = create_system_instruction(safe_intent, 
+                                                       title = song.title, 
+                                                       artist = song.artist, 
+                                                       lyric_line=line_annotation.line.lyric, result=line_inspection, 
+                                                       user_name=user_name, 
+                                                       sign_language=sign_language, 
+                                                       user_translation=user_translation)
+    else:
+        system_instruction = create_system_instruction(safe_intent, song.title, song.artist, line_annotation.line.lyric, line_annotation, user_name, sign_language, user_translation)
 
-      
-    
 
-        try:
-            messages = [SystemMessage(system_instruction)]
+    try:
+        messages: list[BaseMessage] = [SystemMessage(system_instruction)]
 
-            messages.extend([AIMessage(message.message) if message.role == MessageRole.Assistant else HumanMessage(message.message) for message in thread.messages])
+        messages.extend([AIMessage(message.message) if message.role == MessageRole.Assistant else HumanMessage(message.message) for message in thread.messages])
 
-            if user_input is not None:
-                messages.append(HumanMessage(user_input))
+        if user_input is not None:
+            messages.append(HumanMessage(user_input))
 
-            response = await client.agenerate([messages])
+        response = await client.agenerate([messages])
 
-            return intent, response.generations[0][0].message.content
+        return safe_intent, response.generations[0][0].message.content
 
-        except Exception as ex:
-            print(ex)
-            raise ex
+    except Exception as ex:
+        print(ex)
+        raise ex
