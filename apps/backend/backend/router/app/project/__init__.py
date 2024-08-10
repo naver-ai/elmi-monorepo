@@ -1,13 +1,13 @@
 from datetime import datetime
 from typing import Annotated, Optional
-from backend.tasks.preprocessing import preprocess_song
+from backend.tasks.preprocessing import generate_alt_glosses_with_user_translation, generate_line_annotation_with_user_translation, preprocess_song
 from fastapi import APIRouter, status, Depends
 from pydantic import BaseModel, Field
 from sqlmodel import select, desc
 from sqlmodel.ext.asyncio.session import AsyncSession
 
 from backend.database.engine import with_db_session
-from backend.database.models import InteractionType, Line, LineAnnotation, LineInfo, LineInspection, LineTranslation, Project, ProjectConfiguration, Song, SongInfo, User, Verse, VerseInfo
+from backend.database.models import AltGlossesInfo, InteractionType, Line, LineAnnotation, LineInfo, LineInspection, LineTranslation, LineTranslationInfo, Project, ProjectConfiguration, Song, SongInfo, User, Verse, VerseInfo
 from backend.router.app.common import get_signed_in_user
 from backend.database.crud.project import fetch_line_annotations_by_project, fetch_line_inspections_by_project, fetch_line_translation_by_line, fetch_line_translations_by_project, store_interaction_log
 from backend.router.app.project.chat import router as chatRouter
@@ -39,7 +39,7 @@ class ProjectDetails(BaseModel):
     song: SongInfo
     verses: list[VerseInfo]
     lines: list[LineInfo]
-    translations: list[LineTranslation]
+    translations: list[LineTranslationInfo]
     annotations: list[LineAnnotation]
     inspections: list[LineInspection]
 
@@ -85,7 +85,7 @@ async def get_project_detail(project_id: str, user: Annotated[User, Depends(get_
                 verses=project.song.verses,
                 lines=[line for verse in project.song.verses for line in verse.lines],
                 translations=await fetch_line_translations_by_project(db, project_id, user.id),
-                annotations=project.annotations,
+                annotations=project.latest_annotations,
                 inspections=project.inspections
             )
         else:
@@ -104,12 +104,12 @@ async def get_line_annotations(project_id: str, user: Annotated[User, Depends(ge
                        db: Annotated[AsyncSession, Depends(with_db_session)]):
     return await fetch_line_annotations_by_project(db, project_id, user.id)
 
-@router.get("/{project_id}/translations/all", response_model=list[LineTranslation])
+@router.get("/{project_id}/translations/all", response_model=list[LineTranslationInfo])
 async def get_line_translations(project_id: str, user: Annotated[User, Depends(get_signed_in_user)],
                        db: Annotated[AsyncSession, Depends(with_db_session)]):
     return await fetch_line_translations_by_project(db, project_id, user.id)
 
-@router.get("/{project_id}/lines/{line_id}/translation", response_model=LineTranslation | None)
+@router.get("/{project_id}/lines/{line_id}/translation", response_model=LineTranslationInfo | None)
 async def get_one_line_translation(project_id: str, line_id: str, db: Annotated[AsyncSession, Depends(with_db_session)]):
     return await fetch_line_translation_by_line(db, project_id, line_id)
 
@@ -123,9 +123,7 @@ class TranslationInfo(BaseModel):
     def gloss_is_set(self) -> bool:
         return 'gloss' in self.model_fields_set
     
-
-
-@router.put("/{project_id}/lines/{line_id}/translation", response_model=LineTranslation)
+@router.put("/{project_id}/lines/{line_id}/translation", response_model=LineTranslationInfo)
 async def upsert_line_translation(info: TranslationInfo,
                                   project_id: str, line_id: str, 
                                   user: Annotated[User, Depends(get_signed_in_user)],
@@ -147,6 +145,9 @@ async def upsert_line_translation(info: TranslationInfo,
                 "before": gloss_before,
                 "after": info.gloss
             })
+            annotation = await generate_line_annotation_with_user_translation(project_id, db, line_id)
+            db.add(annotation)
+            
     else:
         translation = LineTranslation(project_id=project_id, line_id=line_id, 
                                       gloss=info.gloss, memo=info.memo)
@@ -157,10 +158,22 @@ async def upsert_line_translation(info: TranslationInfo,
                 "before": None,
                 "after": info.gloss
             })
+
     db.add(translation)
     await db.commit()
     await db.refresh(translation)
     return translation
+
+class AltGrossesResult(BaseModel):
+    info: AltGlossesInfo | None
+
+@router.get("/{project_id}/lines/{line_id}/translation/alt", response_model=AltGrossesResult)
+async def get_alt_glosses(gloss: str, project_id: str, line_id: str, 
+                                  user: Annotated[User, Depends(get_signed_in_user)],
+                                  db: Annotated[AsyncSession, Depends(with_db_session)]):
+    result = await generate_alt_glosses_with_user_translation(project_id, db, line_id, gloss)
+
+    return AltGrossesResult(info = result)
 
 class LogCreate(BaseModel):
     type: InteractionType

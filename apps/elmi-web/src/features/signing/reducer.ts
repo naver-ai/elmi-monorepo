@@ -1,10 +1,10 @@
 import { createEntityAdapter, createSelector, createSlice } from "@reduxjs/toolkit"
-import { InteractionLog, InteractionType, LineAnnotation, LineInspection, LineTranslation, LyricLine, ProjectInfo, Song, Verse } from "../../model-types"
+import { AltGlossesInfo, InteractionLog, InteractionType, LineAnnotation, LineInspection, LineTranslation, LyricLine, ProjectInfo, Song, Verse } from "../../model-types"
 import { PayloadAction } from '@reduxjs/toolkit'
 import { AppState, AppThunk } from "../../redux/store"
 import { Http } from "../../net/http"
 import { MediaPlayer } from "../media-player"
-
+import PQueue from 'p-queue';
 
 
 
@@ -13,12 +13,14 @@ const lineEntityAdapter = createEntityAdapter<LyricLine>()
 const lineAnnotationEntityAdapter = createEntityAdapter({selectId: (m: LineAnnotation) => m.line_id})
 const lineInspectionEntityAdapter = createEntityAdapter({selectId: (m: LineInspection) => m.line_id})
 const lineTranslationEntityAdapter = createEntityAdapter({selectId: (m: LineTranslation) => m.line_id})
+const lineAltGlossesEntityAdapter = createEntityAdapter({selectId: (m: AltGlossesInfo) => m.line_id})
 
 const initial_verse_entity_state = verseEntityAdapter.getInitialState()
 const initial_line_entity_state = lineEntityAdapter.getInitialState()
 const initial_line_annotation_entity_state = lineAnnotationEntityAdapter.getInitialState()
 const initial_line_inspection_entity_state = lineInspectionEntityAdapter.getInitialState()
 const initial_line_translation_entity_state = lineTranslationEntityAdapter.getInitialState()
+const initial_line_alt_glosses_entity_state = lineAltGlossesEntityAdapter.getInitialState()
 
 export interface SigningEditorState {
     projectId?: string
@@ -30,10 +32,13 @@ export interface SigningEditorState {
     lineAnnotationEntityState: typeof initial_line_annotation_entity_state,
     lineInspectionEntityState: typeof initial_line_inspection_entity_state,
     lineTranslationEntityState: typeof initial_line_translation_entity_state,
+    lineAltGlossesEntityState: typeof initial_line_alt_glosses_entity_state,
     detailLineId?: string | undefined,
     globelMediaPlayerHeight?: number | undefined
     showScrollToLineButton: boolean,
 
+
+    lineAltGlossLoadingFlags: {[key: string] : boolean | undefined},
     lineTranslationSynchronizationFlags: {[key: string] : boolean | undefined}
 }
 
@@ -46,11 +51,12 @@ const INITIAL_STATE: SigningEditorState = {
     lineAnnotationEntityState: initial_line_annotation_entity_state,
     lineInspectionEntityState: initial_line_inspection_entity_state,
     lineTranslationEntityState: initial_line_translation_entity_state,
+    lineAltGlossesEntityState: initial_line_alt_glosses_entity_state,
     detailLineId: undefined,
     isLineAnnotionLoading: false,
     globelMediaPlayerHeight: undefined,
     showScrollToLineButton: false,
-
+    lineAltGlossLoadingFlags: {},
     lineTranslationSynchronizationFlags: {}
 }
 
@@ -114,7 +120,18 @@ const signingEditorSlice = createSlice({
 
         setLineTranslationSynchronizationFlag: (state, action: PayloadAction<{lineId: string, flag: boolean}>) => {
             state.lineTranslationSynchronizationFlags[action.payload.lineId] = action.payload.flag
-        }
+        },
+        setLineAltGlossLoadingFlag: (state, action: PayloadAction<{lineId: string, flag: boolean}>) => {
+            state.lineAltGlossLoadingFlags[action.payload.lineId] = action.payload.flag
+        },
+
+        setLineAltGlosses: (state, action: PayloadAction<AltGlossesInfo>) => {
+            lineAltGlossesEntityAdapter.setOne(state.lineAltGlossesEntityState, action.payload)
+        },
+        removeLineAltGlosses: (state, action: PayloadAction<string>) => {
+            lineAltGlossesEntityAdapter.removeOne(state.lineAltGlossesEntityState, action.payload)
+        },
+
     }
 })
 
@@ -123,7 +140,7 @@ export const lineSelectors = lineEntityAdapter.getSelectors((state: AppState) =>
 export const lineAnnotationSelectors = lineAnnotationEntityAdapter.getSelectors((state: AppState) => state.editor.lineAnnotationEntityState)
 export const lineInspectionSelectors = lineInspectionEntityAdapter.getSelectors((state: AppState) => state.editor.lineInspectionEntityState)
 export const lineTranslationSelectors = lineTranslationEntityAdapter.getSelectors((state: AppState) => state.editor.lineTranslationEntityState)
-
+export const lineAltGlossesSelectors = lineAltGlossesEntityAdapter.getSelectors((state: AppState) => state.editor.lineAltGlossesEntityState)
 
 export const selectLinesByVerseId = createSelector([lineSelectors.selectAll, (state: AppState, verseId: string) => verseId], (lines, verseId) => {
     return lines.filter(line => line.verse_id == verseId)
@@ -181,6 +198,33 @@ export function upsertLineTranslationInput(lineId: string, gloss: string | undef
     }
 }
 
+export function getAltGlosses(lineId: string, gloss: string): AppThunk {
+    return async (dispatch, getState) => {
+        const state = getState()
+        if(state.auth.token && state.editor.projectId && state.editor.lineAltGlossLoadingFlags[lineId] !== true){
+            dispatch(signingEditorSlice.actions.setLineAltGlossLoadingFlag({lineId, flag: true}))
+            try {
+                const resp = await Http.axios.get(Http.getTemplateEndpoint(Http.ENDPOINT_APP_PROJECTS_ID_LINES_ID_TRANSLATION_ALT, 
+                    {project_id: state.editor.projectId, line_id: lineId}),{params: 
+                        {gloss}, headers: Http.getSignedInHeaders(state.auth.token)})
+
+                const altGlosses: AltGlossesInfo = resp.data.info
+                if(altGlosses != null){
+                    dispatch(signingEditorSlice.actions.setLineAltGlosses(altGlosses))      
+                }else{
+                    console.log("Remove alt glosses")
+                    dispatch(signingEditorSlice.actions.removeLineAltGlosses(lineId))
+                }
+                          
+            }catch(ex){
+                console.log(ex)
+            }finally{ 
+                dispatch(signingEditorSlice.actions.setLineAltGlossLoadingFlag({lineId, flag: false}))
+            }
+        }
+    }
+}
+
 export function sendInteractionLog(projectId: string | null, type: InteractionType, metadata?: any, timestamp?: number): AppThunk {
     return async (dispatch, getState) => {
         
@@ -198,6 +242,6 @@ export function sendInteractionLog(projectId: string | null, type: InteractionTy
     }
 }
 
-export const { initialize: initializeEditorState, setDetailLineId, toggleDetailLineId, setGlobalMediaPlayerHeight, setShowScrollToLineButton } = signingEditorSlice.actions
+export const { initialize: initializeEditorState, setDetailLineId, toggleDetailLineId, setGlobalMediaPlayerHeight, setShowScrollToLineButton, removeLineAltGlosses } = signingEditorSlice.actions
 
 export default signingEditorSlice.reducer

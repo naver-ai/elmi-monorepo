@@ -22,6 +22,7 @@
     "jwt-decode": "^4.0.0",
     "moment": "^2.30.1",
     "moment-timezone": "^0.5.45",
+    "p-queue": "^8.0.1",
     "pupa": "^3.1.0",
     "react": "18.3.1",
     "react-dom": "18.3.1",

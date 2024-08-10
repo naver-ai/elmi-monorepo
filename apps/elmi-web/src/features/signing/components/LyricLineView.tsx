@@ -1,12 +1,11 @@
-import { Button, Input, InputRef, Skeleton, Progress, Tooltip, Spin } from "antd"
+import { Button, Input, InputRef, Skeleton, Progress, Tooltip, Spin, AutoComplete, AutoCompleteProps } from "antd"
 import { useDispatch, useSelector } from "../../../redux/hooks"
-import { lineInspectionSelectors, lineSelectors, lineTranslationSelectors, sendInteractionLog, setDetailLineId, setShowScrollToLineButton, toggleDetailLineId, upsertLineTranslationInput } from "../reducer"
-import { ChangeEventHandler, FocusEventHandler, MouseEventHandler, useCallback, useEffect, useMemo, useRef, useState } from "react"
+import { getAltGlosses, lineAltGlossesSelectors, lineInspectionSelectors, lineSelectors, lineTranslationSelectors, sendInteractionLog, setDetailLineId, setShowScrollToLineButton, toggleDetailLineId, upsertLineTranslationInput } from "../reducer"
+import { FocusEventHandler, MouseEventHandler, useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { MediaPlayer } from "../../media-player"
 import { MediaPlayerStatus } from "../../media-player/types"
-import { ChatBubbleLeftIcon, PauseIcon, PlayIcon, HandRaisedIcon, ArrowRightIcon, CheckBadgeIcon, CheckCircleIcon,  } from "@heroicons/react/20/solid"
+import { ChatBubbleLeftIcon, PauseIcon, PlayIcon, ArrowRightIcon, CheckCircleIcon,  } from "@heroicons/react/20/solid"
 import {LightBulbIcon} from '@heroicons/react/24/solid'
-import { useThrottleCallback } from "@react-hook/throttle"
 import { PartialDarkThemeProvider } from "../../../styles"
 import { startNewThread, selectThreadIdByLineId, setActiveThreadLineId, selectMessagesByThreadId, ChatThreadPlaceholder } from "../../chat/reducer"
 import { useAudioSegmentPositionPercentage } from "../hooks"
@@ -18,6 +17,7 @@ import { useDebouncedCallback } from "use-debounce"
 import { filter } from "rxjs"
 import { InteractionType } from "../../../model-types"
 import { usePrevious } from "@uidotdev/usehooks"
+import { LoadingIndicator } from "../../../components/LoadingIndicator"
 
 const LineReferenceVideoView = () => {
 
@@ -113,6 +113,7 @@ export const LyricLineView = (props: {lineId: string}) => {
     const projectId = useSelector(state => state.editor.projectId)
 
     const detailLineId = useSelector(state => state.editor.detailLineId)
+    const isAltGlossLoading = useSelector(state => state.editor.lineAltGlossLoadingFlags[props.lineId] === true)
 
     const isSelected = detailLineId == props.lineId
     const prevIsSelected = usePrevious(isSelected)
@@ -148,19 +149,6 @@ export const LyricLineView = (props: {lineId: string}) => {
 
     }, [line?.id])
 
-    const onFocusInput = useCallback<FocusEventHandler<HTMLInputElement>>(ev => {
-        if(line?.id != null){
-            dispatch(setDetailLineId(line?.id))
-        }
-    }, [line?.id])
-
-
-    const onClickInput = useCallback<MouseEventHandler<HTMLInputElement>>(ev => {
-        if(line?.id != null){
-            dispatch(setDetailLineId(line?.id))
-        }
-    }, [line?.id])
-
     const mediaPlayerStatus = useSelector(state => state.mediaPlayer.status)
     const isAudioPlaying = mediaPlayerStatus == MediaPlayerStatus.Playing
     const isInLineLoopMode = useSelector(state => state.mediaPlayer.linePlayInfo != null)
@@ -171,9 +159,15 @@ export const LyricLineView = (props: {lineId: string}) => {
     const threadId = useSelector(state => selectThreadIdByLineId(state, props.lineId))
     const isThreadActive = useSelector(state => state.chat.activeLineId == props.lineId)
 
+    const altGlosses = useSelector(state => lineAltGlossesSelectors.selectById(state, props.lineId))
+
     const showChatButton = isSelected === true && threadId == null && isThreadActive == false
 
     const {ref, inView} = useInView()
+
+    const altGlossOptions = useMemo<AutoCompleteProps['options']>(()=>{
+        return altGlosses?.alt_glosses?.map((gloss, i) => ({label: gloss, value: gloss}))
+    }, [altGlosses?.alt_glosses, props.lineId])
 
     const onClickInspectionIndicator = useCallback<MouseEventHandler<HTMLElement>>((ev) => {
         ev.stopPropagation()
@@ -203,12 +197,16 @@ export const LyricLineView = (props: {lineId: string}) => {
     const [currentTranslationInput, setCurrentTranslationInput] = useState<string>(userTranslation?.gloss || "")
     const isTranslationUploading = useSelector(state => state.editor.lineTranslationSynchronizationFlags[props.lineId] === true)
     
-    const debouncedSyncTranslationInput = useDebouncedCallback(()=>{
+    const updateTranslationInput = useCallback(()=>{
         if(inputRef.current?.input != null){
             const currentInputValue = inputRef.current.input.value.trim()
             dispatch(upsertLineTranslationInput(props.lineId, currentInputValue.length == 0 ? undefined : currentInputValue))
+            if(currentInputValue.length > 0){
+                dispatch(getAltGlosses(props.lineId, currentInputValue))
+            }
         }
-    }, 700)
+    }, [props.lineId])
+    const debouncedSyncTranslationInput = useDebouncedCallback(updateTranslationInput, 700)
 
     const isTranslationInputDirty = useMemo(()=>{
         const cleanedInput = currentTranslationInput?.trim() || undefined
@@ -217,21 +215,48 @@ export const LyricLineView = (props: {lineId: string}) => {
 
     }, [userTranslation?.gloss, currentTranslationInput])
 
-    const onInputChange = useCallback<ChangeEventHandler<HTMLInputElement>>((ev)=>{
-        setCurrentTranslationInput(ev.target.value)
+    const onInputChange = useCallback((value: string)=>{
+        setCurrentTranslationInput(value)
         debouncedSyncTranslationInput()
     }, [debouncedSyncTranslationInput])
+
+    const onSelectAltGloss = useCallback((value: string) => {
+        setCurrentTranslationInput(value)
+        updateTranslationInput()
+        if(projectId != null){
+            dispatch(sendInteractionLog(projectId, InteractionType.SelectAltGloss, { value, lineId: props.lineId, altGlossResultId: altGlosses?.id}))
+        }
+    }, [altGlosses?.id, projectId, props.lineId, debouncedSyncTranslationInput, updateTranslationInput])
+
+
+    const [inputFocused, setInputFocused] = useState<boolean>(false)
+
+    const onInputFocus = useCallback<FocusEventHandler<HTMLInputElement>>(ev => {
+        if(line?.id != null){
+            dispatch(setDetailLineId(line?.id))
+        }
+        setInputFocused(true)
+    }, [line?.id])
+
+
+    const onClickInput = useCallback(() => {
+        if(line?.id != null){
+            dispatch(setDetailLineId(line?.id))
+        }
+        if(inputRef.current?.input?.value != null && altGlosses == null){
+            dispatch(getAltGlosses(line?.id, inputRef.current?.input?.value!))
+        }
+    }, [line?.id, altGlosses])
 
     const onInputBlur = useCallback(()=>{
         if(inputRef.current?.input != null){
             const currentInputValue = inputRef.current.input.value.trim()
             dispatch(upsertLineTranslationInput(props.lineId, currentInputValue.length == 0 ? undefined : currentInputValue))
         }
-    }, [userTranslation?.gloss])
+        setInputFocused(false)
+    }, [userTranslation?.gloss, props.lineId])
 
     const scrollAnchorRef = useRef<HTMLDivElement>(null)
-
-    
 
     useEffect(()=>{
         if(isPositionHitting === true && isInLineLoopMode == false && scrollAnchorRef.current != null){
@@ -308,29 +333,33 @@ export const LyricLineView = (props: {lineId: string}) => {
                         )
                     }
                 </div>
-                <Input ref={inputRef} className="interactive rounded-md" 
-                    onClickCapture={onClickInput}
-                    onFocusCapture={onFocusInput}
-                    onChange={onInputChange}
-                    onBlur={onInputBlur}
-                    defaultValue={userTranslation?.gloss}
+                <AutoComplete options={altGlossOptions} className="w-full" onSelect={onSelectAltGloss}
+                    defaultValue={userTranslation?.gloss} 
                     value={currentTranslationInput}
+                    onChange={onInputChange}
                     placeholder="Insert gloss translation"
-                    rootClassName="!pr-1 !pl-2"
+                    onClick={onClickInput}
+                    onFocus={onInputFocus}
+                    onBlur={onInputBlur}
+                    open={altGlossOptions != null && inputFocused == true && isSelected}
+                    suffixIcon={userTranslation?.gloss != null ? <Tooltip title={isTranslationUploading ? "Saving..." : (isTranslationInputDirty ? "" :"Your gloss is saved.")}>{isTranslationUploading ? <Spin size="small"/> : (isTranslationInputDirty ? null : <CheckCircleIcon className="w-4 h-4 text-lime-400"/>)}</Tooltip> : null}
+                    
+                    ><Input ref={inputRef} className="interactive rounded-md"                    
                     autoComplete="off"
-                    suffix={userTranslation?.gloss != null ? <Tooltip title={isTranslationUploading ? "Saving..." : (isTranslationInputDirty ? "" :"Your gloss is saved.")}>{isTranslationUploading ? <Spin size="small"/> : (isTranslationInputDirty ? null : <CheckCircleIcon className="w-4 h-4 text-lime-400"/>)}</Tooltip> : null}
-                    />
+                    rootClassName="!pr-1 !pl-2"
+                    /></AutoComplete>
+                {isSelected && <PartialDarkThemeProvider><div className="flex items-center pt-2">
+                    {isAltGlossLoading ? <LoadingIndicator size="small" title="Generating alt glosses..."/> : null }
+                    <div className="flex-1"/>
                 {
-                    showChatButton && <div className="flex justify-end itms-center mt-2">
-                        <PartialDarkThemeProvider>
-                            {
+                    showChatButton && 
+                            <>{
                                 inspection != null ? <Button type="text" tabIndex={-1} size="small" icon={<LightBulbIcon className="w-4 h-4 animate-bounce-emphasized"/>} onClick={onClickInspectionIndicator}><span>Elmi has thoughts on this line</span><ArrowRightIcon className="w-4 h-4"/></Button> : 
                                 <Button type="text" tabIndex={-1} size="small" icon={<ChatBubbleLeftIcon className="w-4 h-4"/>} onClick={onClickChatThreadButton}>Start Chat<ArrowRightIcon className="w-4 h-4"/></Button>
-                            }
+                            }</>
                             
-                        </PartialDarkThemeProvider>
-                    </div>
-                }
+                }</div>
+                </PartialDarkThemeProvider>}
             </>
         }
     </div>

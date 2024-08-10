@@ -1,5 +1,7 @@
 from datetime import datetime
 from enum import StrEnum, auto
+from itertools import groupby
+import json
 from os import path
 from typing import Literal, Optional, Union
 from backend.utils.time import get_timestamp
@@ -182,6 +184,9 @@ class ProjectConfiguration(BaseModel):
       body_language: BodyLanguage = BodyLanguage.Moderate
       classifier_level: ClassifierLevel = ClassifierLevel.Moderate
 
+      def make_hash(self)->str:
+          return json.dumps(self.model_dump(), sort_keys=True)
+
 class Project(SQLModel, IdTimestampMixin, UserIdMixin, SongIdMixin, table=True):
 
     last_accessed_at: Optional[datetime] = Field(
@@ -213,6 +218,14 @@ class Project(SQLModel, IdTimestampMixin, UserIdMixin, SongIdMixin, table=True):
         else:
             return self.user_settings
     
+    @property
+    def latest_annotations(self) -> list["LineAnnotation"]:
+        result = []
+        for k, ann_itr in groupby(self.annotations, lambda a: a.line_id):
+            annotations = list(ann_itr)
+            annotations.sort(key=lambda a: a.created_at, reverse=True)
+            result.append(annotations[0])
+        return result
 
 class ProjectIdMixin(BaseModel):
     project_id: str = Field(foreign_key=f"{Project.__tablename__}.id")
@@ -259,9 +272,9 @@ class GlossDescription(BaseModel):
     description: str
 
 class LineAnnotation(SQLModel, IdTimestampMixin, LineIdMixin, ProjectIdMixin, table=True):
-    processing_id: str
+    processing_id: str | None = Field(nullable=True)
     gloss:  str
-    gloss_description: str
+    gloss_description: str | None
     
     mood: list[str] = Field(sa_column=Column(JSON), default_factory=lambda: [])
     facial_expression: str
@@ -293,7 +306,14 @@ class LineTranslation(SQLModel, LineTranslationInfo, table=True):
     line: Optional["Line"] = Relationship(back_populates="translations", sa_relationship_kwargs={'lazy': 'selectin'})
     project: Optional["Project"] = Relationship(back_populates="translations", sa_relationship_kwargs={'lazy': 'selectin'})
 
+class AltGlossesInfo(IdTimestampMixin, LineIdMixin, ProjectIdMixin):
+    base_gloss: str = Field(nullable=False, index=True)
+    alt_glosses: list[str] = Field(sa_column=Column(JSON), default=[])
 
+class CachedAltGlossGenerationResult(SQLModel, AltGlossesInfo, table=True):
+    __table_args__ = (UniqueConstraint("base_gloss", "user_settings_hash", "line_id", "project_id", name="base_gloss_settings_line_idx"), )
+
+    user_settings_hash: str = Field(nullable=False)
 
 # New models for Chat :)
 class Thread(SQLModel, IdTimestampMixin, ProjectIdMixin, LineIdMixin, table=True):
@@ -348,6 +368,7 @@ class InteractionType(StrEnum):
     ExitLineMode = "ExitLineMode"
     
     EnterGloss = "EnterGloss"
+    SelectAltGloss = "SelectAltGloss"
 
     StartNewThread = "StartNewThread"
     SendChatMessage = "SendChatMessage"

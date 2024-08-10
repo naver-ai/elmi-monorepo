@@ -197,6 +197,8 @@ export enum InteractionType{
     
     EnterGloss = "EnterGloss",
 
+    SelectAltGloss = "SelectAltGloss",
+
     StartNewThread = "StartNewThread",
     SendChatMessage = "SendChatMessage"
 }
@@ -205,4 +207,12 @@ export interface InteractionLog {
     type: InteractionType
     metadata?: {[key:string]: any} | undefined
 
+}
+
+export interface AltGlossesInfo {
+    id: string
+    base_gloss: string
+    alt_glosses: Array<string>
+    project_id: string
+    line_id: string
 }

@@ -14,7 +14,7 @@ async def fetch_line_inspection_by_line(db: AsyncSession, project_id: str, line_
                           .where(LineInspection.line_id == line_id)
                           .where(LineInspection.project_id == project_id))).first()
 
-async def fetch_line_annotations_by_project(db: AsyncSession, project_id: str, user_id: str | None)->list[LineInspection]:
+async def fetch_line_annotations_by_project(db: AsyncSession, project_id: str, user_id: str | None)->list[LineAnnotation]:
     return (await db.exec(select(LineAnnotation)
                           .join(Line, Line.id == LineAnnotation.line_id)
                           .join(Project, Project.id == LineAnnotation.project_id)
@@ -23,13 +23,14 @@ async def fetch_line_annotations_by_project(db: AsyncSession, project_id: str, u
 
 
 async def fetch_line_translations_by_project(db: AsyncSession, project_id: str, user_id: str | None)->list[LineTranslation]:
-    return (await db.exec(select(LineTranslation)
+    list = (await db.exec(select(LineTranslation)
                           .join(Line, Line.id == LineTranslation.line_id)
                           .join(Project, Project.id == LineTranslation.project_id)
                           .where(Project.user_id == user_id if user_id is not None else True)
                           .where(LineTranslation.project_id == project_id).order_by(Line.start_millis))).all()
+    return list
 
-async def fetch_line_annotation_by_line(db: AsyncSession, project_id: str, line_id: str) -> LineInspection | None:
+async def fetch_line_annotation_by_line(db: AsyncSession, project_id: str, line_id: str) -> LineAnnotation | None:
     return (await db.exec(select(LineAnnotation)
                           .where(LineAnnotation.line_id == line_id)
                           .where(LineInspection.project_id == project_id))).first()
@@ -44,4 +45,3 @@ async def store_interaction_log(db: AsyncSession, user_id: str, project_id: str,
     orm = InteractionLog(type=type, metadata_json=metadata, timestamp=timestamp, local_timezone=timezone, user_id=user_id, project_id=project_id)
     print(orm)
     db.add(orm)
-    await db.commit()

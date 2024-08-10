@@ -32,6 +32,10 @@ export const PartialDarkThemeProvider = (props: {children: any}) => {
             Progress: {
                 defaultColor: "white",
                 remainingColor: 'rgba(255,255,255,0.45)'
+            },
+            Typography: {
+                colorText: 'white',
+                algorithm: AntdTheme.darkAlgorithm
             }
         }
     }}>

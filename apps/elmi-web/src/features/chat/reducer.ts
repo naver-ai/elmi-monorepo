@@ -181,7 +181,6 @@ export function fetchChatData(projectId: string): AppThunk {
                         headers: Http.getSignedInHeaders(token),
                     }
                 );
-                console.log(resp.data)
 
                 dispatch(chatSlice.actions._upsertChatData({...resp.data, overwrite: true}))
             } catch (ex) {
