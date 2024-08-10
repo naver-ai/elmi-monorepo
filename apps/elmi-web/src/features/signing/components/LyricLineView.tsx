@@ -315,7 +315,9 @@ export const LyricLineView = (props: {lineId: string}) => {
                     onBlur={onInputBlur}
                     defaultValue={userTranslation?.gloss}
                     value={currentTranslationInput}
+                    placeholder="Insert gloss translation"
                     rootClassName="!pr-1 !pl-2"
+                    autoComplete="off"
                     suffix={userTranslation?.gloss != null ? <Tooltip title={isTranslationUploading ? "Saving..." : (isTranslationInputDirty ? "" :"Your gloss is saved.")}>{isTranslationUploading ? <Spin size="small"/> : (isTranslationInputDirty ? null : <CheckCircleIcon className="w-4 h-4 text-lime-400"/>)}</Tooltip> : null}
                     />
                 {

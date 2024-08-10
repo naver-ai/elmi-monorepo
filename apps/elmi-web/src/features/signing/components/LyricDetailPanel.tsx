@@ -43,9 +43,10 @@ export const LyricDetailPanel = (props: {lineId: string}) => {
                 <Markdown className="font-regular italic">{annotation.facial_expression}</Markdown>
             </div> : null
         }
+        <p className="my-3 text-sm text-gray-400 text-right">Description and suggestions from ELMI</p>
+
         <div className="border-t-[1px] pt-3 text-right">
             <Button onClick={onClickClose} tabIndex={-1} className="p-2" type="default">Exit Line Edit Mode</Button>
         </div>
-        
     </Fragment>
 }

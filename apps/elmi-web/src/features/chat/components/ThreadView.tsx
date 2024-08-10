@@ -39,9 +39,9 @@ const ChatMessageCallout = memo((props: {
             props.role == MessageRole.Assistant ? avatar : null
         }
         <div className={`flex-1 flex ${props.role == MessageRole.Assistant ? 'justify-start':'justify-end'}`}>
-            <div className={`px-4 py-2 rounded-xl ${props.inSimpleMode === true ? `px-2 py-1 ${props.role == MessageRole.Assistant ? 'bg-opacity-60' : 'bg-white/50'}` : ""} ${props.role == MessageRole.Assistant ? 'bg-slate-700 mr-10 rounded-tl-none':'bg-slate-200 ml-10 rounded-tr-none'} ${props.calloutClassName}`}>
+            <div className={`px-3 py-1 rounded-xl ${props.inSimpleMode === true ? `px-2 py-1 ${props.role == MessageRole.Assistant ? 'bg-opacity-60' : 'bg-white/50'}` : ""} ${props.role == MessageRole.Assistant ? 'bg-slate-700 mr-4 rounded-tl-none':'bg-slate-200 ml-16 rounded-tr-none'} ${props.calloutClassName}`}>
                 {
-                    typeof props.message == 'string' ? <Typography.Paragraph ellipsis={ellipsisConfig} className={`!m-0 p-0 text-base font-light leading-7 ${props.role == MessageRole.Assistant ? ' text-white' : 'text-black'}`}>
+                    typeof props.message == 'string' ? <Typography.Paragraph ellipsis={ellipsisConfig} className={`!m-0 p-0 text-[0.95rem] font-light leading-7 ${props.role == MessageRole.Assistant ? ' text-white' : 'text-black'}`}>
                         <Markdown unwrapDisallowed disallowedElements={DISALLOWED_TAGS}>{props.message}</Markdown>
                     </Typography.Paragraph> : props.message
                 }
@@ -122,7 +122,7 @@ export const ThreadView = (props: {
         if(isProcessingMessage == false){
             requestAnimationFrame(()=>{
                 //inputRef.current?.nativeElement?.scrollIntoView({behavior: 'smooth', block: 'end'})
-                scrollAnchorRef.current?.scrollIntoView({behavior: 'smooth', block: 'end'})
+                inputRef.current?.nativeElement?.scrollIntoView({behavior: 'smooth', block: 'end'})
                 inputRef.current?.focus({cursor: 'all'})
             })
         }
@@ -144,7 +144,7 @@ export const ThreadView = (props: {
                     if(id == props.threadId){
                         scrollAnchorRef.current?.scrollIntoView({
                             behavior: 'smooth',
-                            block: 'start'
+                            block: 'end'
                         })
                     }
                 }

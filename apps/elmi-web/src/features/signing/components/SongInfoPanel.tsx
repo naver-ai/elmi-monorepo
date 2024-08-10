@@ -11,8 +11,12 @@ export const SongInfoPanel = () => {
             <h4>About</h4>
         </Divider>
         <div className="detail-panel-content-wrapper">
-            <p className="font-regular italic leading-7">{songDescription}</p>
-            <p className="mt-3 text-sm text-gray-400">Description & lyrics from <i>genius.com</i></p>
+            {
+                songDescription != null ? <>
+                <p className="font-regular italic leading-7">{songDescription}</p>
+                <p className="mt-3 text-sm text-gray-400">Description & lyrics from <i>genius.com</i></p></> : null
+            }
+            
         </div>
 
     </Fragment>

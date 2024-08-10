@@ -81,15 +81,19 @@ class IntentClassifier(ChainMapper[str, IntentClassification]):
 intent_classifier = IntentClassifier(client)
 
 # Function to classify user intent
-async def classify_user_intent(user_input: str)->ChatIntent:
-    
+async def classify_user_intent(user_input: str, retry_count: int = 5)->ChatIntent:
     # Execute the chain with the lyrics input
     try:
         response_classification = await intent_classifier.run(user_input)
+        return response_classification.intent
     except Exception as ex:
-        print(ex)
+        print("Intent classification error - ", ex)
+        if retry_count > 0:
+            return await classify_user_intent(user_input, retry_count - 1)
+        else:
+            print("Consumed all retry count. Just return 'Other'")
+            return ChatIntent.Other
 
-    return response_classification.intent
     
 
 # Create a formatted system template string with inference results.
