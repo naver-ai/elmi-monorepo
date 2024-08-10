@@ -1,8 +1,6 @@
 import { useCallback } from "react";
-import { setDetailLineId } from "../reducer";
-import { LeftDoubleArrowIcon } from "../../../components/svg-icons";
 import { LyricDetailPanel } from "./LyricDetailPanel";
-import { useDispatch, useSelector } from "../../../redux/hooks"
+import { useSelector } from "../../../redux/hooks"
 import { ArrowLeftStartOnRectangleIcon } from '@heroicons/react/20/solid'
 import { Button } from "antd"
 import { useNavigate } from "react-router-dom"

@@ -1,9 +1,10 @@
 import { createEntityAdapter, createSelector, createSlice } from "@reduxjs/toolkit"
-import { LineAnnotation, LineInspection, LineTranslation, LyricLine, ProjectInfo, Song, Verse } from "../../model-types"
+import { InteractionLog, InteractionType, LineAnnotation, LineInspection, LineTranslation, LyricLine, ProjectInfo, Song, Verse } from "../../model-types"
 import { PayloadAction } from '@reduxjs/toolkit'
 import { AppState, AppThunk } from "../../redux/store"
 import { Http } from "../../net/http"
 import { MediaPlayer } from "../media-player"
+
 
 
 
@@ -175,6 +176,23 @@ export function upsertLineTranslationInput(lineId: string, gloss: string | undef
                 console.log(ex)
             }finally{ 
                 dispatch(signingEditorSlice.actions.setLineTranslationSynchronizationFlag({lineId, flag: false}))
+            }
+        }
+    }
+}
+
+export function sendInteractionLog(projectId: string | null, type: InteractionType, metadata?: any, timestamp?: number): AppThunk {
+    return async (dispatch, getState) => {
+        
+        const state = getState()
+        if(state.auth.token){
+            if(projectId == null){
+                if (state.editor.projectId){
+                    projectId = state.editor.projectId
+                }
+            }
+            if(projectId){
+                await Http.logInteraction(state.auth.token, projectId, type, metadata, timestamp)
             }
         }
     }

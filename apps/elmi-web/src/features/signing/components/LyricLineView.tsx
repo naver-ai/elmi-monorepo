@@ -1,6 +1,6 @@
 import { Button, Input, InputRef, Skeleton, Progress, Tooltip, Spin } from "antd"
 import { useDispatch, useSelector } from "../../../redux/hooks"
-import { lineInspectionSelectors, lineSelectors, lineTranslationSelectors, setDetailLineId, setShowScrollToLineButton, toggleDetailLineId, upsertLineTranslationInput } from "../reducer"
+import { lineInspectionSelectors, lineSelectors, lineTranslationSelectors, sendInteractionLog, setDetailLineId, setShowScrollToLineButton, toggleDetailLineId, upsertLineTranslationInput } from "../reducer"
 import { ChangeEventHandler, FocusEventHandler, MouseEventHandler, useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { MediaPlayer } from "../../media-player"
 import { MediaPlayerStatus } from "../../media-player/types"
@@ -16,6 +16,8 @@ import { useInView } from "react-intersection-observer";
 import { ShortcutManager } from "../../../services/shortcut"
 import { useDebouncedCallback } from "use-debounce"
 import { filter } from "rxjs"
+import { InteractionType } from "../../../model-types"
+import { usePrevious } from "@uidotdev/usehooks"
 
 const LineReferenceVideoView = () => {
 
@@ -73,8 +75,10 @@ const LyricLineControlPanel = (props: {lineId: string}) => {
         ev.stopPropagation()
         if(mediaPlayerStatus == MediaPlayerStatus.Playing){
             dispatch(MediaPlayer.pauseMedia())
+            dispatch(sendInteractionLog(null, InteractionType.PauseSong, {"reason": "line_view", "mode": "line", lineId: line?.id}))
         }else if(mediaPlayerStatus == MediaPlayerStatus.Standby || mediaPlayerStatus == MediaPlayerStatus.Paused){
             dispatch(MediaPlayer.playLineLoop(line?.id, true))
+            dispatch(sendInteractionLog(null, InteractionType.PlaySong, {"reason": "line_view", "mode": "line", lineId: line?.id}))
         }
     }, [mediaPlayerStatus, line?.id])
 
@@ -106,9 +110,12 @@ const START_THREAD_HANDLERS = {
 export const LyricLineView = (props: {lineId: string}) => {
     const line = useSelector(state => lineSelectors.selectById(state, props.lineId))
 
+    const projectId = useSelector(state => state.editor.projectId)
+
     const detailLineId = useSelector(state => state.editor.detailLineId)
 
     const isSelected = detailLineId == props.lineId
+    const prevIsSelected = usePrevious(isSelected)
 
     const inputRef = useRef<InputRef>(null)
 
@@ -125,6 +132,14 @@ export const LyricLineView = (props: {lineId: string}) => {
             })
         }
     }, [isSelected])
+
+    useEffect(()=>{
+        if(prevIsSelected != isSelected && projectId != null){
+            if(isSelected){
+                dispatch(sendInteractionLog(projectId, InteractionType.SelectLine, {lineId: props.lineId}))
+            }
+        }
+    }, [isSelected, prevIsSelected, projectId, props.lineId])
 
     const onClick = useCallback<MouseEventHandler<HTMLDivElement>>((ev)=>{
         if(line?.id != null){

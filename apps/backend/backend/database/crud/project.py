@@ -1,7 +1,7 @@
 from sqlmodel import select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
-from backend.database.models import Line, LineAnnotation, LineInspection, LineTranslation, Project, User
+from backend.database.models import InteractionLog, InteractionType, Line, LineAnnotation, LineInspection, LineTranslation, Project, User
 
 async def fetch_line_inspections_by_project(db: AsyncSession, project_id: str, user_id: str | None)->list[LineInspection]:
     return (await db.exec(select(LineInspection).join(Line, Line.id == LineInspection.line_id)
@@ -39,3 +39,9 @@ async def fetch_line_translation_by_line(db: AsyncSession, project_id: str, line
     return (await db.exec(select(LineTranslation)
                           .where(LineTranslation.line_id == line_id)
                           .where(LineTranslation.project_id == project_id))).first()
+
+async def store_interaction_log(db: AsyncSession, user_id: str, project_id: str, type: InteractionType, metadata: dict | None = None, timestamp: int | None = None, timezone: str | None = None):
+    orm = InteractionLog(type=type, metadata_json=metadata, timestamp=timestamp, local_timezone=timezone, user_id=user_id, project_id=project_id)
+    print(orm)
+    db.add(orm)
+    await db.commit()

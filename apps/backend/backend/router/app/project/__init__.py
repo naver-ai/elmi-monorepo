@@ -7,9 +7,9 @@ from sqlmodel import select, desc
 from sqlmodel.ext.asyncio.session import AsyncSession
 
 from backend.database.engine import with_db_session
-from backend.database.models import Line, LineAnnotation, LineInfo, LineInspection, LineTranslation, Project, ProjectConfiguration, Song, SongInfo, User, Verse, VerseInfo
+from backend.database.models import InteractionType, Line, LineAnnotation, LineInfo, LineInspection, LineTranslation, Project, ProjectConfiguration, Song, SongInfo, User, Verse, VerseInfo
 from backend.router.app.common import get_signed_in_user
-from backend.database.crud.project import fetch_line_annotations_by_project, fetch_line_inspections_by_project, fetch_line_translation_by_line, fetch_line_translations_by_project
+from backend.database.crud.project import fetch_line_annotations_by_project, fetch_line_inspections_by_project, fetch_line_translation_by_line, fetch_line_translations_by_project, store_interaction_log
 from backend.router.app.project.chat import router as chatRouter
 
 router = APIRouter()
@@ -128,23 +128,51 @@ class TranslationInfo(BaseModel):
 @router.put("/{project_id}/lines/{line_id}/translation", response_model=LineTranslation)
 async def upsert_line_translation(info: TranslationInfo,
                                   project_id: str, line_id: str, 
+                                  user: Annotated[User, Depends(get_signed_in_user)],
                                   db: Annotated[AsyncSession, Depends(with_db_session)]):
     translation = await fetch_line_translation_by_line(db, project_id, line_id)
+    
     if translation is not None:
+        gloss_before = translation.gloss
         if info.gloss_is_set():
             translation.gloss = info.gloss if info.gloss is not None and len(info.gloss.strip()) > 0 else None
         
         if info.memo_is_set():
             translation.memo = info.memo if info.memo is not None and len(info.memo.strip()) > 0 else None
         
+        if gloss_before != info.gloss:
+            await store_interaction_log(db, user.id, project_id, InteractionType.EnterGloss, {
+                "initial":False,
+                "translation_id": translation.id,
+                "before": gloss_before,
+                "after": info.gloss
+            })
     else:
         translation = LineTranslation(project_id=project_id, line_id=line_id, 
                                       gloss=info.gloss, memo=info.memo)
-        
-
+        if translation.gloss != None:
+            await store_interaction_log(db, user.id, project_id, InteractionType.EnterGloss, {
+                "initial":True,
+                "translation_id": translation.id,
+                "before": None,
+                "after": info.gloss
+            })
     db.add(translation)
     await db.commit()
     await db.refresh(translation)
     return translation
+
+class LogCreate(BaseModel):
+    type: InteractionType
+    metadata: dict | None = None
+    timestamp: int | None = None
+    timezone: str | None = None
+
+@router.post("/{project_id}/logs/insert")
+async def log_interaction(args: LogCreate, project_id: str, 
+                          user: Annotated[User, Depends(get_signed_in_user)], 
+                          db: Annotated[AsyncSession, Depends(with_db_session)]):
+    print("Log user interaction")
+    await store_interaction_log(db, user.id, project_id, args.type, args.metadata, args.timestamp, args.timezone)
 
 router.include_router(chatRouter, prefix="/{project_id}/chat")

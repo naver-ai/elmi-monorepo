@@ -2,6 +2,7 @@ from datetime import datetime
 from enum import StrEnum, auto
 from os import path
 from typing import Literal, Optional, Union
+from backend.utils.time import get_timestamp
 from pydantic import BaseModel, ConfigDict, computed_field, field_validator
 from sqlalchemy import DateTime, func
 from sqlmodel import Relationship, SQLModel, Field, UniqueConstraint, Column, JSON
@@ -122,7 +123,8 @@ class SharableUserInfo(IdTimestampMixin):
 class User(SQLModel, SharableUserInfo, table=True):
     alias: str = Field(nullable=False, min_length=1)
     passcode: str = Field(unique=True, allow_mutation=False, default_factory=lambda: generate('0123456789', size=6))
-    projects: list['Project'] = Relationship(back_populates="user", sa_relationship_kwargs={'lazy': 'selectin'})
+    projects: list['Project'] = Relationship(back_populates="user", sa_relationship_kwargs={'lazy': 'selectin'}, cascade_delete=True)
+    logs:  list["InteractionLog"] = Relationship(back_populates="user", sa_relationship_kwargs={'lazy': 'selectin'})
 
 
 class UserIdMixin(BaseModel):
@@ -201,6 +203,8 @@ class Project(SQLModel, IdTimestampMixin, UserIdMixin, SongIdMixin, table=True):
 
     threads: list["Thread"] = Relationship(back_populates="project", sa_relationship_kwargs={'lazy': 'selectin'},  cascade_delete=True)
     messages: list["ThreadMessage"] = Relationship(back_populates="project", sa_relationship_kwargs={'lazy': 'selectin'})
+
+    logs:  list["InteractionLog"] = Relationship(back_populates="project", sa_relationship_kwargs={'lazy': 'selectin'}, cascade_delete=True)
 
     @property
     def safe_user_settings(self) -> ProjectConfiguration:
@@ -329,3 +333,33 @@ class ThreadMessage(SQLModel, IdTimestampMixin, ProjectIdMixin, table=True):
     thread: Thread = Relationship(back_populates="messages")
     project: Project = Relationship(back_populates="messages")
     message_metadata: dict = Field(sa_column=Column(JSON, name="metadata"), default={})
+
+
+class InteractionType(StrEnum):
+    EnterProject = "EnterProject",
+    ExitProject = "ExitProject",
+    
+    # Player
+    PlaySong = "PlaySong"
+    PauseSong = "PauseSong"
+
+    # Exploration
+    SelectLine = "SelectLine"
+    ExitLineMode = "ExitLineMode"
+    
+    EnterGloss = "EnterGloss"
+
+    StartNewThread = "StartNewThread"
+    SendChatMessage = "SendChatMessage"
+
+
+class InteractionLog(SQLModel, IdTimestampMixin, UserIdMixin, ProjectIdMixin, table=True):
+    model_config = ConfigDict(use_enum_values=True)
+
+    type: InteractionType = Field(nullable=False, index=True)
+    metadata_json: dict[str, dict | int | float | str | None] = Field(sa_column=Column(JSON, name="metadata"), default=None)
+
+    project: Project = Relationship(back_populates="logs", sa_relationship_kwargs={'lazy': 'selectin'})
+    user: User = Relationship(back_populates="logs", sa_relationship_kwargs={'lazy': 'selectin'})
+    timestamp: int = Field(default_factory=get_timestamp, index=True)
+    local_timezone: Optional[str] = Field(nullable=True, default=None)

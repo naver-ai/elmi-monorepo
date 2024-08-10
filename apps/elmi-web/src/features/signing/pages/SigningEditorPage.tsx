@@ -1,19 +1,15 @@
-import { useDispatch, useSelector } from "../../../redux/hooks"
+import { useDispatch } from "../../../redux/hooks"
 import { SignedInScreenFrame } from "../../../components/SignedInScreenFrame"
 import { useProjectIdInRoute } from "../hooks"
-import {ArrowLeftStartOnRectangleIcon} from '@heroicons/react/20/solid'
-import { Button, Layout } from "antd"
 import { useNavigate } from "react-router-dom"
-import { useCallback, useEffect, useMemo } from "react"
-import { fetchProjectDetail, initializeEditorState } from "../reducer"
+import { useEffect } from "react"
+import { fetchProjectDetail, initializeEditorState, sendInteractionLog } from "../reducer"
 import { LyricsView } from "../components/LyricsView"
-import { LyricDetailPanel } from "../components/LyricDetailPanel"
 import { MediaPlayer } from "../../media-player"
 import { fetchChatData, initializeChatState } from "../../chat/reducer"
 import { ChatThreadSidePanel } from "../components/ChatThreadSidePanel"
-import { ReferenceVideoView } from "../components/ReferenceVideoView"
-import { Http } from "../../../net/http"
 import { InfoSidebar } from "../components/InfoSidebar"
+import { InteractionType } from "../../../model-types"
 
 export const SigningEditorPage = () => {
 
@@ -26,10 +22,14 @@ export const SigningEditorPage = () => {
         dispatch(fetchProjectDetail(projectId))
         dispatch(fetchChatData(projectId))
 
+        dispatch(sendInteractionLog(projectId, InteractionType.EnterProject))
+
         return () => {
             dispatch(initializeEditorState())
             dispatch(initializeChatState())
             dispatch(MediaPlayer.dispose())
+
+            dispatch(sendInteractionLog(projectId, InteractionType.ExitProject))
         }
     }, [projectId]) 
 

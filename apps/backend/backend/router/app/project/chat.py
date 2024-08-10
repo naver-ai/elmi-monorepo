@@ -1,6 +1,7 @@
 from typing import Annotated, Self
+from backend.database.crud.project import store_interaction_log
 from backend.database.engine import with_db_session
-from backend.database.models import ChatIntent, MessageRole, Project, Thread, ThreadMessage, User
+from backend.database.models import ChatIntent, InteractionType, MessageRole, Project, Thread, ThreadMessage, User
 from backend.router.app.common import get_project, get_signed_in_user, get_thread
 from backend.tasks.chat.chatbot import generate_chat_response
 from fastapi import APIRouter, HTTPException, status, Depends
@@ -70,6 +71,11 @@ async def start_thread(args: ThreadCreate,
     db.add(response_message)
     await db.commit()
 
+    await store_interaction_log(db, project.user_id, project.id, InteractionType.StartNewThread, {
+        "thread_id": thread.id,
+        "intent": intent 
+    })
+
     return ThreadStartResult(thread=thread, initial_assistant_message=response_message)
 
 
@@ -121,5 +127,12 @@ async def send_user_message(args: MessageCreate,
     await db.commit()
     await db.refresh(response_message)
     await db.refresh(new_user_message)
+
+    await store_interaction_log(db, thread.project.user_id, thread.project.id, InteractionType.SendChatMessage, {
+        "thread_id": thread.id,
+        "message": args.message,
+        "intent": intent,
+        "response": assistant_response 
+    })
 
     return UserMessageResponse(user_input=new_user_message, assistant_output=response_message)

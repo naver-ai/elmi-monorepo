@@ -6,11 +6,13 @@ import { useThrottleCallback } from "@react-hook/throttle"
 import { useDispatch, useSelector } from "../../../redux/hooks"
 import { useResizeDetector } from "react-resize-detector"
 import { LapsIcon } from "../../../components/svg-icons"
-import { setDetailLineId, setGlobalMediaPlayerHeight } from "../reducer"
+import { sendInteractionLog, setDetailLineId, setGlobalMediaPlayerHeight } from "../reducer"
 import { MediaPlayerStatus } from "../../media-player/types"
 import { formatDuration } from "../../../utils/time"
 import { Http } from "../../../net/http"
 import { ReferenceVideoView } from "./ReferenceVideoView"
+import { InteractionType } from "../../../model-types"
+import { usePrevious } from "@uidotdev/usehooks"
 
 const TIMELINE_PADDING = 1
 
@@ -167,6 +169,8 @@ export const GlobalMediaPlayer = (props: {
     className?: string
 }) => {
 
+    const projectId = useSelector(state => state.editor.projectId)
+
     const dispatch = useDispatch()
 
     const [volume, setVolume] = useState<number>(1)
@@ -174,8 +178,10 @@ export const GlobalMediaPlayer = (props: {
     const songDuration = useSelector(state => state.mediaPlayer.songDurationMillis)
 
     const mediaPlayerStatus = useSelector(state => state.mediaPlayer.status)
+    const prevMediaPlayerStatus = usePrevious(mediaPlayerStatus)
 
     const isInLineLoopMode = useSelector(state => state.mediaPlayer.linePlayInfo != null)
+    const lineIdInLoopMode = useSelector(state => state.mediaPlayer.linePlayInfo?.lineId)
     
     const updateSystemVolume = useCallback((value: number)=>{
         MediaPlayer.setMediaVolume(value / 100)
@@ -216,16 +222,22 @@ export const GlobalMediaPlayer = (props: {
         if(isInLineLoopMode){
             dispatch(setDetailLineId(undefined))
             dispatch(MediaPlayer.exitLineLoop())
+
+            if(projectId != null && lineIdInLoopMode != null){
+                dispatch(sendInteractionLog(projectId, InteractionType.ExitLineMode, {"from": lineIdInLoopMode, "reason": "global_player"}))
+            }
         }
-    }, [isInLineLoopMode])
+    }, [isInLineLoopMode, projectId, lineIdInLoopMode])
 
     const onPlayButtonClick = useCallback(()=>{
         if(mediaPlayerStatus == MediaPlayerStatus.Playing){
             dispatch(MediaPlayer.pauseMedia())
+            dispatch(sendInteractionLog(null, InteractionType.PauseSong, {"reason": "global_player", "mode": isInLineLoopMode ? "line" : "global", lineId: lineIdInLoopMode}))
         }else{
             dispatch(MediaPlayer.performGlobalPlay())
+            dispatch(sendInteractionLog(null, InteractionType.PlaySong, {"reason": "global_player", "mode": isInLineLoopMode ? "line" : "global", lineId: lineIdInLoopMode}))
         }
-    }, [mediaPlayerStatus])
+    }, [mediaPlayerStatus, isInLineLoopMode, lineIdInLoopMode])
 
     useEffect(()=>{
         updateProgressText(null)

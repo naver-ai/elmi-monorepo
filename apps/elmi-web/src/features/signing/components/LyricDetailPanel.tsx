@@ -1,21 +1,24 @@
-import { Button, Divider, Space } from "antd"
+import { Button, Divider } from "antd"
 import { useDispatch, useSelector } from "../../../redux/hooks"
 import { Fragment, useCallback } from "react";
-import { lineAnnotationSelectors, setDetailLineId } from "../reducer";
-import { LeftDoubleArrowIcon } from "../../../components/svg-icons";
-import { LineAnnotation } from "../../../model-types";
+import { lineAnnotationSelectors, sendInteractionLog, setDetailLineId } from "../reducer";
+import { InteractionType, LineAnnotation } from "../../../model-types";
 import Markdown from 'react-markdown'
 
 export const LyricDetailPanel = (props: {lineId: string}) => {
 
     const annotation: LineAnnotation | undefined = useSelector(state => lineAnnotationSelectors.selectById(state, props.lineId))
 
+    const projectId = useSelector(state => state.editor.projectId)
 
     const dispatch = useDispatch()
 
     const onClickClose = useCallback(() => {
         dispatch(setDetailLineId(undefined))
-    }, [])
+        if(projectId != null){
+            dispatch(sendInteractionLog(projectId, InteractionType.ExitLineMode, {"from": props.lineId, "reason": "sidebar"}))
+        }
+    }, [projectId, props.lineId])
 
 
     return <Fragment>

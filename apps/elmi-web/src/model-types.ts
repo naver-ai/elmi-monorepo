@@ -183,3 +183,26 @@ export interface ThreadMessage {
     intent?: ChatIntent | undefined
     message_metadata?: {[key:string]: any} | undefined
 }
+
+export enum InteractionType{
+
+    EnterProject = "EnterProject",
+    ExitProject = "ExitProject",
+    
+    PlaySong = "PlaySong",
+    PauseSong = "PauseSong",
+
+    SelectLine = "SelectLine",
+    ExitLineMode = "ExitLineMode",
+    
+    EnterGloss = "EnterGloss",
+
+    StartNewThread = "StartNewThread",
+    SendChatMessage = "SendChatMessage"
+}
+
+export interface InteractionLog {
+    type: InteractionType
+    metadata?: {[key:string]: any} | undefined
+
+}
