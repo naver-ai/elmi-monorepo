@@ -3,6 +3,7 @@ from enum import StrEnum
 from backend.database.engine import create_db_and_tables, engine
 from backend.database.models import SongWhitelistItem, User
 from backend.database.test import create_test_db_entities
+from backend.tasks.media_preparation.common import LyricsPackage
 import questionary
 from backend.database import db_sessionmaker
 from sqlmodel import select
@@ -49,6 +50,14 @@ async def _add_song():
             artist = await questionary.text(message="Enter artist:", validate=validate_non_null_str).ask_async()
             youtube_id = await questionary.text(message="Enter YouTube ID for reference video:", validate=validate_non_null_str).ask_async()
 
+            use_override_lyrics = await questionary.confirm("Use your own lyrics?").ask_async()
+
+            if use_override_lyrics is True:
+                raw_lines = await questionary.text(message="Enter raw lyric lines:", validate=validate_non_null_str).ask_async()
+                override_lyrics = LyricsPackage.from_list_str(raw_lines.split("\n"))
+            else:
+                override_lyrics = None
+
             use_whitelist = await questionary.confirm("Make this song available to specific users?").ask_async()
             whitelist_users: list[User] = []
             if use_whitelist:
@@ -66,7 +75,7 @@ async def _add_song():
                         selected_users.append(remaining_users[choice_index])
                 whitelist_users = selected_users
             
-            song = await prepare_song(title, artist, youtube_id, db, force=True)
+            song = await prepare_song(title, artist, youtube_id, db, override_lyrics=override_lyrics, force=True)
             if len(whitelist_users) > 0:
                 db.add_all([SongWhitelistItem(user_id=u.id, song_id=song.id, active=True) for u in whitelist_users])
             print("====Successfully created the song.")

@@ -6,12 +6,16 @@ from pydub import AudioSegment
 from backend.database.models import Line, Song, TimestampRangeMixin, Verse
 from .genius import genius
 from .media import MediaManager
+from .common import LyricsPackage
 from backend.utils.string import spinalcase
 from .lyric_synchronizer import LyricSynchronizer
 
 synchronizer = LyricSynchronizer()
 
-async def prepare_song(title: str, artist: str, reference_youtube_id: str, db: AsyncSession, force: bool = False)->Song:
+async def prepare_song(title: str, artist: str, 
+                       reference_youtube_id: str, db: AsyncSession,
+                       override_lyrics: LyricsPackage | None = None,
+                       force: bool = False)->Song:
 
     match_songs = await db.exec(select(Song).where(Song.title == title, Song.artist == artist).limit(1))
     match_song = match_songs.first()
@@ -20,6 +24,9 @@ async def prepare_song(title: str, artist: str, reference_youtube_id: str, db: A
 
     async with db.begin_nested():
         song_info = await genius.retrieve_song_info(title, artist)
+        if override_lyrics is not None:
+            print("Override custom lyrics.")
+            song_info.lyrics = override_lyrics
 
         song = Song(title=song_info.title, artist=song_info.artist_names, description=song_info.description, reference_video_id=reference_youtube_id)
                     
@@ -45,7 +52,7 @@ async def prepare_song(title: str, artist: str, reference_youtube_id: str, db: A
 
         duration_millis = round(audio.duration_seconds * 1000)
 
-        print("Reference Lyrics from Genius:")
+        print("Reference Lyrics:")
         print(song_info.lyrics)
 
         segmented_lyrics = synchronizer.retrieve_segment_timestamped_subtitles_from_youtube(song.reference_video_id)

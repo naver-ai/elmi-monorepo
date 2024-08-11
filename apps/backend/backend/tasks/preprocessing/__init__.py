@@ -5,6 +5,7 @@ from sqlmodel import select, delete
 from sqlmodel.ext.asyncio.session import AsyncSession
 from langchain_core.runnables import RunnableParallel
 import asyncio
+from more_itertools import sliced
 
 from backend.database.models import AltGlossesInfo, CachedAltGlossGenerationResult, GlossDescription, Line, LineAnnotation, LineInspection, Project
 from .base_gloss_generation import BaseGlossGenerationPipeline
@@ -131,21 +132,12 @@ async def preprocess_song(project_id: str, db: AsyncSession, force: bool = True)
                 line_batches: list[list[Line]] = []
                 
                 if len(project.song.verses) > 1:
-                    curr_batch = []
                     for verse_i, verse in enumerate(project.song.verses):
-                        if len(curr_batch) > 0 and len(curr_batch) + len(verse.lines) > 15:
-                            line_batches.append(curr_batch)
-                            curr_batch = []
-                        
-                        curr_batch += verse.lines
-                        
-                        if len(curr_batch) >= 10:
-                            line_batches.append(curr_batch)
-                            curr_batch = []
-                    if len(curr_batch) > 0:
-                        line_batches.append(curr_batch)
+                        if len(verse.lines) > 12:
+                            verse_batches = list(sliced([line for line in verse.lines], n=8))
+                            line_batches.extend(verse_batches)
                 else:
-                    line_batches = list(batched([line for verse in project.song.verses for line in verse.lines], n=10))
+                    line_batches = list(sliced([line for verse in project.song.verses for line in verse.lines], n=10))
 
                 async def batch_analysis(lines: list[Line], batch_id: int):
 

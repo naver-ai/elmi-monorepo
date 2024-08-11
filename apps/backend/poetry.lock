@@ -1337,6 +1337,17 @@ files = [
 ]
 
 [[package]]
+name = "more-itertools"
+version = "10.4.0"
+description = "More routines for operating on iterables, beyond itertools"
+optional = false
+python-versions = ">=3.8"
+files = [
+    {file = "more-itertools-10.4.0.tar.gz", hash = "sha256:fe0e63c4ab068eac62410ab05cccca2dc71ec44ba8ef29916a0090df061cf923"},
+    {file = "more_itertools-10.4.0-py3-none-any.whl", hash = "sha256:0f7d9f83a0a8dcfa8a2694a770590d98a67ea943e3d9f5298309a484758c4e27"},
+]
+
+[[package]]
 name = "multidict"
 version = "6.0.5"
 description = "multidict implementation"
@@ -3350,4 +3361,4 @@ test = ["pytest (>=8.1,<9.0)"]
 [metadata]
 lock-version = "2.0"
 python-versions = ">=3.11,<3.12"
-content-hash = "5a34cec0d53cb0e937cdd280f583985c07f457098b5231cb83cd1a00cc04e37b"
+content-hash = "b63f468e9685fd337f187346793150310df125a554c18472e941e51a8c15de5b"

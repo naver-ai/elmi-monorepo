@@ -3,6 +3,7 @@ from io import BytesIO
 from math import ceil, floor
 import re
 from backend.database.models import Line, TimestampRangeMixin, Verse
+from .common import LyricLine, LyricsPackage
 from langchain_openai import ChatOpenAI
 from pydantic import BaseModel, TypeAdapter, validate_call
 from backend.utils.env_helper import get_env_variable, EnvironmentVariables
@@ -17,7 +18,7 @@ from langchain_core.output_parsers import PydanticOutputParser
 
 import json
 
-from .genius import LyricLine, LyricsPackage, clean_lyric_line
+from .common import clean_lyric_line
 from backend.utils.lyric_data_types import SyncedLyricSegment, SyncedLyricsSegmentWithWordLevelTimestamp, SyncedText, SyncedTimestamps
 
 PROMPT_LINE_MATCH = """
@@ -136,7 +137,7 @@ class LyricSynchronizer:
 
     def retrieve_segment_timestamped_subtitles_from_youtube(self, youtube_id: str, expand_duration_millis: int = 1000) -> list[SyncedText]:
 
-        youtube_transcript = YouTubeTranscriptApi.get_transcript(youtube_id)
+        youtube_transcript = YouTubeTranscriptApi.get_transcript(youtube_id, languages=['en', 'en-US'])
 
         print("Original youtube transcript: ", youtube_transcript)
 
