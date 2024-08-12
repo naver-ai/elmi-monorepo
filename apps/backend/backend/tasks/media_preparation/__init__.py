@@ -4,7 +4,7 @@ from sqlmodel.ext.asyncio.session import AsyncSession
 from pydub import AudioSegment
 
 from backend.database.models import Line, Song, TimestampRangeMixin, Verse
-from .genius import genius
+from .genius import GeniusSongInfo, genius
 from .media import MediaManager
 from .common import LyricsPackage
 from backend.utils.string import spinalcase
@@ -14,6 +14,8 @@ synchronizer = LyricSynchronizer()
 
 async def prepare_song(title: str, artist: str, 
                        reference_youtube_id: str, db: AsyncSession,
+                       skip_genius: bool = False,
+                       override_description: str | None = None,
                        override_lyrics: LyricsPackage | None = None,
                        force: bool = False)->Song:
 
@@ -23,10 +25,17 @@ async def prepare_song(title: str, artist: str,
         return match_song
 
     async with db.begin_nested():
-        song_info = await genius.retrieve_song_info(title, artist)
+        if skip_genius is True:
+            song_info = GeniusSongInfo(title=title, artist_names=artist, song_art_image_thumbnail_url=None, song_art_image_url=None, lyrics=override_lyrics, description=override_description)
+        else:
+            song_info = await genius.retrieve_song_info(title, artist)
+        
         if override_lyrics is not None:
             print("Override custom lyrics.")
             song_info.lyrics = override_lyrics
+
+        if override_description is not None:
+            song_info.description = override_description
 
         song = Song(title=song_info.title, artist=song_info.artist_names, description=song_info.description, reference_video_id=reference_youtube_id)
                     

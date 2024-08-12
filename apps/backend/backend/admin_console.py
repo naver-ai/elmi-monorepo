@@ -50,13 +50,25 @@ async def _add_song():
             artist = await questionary.text(message="Enter artist:", validate=validate_non_null_str).ask_async()
             youtube_id = await questionary.text(message="Enter YouTube ID for reference video:", validate=validate_non_null_str).ask_async()
 
-            use_override_lyrics = await questionary.confirm("Use your own lyrics?").ask_async()
+            override_lyrics = None
+            override_description = None
 
-            if use_override_lyrics is True:
+            skip_genius = await questionary.confirm("Skip Genius and instead use your own information?").ask_async()
+            if skip_genius:
                 raw_lines = await questionary.text(message="Enter raw lyric lines:", validate=validate_non_null_str).ask_async()
                 override_lyrics = LyricsPackage.from_list_str(raw_lines.split("\n"))
+                override_description = await questionary.text(message="Enter song description:", validate=validate_non_null_str).ask_async()
             else:
-                override_lyrics = None
+                use_override_lyrics = await questionary.confirm("Use your own lyrics?").ask_async()
+
+                if use_override_lyrics is True:
+                    raw_lines = await questionary.text(message="Enter raw lyric lines:", validate=validate_non_null_str).ask_async()
+                    override_lyrics = LyricsPackage.from_list_str(raw_lines.split("\n"))
+
+                use_override_description = await questionary.confirm("User your own song description?").ask_async()
+
+                if use_override_description is True:
+                    override_description = await questionary.text(message="Enter song description:", validate=validate_non_null_str).ask_async()
 
             use_whitelist = await questionary.confirm("Make this song available to specific users?").ask_async()
             whitelist_users: list[User] = []
@@ -75,7 +87,7 @@ async def _add_song():
                         selected_users.append(remaining_users[choice_index])
                 whitelist_users = selected_users
             
-            song = await prepare_song(title, artist, youtube_id, db, override_lyrics=override_lyrics, force=True)
+            song = await prepare_song(title, artist, youtube_id, db, skip_genius=skip_genius, override_lyrics=override_lyrics, override_description=override_description, force=True)
             if len(whitelist_users) > 0:
                 db.add_all([SongWhitelistItem(user_id=u.id, song_id=song.id, active=True) for u in whitelist_users])
             print("====Successfully created the song.")

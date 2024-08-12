@@ -64,11 +64,11 @@ class GeniusManager:
     
     def __init__(self) -> None:
         self.token = get_env_variable(EnvironmentVariables.GENIUS_ACCESS_TOKEN)
-    
-    retry()
-    async def retrieve_song_info(self, title: str, artist: str) -> GeniusSongInfo | None:
 
-        params = {"q": f"{title}"}
+    retry()
+    async def query_genius(self, search_term) -> list[any] | None:
+
+        params = {"q": search_term} 
 
         headers = {
                 'Authorization': f"Bearer {self.token}"
@@ -78,19 +78,26 @@ class GeniusManager:
             response = await client.get(url=self.ENDPOINT_SEARCH, params=params, headers=headers, timeout=20000)
             print(response.json())
             songs = [hit["result"] for hit in response.json()["response"]["hits"] if hit["type"] == "song"]
+            
+            return songs
+    
+    
+    async def retrieve_song_info(self, title: str, artist: str) -> GeniusSongInfo | None:
+        search_terms = [f"{title} by {artist}", f"{title} - {artist}", f"{title}"]
+        for term in search_terms:
+            print(f"Query Genius with term \"{term}\"...")
+            songs = await self.query_genius(term)
             if len(songs) > 0:
                 print(f"{len(songs)} songs")
                 for song in songs:
                     print(f"Check {song['title']} / {song['artist_names']}")
                     if song["title"].strip().lower() == title.strip().lower():
                         if song["artist_names"].strip().lower() == artist.strip().lower():
-
                             print(song)
 
                             lyrics, desc = await extract_lyrics_and_description(song["path"])
-
                             return GeniusSongInfo(**song, lyrics=lyrics, description=desc)
-                
-            return None
+        
+        return None
 
 genius = GeniusManager()
