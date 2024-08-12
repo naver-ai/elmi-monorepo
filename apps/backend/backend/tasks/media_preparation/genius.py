@@ -97,8 +97,8 @@ class GeniusManager:
 
                     print(f"Check {song['title']} / {song['artist_names']}.. title similarity - {title_similarity}, artist similarity - {artist_similarity}")
 
-                    if song["title"].strip().lower() == title.strip().lower() or title_similarity > 0.9:
-                        if song["artist_names"].strip().lower() == artist.strip().lower() or artist_similarity > 0.9:
+                    if song["title"].strip().lower() == title.strip().lower() or title_similarity > 90:
+                        if song["artist_names"].strip().lower() == artist.strip().lower() or artist_similarity > 90:
                             print(song)
 
                             lyrics, desc = await extract_lyrics_and_description(song["path"])

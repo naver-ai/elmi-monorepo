@@ -51,7 +51,10 @@ class LyricsPackage(BaseModel):
 def clean_lyric_line(line: str) -> str:
     cleaned_line = line.strip()
     cleaned_line = re.sub(r"^[^a-zA-Z0-9]+$", "", cleaned_line)
+    cleaned_line = re.sub(r"^[^a-zA-Z0-9]+\s", "", cleaned_line)
+    cleaned_line = re.sub(r"\s+[^a-zA-Z0-9]+$", "", cleaned_line)
     cleaned_line = re.sub(r'\(.*?\)', "", cleaned_line)
+    cleaned_line = re.sub(r'\[.*?\]', "", cleaned_line)
     cleaned_line = re.sub(r'\s+([,?.!;:])', r'\1', cleaned_line)
     cleaned_line = re.sub(f'\s+', ' ', cleaned_line).strip()
     return cleaned_line

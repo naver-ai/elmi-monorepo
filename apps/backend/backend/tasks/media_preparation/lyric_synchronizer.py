@@ -208,7 +208,7 @@ class LyricSynchronizer:
 
             if max(highest_similarity, highest_similarity_with_stitched_subtitles) > 40:
                 if highest_similarity >= highest_similarity_with_stitched_subtitles:
-                    if similarities[0] == similarities[1] == highest_similarity:
+                    if len(similarities) > 1 and similarities[0] == similarities[1] == highest_similarity:
                         print("There might be skipped repeatedness in the subtitles.")
                         cand_highest_similarity = candidates[1]
                     else:         
@@ -260,8 +260,6 @@ class LyricSynchronizer:
                         last_subtitle_idx_paired = cand1_index
                 else:
                     print("Did not find the lyrics line match. Make a new bridge subtitle...")
-                    print("Before:", merged[last_subtitle_idx_paired])
-                    print("After:", merged[last_subtitle_idx_paired + 1])
                     segment = SyncedLyricSegment(
                         start=merged[last_subtitle_idx_paired].end,
                         end=merged[last_subtitle_idx_paired + 1].start if (last_subtitle_idx_paired < len(merged) - 1 and line_i < len(lyrics.lines) - 1) else song_duration_sec,
