@@ -136,8 +136,12 @@ async def preprocess_song(project_id: str, db: AsyncSession, force: bool = True)
                         if len(verse.lines) > 12:
                             verse_batches = list(sliced([line for line in verse.lines], n=8))
                             line_batches.extend(verse_batches)
+                        else:
+                            line_batches.append(verse.lines)
                 else:
                     line_batches = list(sliced([line for verse in project.song.verses for line in verse.lines], n=10))
+
+                print(line_batches)
 
                 async def batch_analysis(lines: list[Line], batch_id: int):
 
