@@ -26,7 +26,7 @@ async def prepare_song(title: str, artist: str,
 
     async with db.begin_nested():
         if skip_genius is True:
-            song_info = GeniusSongInfo(title=title, artist_names=artist, song_art_image_thumbnail_url=None, song_art_image_url=None, lyrics=override_lyrics, description=override_description)
+            song_info = GeniusSongInfo(id=0, title=title, artist_names=artist, song_art_image_thumbnail_url=None, song_art_image_url=None, lyrics=override_lyrics, description=override_description)
         else:
             song_info = await genius.retrieve_song_info(title, artist)
         
