@@ -128,41 +128,39 @@ async def upsert_line_translation(info: TranslationInfo,
                                   project_id: str, line_id: str, 
                                   user: Annotated[User, Depends(get_signed_in_user)],
                                   db: Annotated[AsyncSession, Depends(with_db_session)]):
-    translation = await fetch_line_translation_by_line(db, project_id, line_id)
-    
-    if translation is not None:
-        gloss_before = translation.gloss
-        if info.gloss_is_set():
-            translation.gloss = info.gloss if info.gloss is not None and len(info.gloss.strip()) > 0 else None
+        print(f"Try upserting translation - {user.alias},'{info.gloss}'")
+        translation = await fetch_line_translation_by_line(db, project_id, line_id)
         
-        if info.memo_is_set():
-            translation.memo = info.memo if info.memo is not None and len(info.memo.strip()) > 0 else None
-        
-        if gloss_before != info.gloss:
-            await store_interaction_log(db, user.id, project_id, InteractionType.EnterGloss, {
-                "initial":False,
-                "translation_id": translation.id,
-                "before": gloss_before,
-                "after": info.gloss
-            })
-            annotation = await generate_line_annotation_with_user_translation(project_id, db, line_id)
-            db.add(annotation)
+        if translation is not None:
+            gloss_before = translation.gloss
+            if info.gloss_is_set():
+                translation.gloss = info.gloss if info.gloss is not None and len(info.gloss.strip()) > 0 else None
             
-    else:
-        translation = LineTranslation(project_id=project_id, line_id=line_id, 
-                                      gloss=info.gloss, memo=info.memo)
-        if translation.gloss != None:
-            await store_interaction_log(db, user.id, project_id, InteractionType.EnterGloss, {
-                "initial":True,
-                "translation_id": translation.id,
-                "before": None,
-                "after": info.gloss
-            })
+            if info.memo_is_set():
+                translation.memo = info.memo if info.memo is not None and len(info.memo.strip()) > 0 else None
+            
+            if gloss_before != info.gloss:
+                await store_interaction_log(db, user.id, project_id, InteractionType.EnterGloss, {
+                    "initial":False,
+                    "translation_id": translation.id,
+                    "before": gloss_before,
+                    "after": info.gloss
+                })                
+        else:
+            translation = LineTranslation(project_id=project_id, line_id=line_id, 
+                                        gloss=info.gloss, memo=info.memo)
+            if translation.gloss != None:
+                await store_interaction_log(db, user.id, project_id, InteractionType.EnterGloss, {
+                    "initial":True,
+                    "translation_id": translation.id,
+                    "before": None,
+                    "after": info.gloss
+                })
 
-    db.add(translation)
-    await db.commit()
-    await db.refresh(translation)
-    return translation
+        db.add(translation)
+        await db.commit()
+        await db.refresh(translation)
+        return translation
 
 class AltGrossesResult(BaseModel):
     info: AltGlossesInfo | None

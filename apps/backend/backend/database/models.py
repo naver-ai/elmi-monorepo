@@ -209,7 +209,9 @@ class Project(SQLModel, IdTimestampMixin, UserIdMixin, SongIdMixin, table=True):
     threads: list["Thread"] = Relationship(back_populates="project", sa_relationship_kwargs={'lazy': 'selectin'},  cascade_delete=True)
     messages: list["ThreadMessage"] = Relationship(back_populates="project", sa_relationship_kwargs={'lazy': 'selectin'})
 
+    project_sessions: list["ProjectSession"] = Relationship(back_populates="project", sa_relationship_kwargs={'lazy': 'selectin'})
     logs:  list["InteractionLog"] = Relationship(back_populates="project", sa_relationship_kwargs={'lazy': 'selectin'}, cascade_delete=True)
+
 
     @property
     def safe_user_settings(self) -> ProjectConfiguration:
@@ -342,6 +344,22 @@ class ChatIntent(StrEnum):
     Emoting=auto()
     Timing=auto()
     Other=auto()
+
+class LocalTimezoneMixin(BaseModel):
+    local_timezone: Optional[str] = Field(nullable=True, default=None)
+
+class SessionTimeRangeMixin(LocalTimezoneMixin):
+    started_timestamp: int = Field(default_factory=get_timestamp, index=True)
+    ended_timestamp: int | None = Field(default=None, nullable=True, index=True)
+    
+
+class BrowserSession(SQLModel, IdTimestampMixin, UserIdMixin, SessionTimeRangeMixin, LocalTimezoneMixin, table=True):
+    project_sessions: list['ProjectSession'] = Relationship(back_populates='browser_session', sa_relationship_kwargs={'lazy': 'selectin'})
+    
+class ProjectSession(SQLModel, IdTimestampMixin, ProjectIdMixin, SessionTimeRangeMixin, table=True):
+    browser_session_id: str = Field(foreign_key=f"{BrowserSession.__tablename__}.id")
+    browser_session: BrowserSession | None = Relationship(back_populates='project_sessions')
+    project: Project | None = Relationship(back_populates='project_sessions')
 
 class ThreadMessage(SQLModel, IdTimestampMixin, ProjectIdMixin, table=True):
     model_config = ConfigDict(use_enum_values=True)
