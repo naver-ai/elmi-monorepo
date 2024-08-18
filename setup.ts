@@ -3,6 +3,8 @@ import fs from 'fs-extra'
 import dotenv from 'dotenv'
 import path from 'path'
 import inquirer from 'inquirer'
+import bcrypt from 'bcrypt';
+import { nanoid } from 'nanoid'
 
 const envPath = path.resolve(process.cwd(), ".env")
 
@@ -24,7 +26,16 @@ const VITE_WHITELISTS: {[key:string]:boolean} = {
     "OPENAI_API_KEY": false,
     "GENIUS_ACCESS_TOKEN": false,
     "AUTH_SECRET": false,
+    "ADMIN_ID": false,
+    "ADMIN_HASHED_PW": false
     //"EXAMPLE_SONG_GDRIVE_ID": false
+}
+
+
+async function hashPassword(password:string): Promise<string>{
+    let hp = await bcrypt.hash(password.trim(), 10)
+    console.log(hp)
+    return hp
 }
 
 async function setup(){
@@ -92,6 +103,15 @@ async function setup(){
                 validate: makeExistingValidator("Please enter a valid access token.")
             })
     }
+
+    if(env.parsed?.["ADMIN_HASHED_PW"] == null){
+        questions.push({
+            type: 'password',
+            name: 'ADMIN_HASHED_PW',
+            message: "Set password for admin.",
+            validate: makeExistingValidator("Please enter a valid access token.")
+        })
+    }
 /*
     if(env.parsed?.["EXAMPLE_SONG_GDRIVE_ID"] == null){
         questions.push({
@@ -104,10 +124,20 @@ async function setup(){
 
     const newObj: {[key:string]:string} = env.parsed as any
 
+
+
+    if(env.parsed?.["ADMIN_ID"] == null){
+        newObj["ADMIN_ID"] = nanoid()
+    }
+
     if(questions.length > 0){
         const answers = await inquirer.prompt(questions)
         for(const key of Object.keys(answers)){
-            newObj[key] = answers[key]
+            if(key == "ADMIN_HASHED_PW"){
+                newObj[key] = await hashPassword(answers[key])
+            }else{
+                newObj[key] = answers[key]
+            }
         }
     }
 

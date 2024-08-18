@@ -1,5 +1,5 @@
-from datetime import datetime
 from typing import Annotated, Optional
+from backend.router.endpoint_models import ProjectInfo, convert_project_to_project_info, ProjectDetails, convert_project_to_project_details
 from backend.tasks.preprocessing import generate_alt_glosses_with_user_translation, generate_line_annotation_with_user_translation, preprocess_song
 from fastapi import APIRouter, status, Depends
 from pydantic import BaseModel, Field
@@ -7,41 +7,20 @@ from sqlmodel import select, desc
 from sqlmodel.ext.asyncio.session import AsyncSession
 
 from backend.database.engine import with_db_session
-from backend.database.models import AltGlossesInfo, InteractionType, Line, LineAnnotation, LineInfo, LineInspection, LineTranslation, LineTranslationInfo, Project, ProjectConfiguration, Song, SongInfo, User, Verse, VerseInfo
+from backend.database.models import AltGlossesInfo, InteractionType, Line, LineAnnotation, LineInspection, LineTranslation, LineTranslationInfo, Project, ProjectConfiguration, Song, User
 from backend.router.app.common import get_signed_in_user
 from backend.database.crud.project import fetch_line_annotations_by_project, fetch_line_inspections_by_project, fetch_line_translation_by_line, fetch_line_translations_by_project, store_interaction_log
 from backend.router.app.project.chat import router as chatRouter
 
 router = APIRouter()
 
-class ProjectInfo(BaseModel):
-    id: str
-    user_id: str
-    song_id: str
-    song_title: str
-    song_artist: str
-    song_description: str | None
-    last_accessed_at: int | None
-
 @router.get("/all", response_model=list[ProjectInfo])
 async def get_projects(user: Annotated[User, Depends(get_signed_in_user)], 
                        db: Annotated[AsyncSession, Depends(with_db_session)]):
-    query = select(Project, Song).where(Project.user_id == user.id, Project.song_id == Song.id).order_by(desc(Project.last_accessed_at))
+    query = select(Project).where(Project.user_id == user.id).order_by(desc(Project.last_accessed_at))
     results = (await db.exec(query)).all()
-    return [ProjectInfo(id=proj.id, user_id=user.id, song_id=song.id, 
-                        song_title=song.title, song_artist=song.artist, song_description=song.description, 
-                        last_accessed_at=proj.last_accessed_at) for proj, song in results]
+    return [convert_project_to_project_info(proj) for proj in results]
 
-
-class ProjectDetails(BaseModel):
-    id: str
-    last_accessed_at: datetime | None
-    song: SongInfo
-    verses: list[VerseInfo]
-    lines: list[LineInfo]
-    translations: list[LineTranslationInfo]
-    annotations: list[LineAnnotation]
-    inspections: list[LineInspection]
 
 class ProjectCreationArgs(ProjectConfiguration):
     song_id: str
@@ -78,16 +57,7 @@ async def get_project_detail(project_id: str, user: Annotated[User, Depends(get_
     project = await db.get(Project, project_id)
     if project is not None:
         if project.user_id == user.id:
-            return ProjectDetails(
-                id=project.id,
-                last_accessed_at=project.last_accessed_at,
-                song=project.song,
-                verses=project.song.verses,
-                lines=[line for verse in project.song.verses for line in verse.lines],
-                translations=await fetch_line_translations_by_project(db, project_id, user.id),
-                annotations=project.latest_annotations,
-                inspections=project.inspections
-            )
+            return await convert_project_to_project_details(project, user.id, db)
         else:
             return status.HTTP_403_FORBIDDEN
     else:

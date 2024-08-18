@@ -1,7 +1,9 @@
+from pydantic import BaseModel
+from datetime import datetime
 from sqlmodel import select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
-from backend.database.models import InteractionLog, InteractionType, Line, LineAnnotation, LineInspection, LineTranslation, Project, User
+from backend.database.models import InteractionLog, InteractionType, Line, LineAnnotation, LineInfo, LineInspection, LineTranslation, LineTranslationInfo, Project, SongInfo, User, VerseInfo
 
 async def fetch_line_inspections_by_project(db: AsyncSession, project_id: str, user_id: str | None)->list[LineInspection]:
     return (await db.exec(select(LineInspection).join(Line, Line.id == LineInspection.line_id)

@@ -6,6 +6,33 @@ import { useVerifyToken } from "../features/auth/hooks"
 import { useEffect } from "react"
 import { useSelector } from "../redux/hooks"
 import { UserInfoPage } from "../features/auth/pages/UserInfoPage"
+import { useVerifyAdminToken } from "../features/admin/auth/hook"
+import { AdminLoginPage } from "../features/admin/auth/pages/AdminLoginPage"
+import { UserListPage } from "../features/admin/users/pages/UserListPage"
+import { UsersPageFrame } from "../features/admin/users/components/UsersPageFrame"
+import { UserPage } from "../features/admin/users/pages/UserPage"
+import { UserProjectDetailPage } from "../features/admin/users/pages/UserProjectDetailPage"
+
+
+const AdminLoggedInRoute = () => {
+    const { verify, isSignedIn } = useVerifyAdminToken();
+  
+    useEffect(() => {
+      verify().then((isSignedIn) => {
+        if (!isSignedIn) {
+          console.log('Should redirect to login');
+        }
+      });
+    }, [verify]);
+  
+    if (isSignedIn) {
+      return <Outlet />;
+    } else if (isSignedIn == null) {
+      return <div>Verifying user...</div>;
+    } else {
+      return <Navigate to="/admin/login" />;
+    }
+  };
 
 const SignedInRoute = () => {
     const {verify, isSignedIn} = useVerifyToken()
@@ -50,7 +77,19 @@ export const MainRouter = () => {
                     </Route>
                 </Route>
             </Route>
-            
+        </Route>
+        <Route path="admin">
+            <Route path="login" element={<AdminLoginPage/>}/>
+            <Route element={<AdminLoggedInRoute/>}>
+                <Route index element={<Navigate to={'users'} />} />
+                    <Route element={<UsersPageFrame/>}>
+                        <Route path="users">
+                        <Route index element={<UserListPage/>} />
+                        <Route path=":userId" element={<UserPage/>}/>
+                        <Route path=":userId/projects/:projectId" element={<UserProjectDetailPage/>}/>
+                    </Route>
+                </Route>
+            </Route>
         </Route>
     </Routes>
 </BrowserRouter>

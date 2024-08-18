@@ -11,6 +11,8 @@ from fastapi.staticfiles import StaticFiles
 from backend.database.engine import create_db_and_tables, engine
 from backend.router.app import router as app_router
 from backend.router.app.project.chat import router as chat_router  # Corrected the import path
+from backend.router.admin import router as admin_router  # Corrected the import path
+
 from re import compile
 
 @asynccontextmanager
@@ -33,6 +35,11 @@ app.include_router(
 app.include_router(
     chat_router,
     prefix="/api/v1/chat"
+)
+
+app.include_router(
+    admin_router,
+    prefix="/api/v1/admin"
 )
 
 @app.head("/api/v1/ping")

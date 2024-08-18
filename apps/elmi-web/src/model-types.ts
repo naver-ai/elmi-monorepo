@@ -1,4 +1,3 @@
-import { string } from "yup"
 
 export enum SignLanguageType{
     ASL="ASL",
@@ -71,6 +70,16 @@ export interface User {
     id: string
     callable_name?: string | undefined
     sign_language?: SignLanguageType | undefined
+}
+
+export interface UserFullInfo extends User{
+    alias: string
+    passcode: string
+}
+
+
+export interface UserWithProjects extends UserFullInfo {
+    projects: Array<ProjectInfo>
 }
 
 export interface ProjectInfo {
@@ -205,8 +214,14 @@ export enum InteractionType{
 
 export interface InteractionLog {
     type: InteractionType
-    metadata?: {[key:string]: any} | undefined
+    metadata_json?: {[key:string]: any} | undefined
+}
 
+export interface InteractionLogORM extends InteractionLog {
+    id: string
+
+    timestamp: number
+    local_timezone: string
 }
 
 export interface AltGlossesInfo {
@@ -215,4 +230,16 @@ export interface AltGlossesInfo {
     alt_glosses: Array<string>
     project_id: string
     line_id: string
+}
+
+export interface ProjectDetail {
+    id: string
+    last_accessed_at: string | undefined
+    song: Song
+    verses: Array<Verse>
+    lines: Array<LyricLine>
+    annotations: Array<LineAnnotation>
+    inspections: Array<LineInspection>
+    translations: Array<LineTranslation>
+    logs?: Array<InteractionLogORM>
 }

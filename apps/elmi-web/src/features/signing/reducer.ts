@@ -1,11 +1,9 @@
 import { createEntityAdapter, createSelector, createSlice } from "@reduxjs/toolkit"
-import { AltGlossesInfo, InteractionLog, InteractionType, LineAnnotation, LineInspection, LineTranslation, LyricLine, ProjectInfo, Song, Verse } from "../../model-types"
+import { AltGlossesInfo, InteractionLog, InteractionType, LineAnnotation, LineInspection, LineTranslation, LyricLine, ProjectDetail, ProjectInfo, Song, Verse } from "../../model-types"
 import { PayloadAction } from '@reduxjs/toolkit'
 import { AppState, AppThunk } from "../../redux/store"
 import { Http } from "../../net/http"
 import { MediaPlayer } from "../media-player"
-import PQueue from 'p-queue';
-
 
 
 const verseEntityAdapter = createEntityAdapter<Verse>()
@@ -58,17 +56,6 @@ const INITIAL_STATE: SigningEditorState = {
     showScrollToLineButton: false,
     lineAltGlossLoadingFlags: {},
     lineTranslationSynchronizationFlags: {}
-}
-
-interface ProjectDetail{
-    id: string
-    last_accessed_at: string | undefined
-    song: Song
-    verses: Array<Verse>
-    lines: Array<LyricLine>
-    annotations: Array<LineAnnotation>
-    inspections: Array<LineInspection>
-    translations: Array<LineTranslation>
 }
 
 const signingEditorSlice = createSlice({
