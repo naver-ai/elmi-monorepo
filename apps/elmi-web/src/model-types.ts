@@ -242,4 +242,6 @@ export interface ProjectDetail {
     inspections: Array<LineInspection>
     translations: Array<LineTranslation>
     logs?: Array<InteractionLogORM>
+    threads?: Array<ChatThread>
+    messages?: Array<ThreadMessage>
 }

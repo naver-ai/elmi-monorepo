@@ -34,7 +34,7 @@ export const UserProjectDetailPage = () => {
             label: <b>Interaction Logs</b>,
             children: <LogView projectId={projectId}/>
         }]
-    }, [])
+    }, [projectId])
 
     const dispatch = useDispatch()
 
@@ -49,7 +49,7 @@ export const UserProjectDetailPage = () => {
         <div className="text-xl font-bold">{projectInfo?.song_title} - {projectInfo?.song_artist} <span className="text-xs ml-10 font-normal">Project ID: {projectInfo?.id}</span></div>
         <Divider/>
         {
-            isProjectLoading ? <LoadingIndicator title="Loading project details..."/> : <Collapse size="large" items={collapseItems} destroyInactivePanel/>
+            isProjectLoading ? <LoadingIndicator title="Loading project details..."/> : <Collapse size="large" items={collapseItems} destroyInactivePanel={false}/>
         }
     </div></div>
 }

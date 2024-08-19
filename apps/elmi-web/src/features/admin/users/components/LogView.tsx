@@ -19,7 +19,7 @@ export const LogView = (props: {projectId: string}) => {
                 }
             }else if(log.metadata_json != null){
                 logContent = <div className="mt-2">{Object.keys(log.metadata_json).map(key => {
-                    return <div className="flex"><div className="font-semibold w-32">{key}</div><div className="flex-1">{log.metadata_json![key]}</div></div>
+                    return <div key={key} className="flex"><div className="font-semibold w-32">{key}</div><div className="flex-1">{log.metadata_json![key]}</div></div>
                 })}</div>
             }
 
