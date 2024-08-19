@@ -69,12 +69,12 @@ async def start_thread(args: ThreadCreate,
             project_id=thread.project_id
         )
     db.add(response_message)
-    await db.commit()
 
     await store_interaction_log(db, project.user_id, project.id, InteractionType.StartNewThread, {
         "thread_id": thread.id,
         "intent": intent 
     })
+    await db.commit()
 
     return ThreadStartResult(thread=thread, initial_assistant_message=response_message)
 
@@ -134,5 +134,6 @@ async def send_user_message(args: MessageCreate,
         "intent": intent,
         "response": assistant_response 
     })
+    await db.commit()
 
     return UserMessageResponse(user_input=new_user_message, assistant_output=response_message)

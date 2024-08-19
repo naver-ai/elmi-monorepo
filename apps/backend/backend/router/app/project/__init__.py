@@ -155,5 +155,6 @@ async def log_interaction(args: LogCreate, project_id: str,
                           db: Annotated[AsyncSession, Depends(with_db_session)]):
     print("Log user interaction")
     await store_interaction_log(db, user.id, project_id, args.type, args.metadata, args.timestamp, args.timezone)
+    await db.commit()
 
 router.include_router(chatRouter, prefix="/{project_id}/chat")

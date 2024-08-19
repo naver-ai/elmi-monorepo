@@ -48,8 +48,8 @@ export const UsersPageFrame = () => {
                 mode="inline"
                 items={menuItems}
                 onSelect={onSelectMenu}
-                openKeys={match != null ? [match.params.userId!] : undefined}
-                selectedKeys={match != null ? [match.params.projectId!] : undefined}
+                defaultOpenKeys={match != null ? [match.params.userId!] : undefined}
+                defaultSelectedKeys={match != null ? [match.params.projectId!] : undefined}
                 />
         </Layout.Sider>
         <Layout.Content className="bg-[#fafafa]">
