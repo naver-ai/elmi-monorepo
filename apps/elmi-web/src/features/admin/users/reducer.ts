@@ -1,7 +1,8 @@
-import { createEntityAdapter, createSlice, PayloadAction } from '@reduxjs/toolkit';
+import { createEntityAdapter, createSelector, createSlice, PayloadAction } from '@reduxjs/toolkit';
 import { Http } from '../../../net/http';
 import { AppState, AppThunk } from '../../../redux/store';
-import { ProjectDetail, ProjectInfo, UserFullInfo, UserWithProjects } from '../../../model-types';
+import { ChatThread, LyricLine, ProjectDetail, ProjectInfo, ThreadMessage, UserFullInfo, UserWithProjects, Verse } from '../../../model-types';
+import { useMemo } from 'react';
 
 const userEntityAdapter = createEntityAdapter<UserWithProjects>()
 const projectDetailEntityAdapter = createEntityAdapter<ProjectDetail>()
@@ -65,6 +66,26 @@ const usersSlice = createSlice({
 
 export const usersSelectors = userEntityAdapter.getSelectors((state: AppState) => state.admin.users.userEntityState)
 export const projectDetailSelectors = projectDetailEntityAdapter.getSelectors((state: AppState) => state.admin.users.projectDetailEntityState)
+
+export const selectDenormalizedGlossPackage = createSelector([projectDetailSelectors.selectById], (detail) => {
+  const result: Array<Verse & { lyrics: Array<LyricLine & {gloss?:string, thread?: ChatThread & {messages: Array<ThreadMessage>}}> }> = detail?.verses.map(v => ({ ...v, lyrics: detail.lines.filter(line => line.verse_id == v.id).map(line => { 
+        let thread: any = detail.threads?.find(t => t.line_id == line.id)
+        if(thread){
+            thread = {
+                ...thread,
+                messages: detail.messages?.filter(m => m.thread_id == thread?.id)
+            }
+        }
+        
+        return {
+            ...line, 
+            gloss: detail.translations.find(t => t.line_id == line.id)?.gloss,
+            thread
+        }
+    })}))
+  return result
+})
+
 
 export const fetchUsers = (): AppThunk => {
   return async(dispatch, getState) => {

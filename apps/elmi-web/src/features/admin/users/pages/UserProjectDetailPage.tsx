@@ -1,11 +1,13 @@
 import { useDispatch, useSelector } from "../../../../redux/hooks"
 import { Navigate, useMatch } from "react-router-dom"
-import { fetchProjectDetail, usersSelectors } from "../reducer"
-import { Collapse, CollapseProps, Divider } from "antd"
-import { useEffect, useMemo } from "react"
+import { fetchProjectDetail, projectDetailSelectors, selectDenormalizedGlossPackage, usersSelectors } from "../reducer"
+import { Button, Collapse, CollapseProps, Divider } from "antd"
+import { MouseEventHandler, useCallback, useEffect, useMemo } from "react"
 import { LoadingIndicator } from "../../../../components/LoadingIndicator"
 import { GlossView } from "../components/GlossView"
 import { LogView } from "../components/LogView"
+import { ArchiveBoxArrowDownIcon } from "@heroicons/react/20/solid"
+import FileSaver from "file-saver"
 
 
 export const UserProjectDetailPage = () => {
@@ -24,17 +26,37 @@ export const UserProjectDetailPage = () => {
     const isProjectLoading = useSelector(state => state.admin.users.loadingProjectDetailFlags[projectId] === true)
 
 
+    const hierarchicalLyrics = useSelector(state => selectDenormalizedGlossPackage(state, projectId))
+
+    const interactionLogs = useSelector(state => projectDetailSelectors.selectById(state, projectId)?.logs)
+
+    const onDownloadGlossClick = useCallback<MouseEventHandler<HTMLElement>>((ev)=>{
+        ev.stopPropagation()
+        if(user?.alias != null && projectInfo?.song_title != null){
+            FileSaver.saveAs(new Blob([JSON.stringify(hierarchicalLyrics, null, 2)], {type: "text/plain;charset=utf-8"}), `gloss-${user?.alias}-${projectInfo?.song_title}.json`)
+        }
+    }, [hierarchicalLyrics, user?.alias, projectInfo?.song_title])
+
+
+    const onDownloadLogsClick = useCallback<MouseEventHandler<HTMLElement>>((ev)=>{
+        ev.stopPropagation()
+        if(user?.alias != null && projectInfo?.song_title != null){
+            FileSaver.saveAs(new Blob([JSON.stringify(interactionLogs, null, 2)], {type: "text/plain;charset=utf-8"}), `logs-${user?.alias}-${projectInfo?.song_title}.json`)
+        }
+    }, [interactionLogs, user?.alias, projectInfo?.song_title])
+
     const collapseItems: CollapseProps['items'] = useMemo(()=>{
         return [{
             key: 'gloss',
-            label: <b>Glosses</b>,
+            label: <div className="flex justify-between items-center"><b>Glosses</b><Button type="text" onClick={onDownloadGlossClick}><ArchiveBoxArrowDownIcon className="w-5 h-5"/></Button></div>,
             children: <GlossView projectId={projectId}/>
         },{
             key: 'logs',
-            label: <b>Interaction Logs</b>,
+            label: <div className="flex justify-between items-center"><b>Interaction Logs</b><Button type="text" onClick={onDownloadLogsClick}><ArchiveBoxArrowDownIcon className="w-5 h-5"/></Button></div>,
             children: <LogView projectId={projectId}/>
         }]
     }, [projectId])
+
 
     const dispatch = useDispatch()
 
@@ -49,7 +71,7 @@ export const UserProjectDetailPage = () => {
         <div className="text-xl font-bold">{projectInfo?.song_title} - {projectInfo?.song_artist} <span className="text-xs ml-10 font-normal">Project ID: {projectInfo?.id}</span></div>
         <Divider/>
         {
-            isProjectLoading ? <LoadingIndicator title="Loading project details..."/> : <Collapse size="large" items={collapseItems} destroyInactivePanel={false}/>
+            isProjectLoading ? <LoadingIndicator title="Loading project details..."/> : <Collapse size="large" items={collapseItems} defaultActiveKey={['gloss']} destroyInactivePanel={false}/>
         }
     </div></div>
 }

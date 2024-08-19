@@ -1,30 +1,15 @@
 import { useMemo } from "react"
 import { useSelector } from "../../../../redux/hooks"
-import { projectDetailSelectors } from "../reducer"
+import { projectDetailSelectors, selectDenormalizedGlossPackage } from "../reducer"
 import { ChatThread, InteractionType, LyricLine, MessageRole, ThreadMessage, Verse } from "../../../../model-types"
 import moment from "moment-timezone"
+import { UseSelector } from "react-redux"
 
 export const GlossView = (props: {
     projectId: string
 }) => {
     const detail = useSelector(state => projectDetailSelectors.selectById(state, props.projectId))
-    const hierarchicalLyrics: Array<Verse & { lyrics: Array<LyricLine & {gloss?:string, thread?: ChatThread & {messages: Array<ThreadMessage>}}> }> = useMemo(() => {
-        return detail?.verses.map(v => ({ ...v, lyrics: detail.lines.filter(line => line.verse_id == v.id).map(line => { 
-            let thread: any = detail.threads?.find(t => t.line_id == line.id)
-            if(thread){
-                thread = {
-                    ...thread,
-                    messages: detail.messages?.filter(m => m.thread_id == thread?.id)
-                }
-            }
-            
-            return {
-                ...line, 
-                gloss: detail.translations.find(t => t.line_id == line.id)?.gloss,
-                thread
-            }
-        }) }))
-    }, [detail?.id])
+    const hierarchicalLyrics = useSelector(state => selectDenormalizedGlossPackage(state, props.projectId))
 
     return <div className="text-sm">
         {
