@@ -234,6 +234,7 @@ export interface AltGlossesInfo {
 
 export interface ProjectDetail {
     id: string
+    user_settings: ProjectConfiguration
     last_accessed_at: string | undefined
     song: Song
     verses: Array<Verse>

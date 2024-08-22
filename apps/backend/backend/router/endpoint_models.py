@@ -1,6 +1,6 @@
 from datetime import datetime
 from backend.database.crud.project import fetch_line_translations_by_project
-from backend.database.models import InteractionLog, LineAnnotation, LineInfo, LineInspection, LineTranslationInfo, Project, SongInfo, Thread, ThreadMessage, VerseInfo
+from backend.database.models import InteractionLog, LineAnnotation, LineInfo, LineInspection, LineTranslationInfo, Project, ProjectConfiguration, SongInfo, Thread, ThreadMessage, VerseInfo
 from pydantic import BaseModel
 from sqlmodel.ext.asyncio.session import AsyncSession
 
@@ -22,6 +22,7 @@ def convert_project_to_project_info(project: Project) -> ProjectInfo:
 
 class ProjectDetails(BaseModel):
     id: str
+    user_settings: ProjectConfiguration
     last_accessed_at: datetime | None
     song: SongInfo
     verses: list[VerseInfo]
@@ -40,6 +41,7 @@ async def convert_project_to_project_details(project: Project, user_id: str, db:
                                              ) -> ProjectDetails:
     return ProjectDetails(
                 id=project.id,
+                user_settings=project.user_settings,
                 last_accessed_at=project.last_accessed_at,
                 song=project.song,
                 verses=project.song.verses,
