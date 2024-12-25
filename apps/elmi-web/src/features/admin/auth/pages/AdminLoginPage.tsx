@@ -53,3 +53,5 @@ export const AdminLoginPage = () => {
       </Card>
     </div>
 };
+
+export default AdminLoginPage;

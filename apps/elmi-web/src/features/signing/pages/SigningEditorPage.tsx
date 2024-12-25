@@ -11,7 +11,7 @@ import { ChatThreadSidePanel } from "../components/ChatThreadSidePanel"
 import { InfoSidebar } from "../components/InfoSidebar"
 import { InteractionType } from "../../../model-types"
 
-export const SigningEditorPage = () => {
+const SigningEditorPage = () => {
 
     const dispatch = useDispatch()
     const nav = useNavigate()
@@ -42,3 +42,5 @@ export const SigningEditorPage = () => {
         </div>
     </SignedInScreenFrame>
 }
+
+export default SigningEditorPage

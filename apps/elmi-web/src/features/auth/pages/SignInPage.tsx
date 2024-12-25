@@ -40,3 +40,5 @@ export const SignInPage = () => {
         </Card>
     </div>
 }
+
+export default SignInPage

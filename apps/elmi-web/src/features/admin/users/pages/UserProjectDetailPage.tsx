@@ -80,3 +80,5 @@ export const UserProjectDetailPage = () => {
         }
     </div></div>
 }
+
+export default UserProjectDetailPage

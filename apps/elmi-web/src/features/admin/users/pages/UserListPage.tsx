@@ -9,3 +9,5 @@ export const UserListPage = () => {
         Select user on the left.
     </div>
 }
+
+export default UserListPage

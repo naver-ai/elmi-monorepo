@@ -86,3 +86,5 @@ export const ProjectsPage = () => {
         <ProjectCreationModal isOpen={isProjectCreationModalOpen} onClose={onModalClose}/>
     </SignedInScreenFrame>
 }
+
+export default ProjectsPage

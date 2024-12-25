@@ -57,3 +57,5 @@ export const UserInfoPage = () => {
     </div>
     </SignedInScreenFrame>
 }
+
+export default UserInfoPage

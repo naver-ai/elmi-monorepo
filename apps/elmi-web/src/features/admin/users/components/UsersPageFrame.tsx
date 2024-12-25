@@ -57,3 +57,5 @@ export const UsersPageFrame = () => {
         </Layout.Content>
     </Layout>
 }
+
+export default UsersPageFrame
