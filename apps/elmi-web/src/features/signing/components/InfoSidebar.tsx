@@ -6,6 +6,9 @@ import { Button } from "antd"
 import { useNavigate } from "react-router-dom"
 import { SongInfoPanel } from "./SongInfoPanel";
 import { GrandientBorderline } from "../../../components/decorations";
+import LinesEllipsis from 'react-lines-ellipsis'
+import responsiveHOC from 'react-lines-ellipsis/lib/responsiveHOC'
+const ResponsiveEllipsis = responsiveHOC()(LinesEllipsis)
 
 const HeaderContent = () => {
 
@@ -17,11 +20,12 @@ const HeaderContent = () => {
         nav("/app/projects")
     }, [])
 
-    return <div className="flex flex-row items-center h-10 relative pr-1">
+    return <div className="flex flex-row items-center h-14 relative pr-1">
         <Button className="aspect-square h-full rounded-none p-0 items-center justify-center flex text-slate-500 border-r-[1px] border-r-slate-200" type="text" onClick={onToListClick}><ArrowLeftStartOnRectangleIcon className="w-5 h-5" /></Button>
         {
-            songInfo != null ? <div>
-                <span className="ml-3 font-bold text-lg">{songInfo?.title}</span> - {songInfo?.artist}
+            songInfo != null ? <div className="px-2">
+                <ResponsiveEllipsis className="font-bold" text={songInfo?.title} maxLine={1} />
+                <ResponsiveEllipsis className="text-sm" text={songInfo?.artist} maxLine={1} />
             </div> : null
         }
         <div className="flex-1" />
