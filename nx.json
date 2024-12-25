@@ -44,7 +44,7 @@
       }
     },
     {
-      "plugin": "@nxlv/python"  
+      "plugin": "@nxlv/python"
     }
   ],
   "generators": {
@@ -63,5 +63,11 @@
         "linter": "eslint"
       }
     }
-  }
+  },
+  "targetDefaults": {
+    "e2e-ci--**/*": {
+      "dependsOn": ["^build"]
+    }
+  },
+  "useLegacyCache": true
 }

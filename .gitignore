@@ -53,3 +53,6 @@ data/output_feature1.json
 data/output_feature2.json
 data/output_feature3.json
 data/output_feature4.json
+
+vite.config.*.timestamp*
+vitest.config.*.timestamp*
