@@ -83,12 +83,12 @@ class SongIdMixin(BaseModel):
 
 
 class TimestampRangeMixin(BaseModel):
-    start_millis: Optional[int] = Field(ge=0, default=None)
-    end_millis: Optional[int] = Field(ge=0, default=None)
+    start_millis: Optional[int] = Field(ge=0, default=None, index=True)
+    end_millis: Optional[int] = Field(ge=0, default=None, index=True)
 
 class VerseInfo(IdTimestampMixin, SongIdMixin, TimestampRangeMixin):
     title: Optional[str] = Field(nullable=True)
-    verse_ordering: int = Field(nullable=False)
+    verse_ordering: int = Field(nullable=False, index=True)
     included: bool = Field(default=True)
 
 class Verse(SQLModel, VerseInfo, table=True):
@@ -99,7 +99,7 @@ class VerseIdMixin(BaseModel):
     verse_id: str = Field(foreign_key=f"{Verse.__tablename__}.id")
 
 class LineInfo(IdTimestampMixin, VerseIdMixin, SongIdMixin, TimestampRangeMixin):
-    line_number: int = Field(nullable=False)
+    line_number: int = Field(nullable=False, index=True)
     lyric: str = Field(nullable=False)
     tokens: list[str] = Field(sa_column=Column(JSON), default=[])
     timestamps: list[TimestampRangeMixin] = Field(sa_column=Column(JSON), default=[])

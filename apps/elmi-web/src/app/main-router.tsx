@@ -3,6 +3,7 @@ import { useEffect, lazy, Suspense } from "react"
 import { useSelector } from "../redux/hooks"
 import { BrowserRouter, Navigate, Outlet, Route, Routes } from "react-router-dom"
 import { useVerifyAdminToken } from "../features/admin/auth/hook"
+import { LoadingIndicator } from "../components/LoadingIndicator"
 
 const SignInPage = lazy(()=>import("../features/auth/pages/SignInPage"))
 const ProjectsPage = lazy(()=>import("../features/projects/pages/ProjectsPage"))
@@ -30,7 +31,7 @@ const AdminLoggedInRoute = () => {
     if (isSignedIn) {
       return <Outlet />;
     } else if (isSignedIn == null) {
-      return <div>Verifying user...</div>;
+      return <div className="flex justify-center items-center h-[100vh] w-full"><LoadingIndicator title="Verifying user..."/></div>;
     } else {
       return <Navigate to="/admin/login" />;
     }
@@ -50,7 +51,7 @@ const SignedInRoute = () => {
     if(isSignedIn){
         return <Outlet/>
     }else if(isSignedIn == null){
-        return <div>Verifying user...</div>
+        return <div className="flex justify-center items-center h-[100vh] w-full"><LoadingIndicator title="Verifying user..."/></div>
     }else{
         return <Navigate to="/app/login"/>
     }

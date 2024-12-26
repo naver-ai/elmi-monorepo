@@ -1,8 +1,8 @@
-import { useDispatch } from "../../../redux/hooks"
+import { useDispatch, useSelector } from "../../../redux/hooks"
 import { SignedInScreenFrame } from "../../../components/SignedInScreenFrame"
 import { useProjectIdInRoute } from "../hooks"
 import { useNavigate } from "react-router-dom"
-import { useEffect } from "react"
+import { useDeferredValue, useEffect } from "react"
 import { fetchProjectDetail, initializeEditorState, sendInteractionLog } from "../reducer"
 import { LyricsView } from "../components/LyricsView"
 import { MediaPlayer } from "../../media-player"
@@ -10,13 +10,17 @@ import { fetchChatData, initializeChatState } from "../../chat/reducer"
 import { ChatThreadSidePanel } from "../components/ChatThreadSidePanel"
 import { InfoSidebar } from "../components/InfoSidebar"
 import { InteractionType } from "../../../model-types"
+import { LoadingIndicator } from "../../../components/LoadingIndicator"
 
 const SigningEditorPage = () => {
 
     const dispatch = useDispatch()
-    const nav = useNavigate()
 
     const projectId = useProjectIdInRoute()!
+
+    const isLoadingProject = useSelector(state => state.editor.isProjectLoading)
+
+    console.log(isLoadingProject)
 
     useEffect(()=>{
         dispatch(fetchProjectDetail(projectId))
@@ -31,15 +35,19 @@ const SigningEditorPage = () => {
 
             dispatch(sendInteractionLog(projectId, InteractionType.ExitProject))
         }
-    }, [projectId]) 
+    }, [projectId])
 
     return <SignedInScreenFrame withHeader={false}>
-        <div className="h-full flex flex-row w-[100vw] relative">
+        {
+            isLoadingProject ? <div className="flex justify-center items-center h-full w-full">
+                <LoadingIndicator className="self-center" title="Loading project..."/>
+                </div> : <div className="h-full flex flex-row w-[100vw] relative">
             <InfoSidebar/>
             <LyricsView className="flex-1"/>
             <ChatThreadSidePanel/>
             
         </div>
+        }
     </SignedInScreenFrame>
 }
 
